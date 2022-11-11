@@ -1,0 +1,247 @@
+diff --git a/content/renderer/render_frame_impl.cc b/content/renderer/render_frame_impl.cc
+index 6a7e5ab92e6fa..be390eac56d3c 100644
+--- a/content/renderer/render_frame_impl.cc
++++ b/content/renderer/render_frame_impl.cc
+@@ -254,6 +254,12 @@
+ #include "content/renderer/java/gin_java_bridge_dispatcher.h"
+ #endif
+ 
++#include "cc/trees/layer_tree_host.h"
++#include "cc/paint/paint_recorder.h"
++#include "cc/paint/skia_paint_canvas.h"
++#include "third_party/skia/include/core/SkStream.h"
++#include "third_party/skia/include/svg/SkSVGCanvas.h"
++
+ using base::Time;
+ using blink::ContextMenuData;
+ using blink::WebContentDecryptionModule;
+@@ -3842,6 +3848,93 @@ void RenderFrameImpl::DidClearWindowObject() {
+ 
+   for (auto& observer : observers_)
+     observer.DidClearWindowObject();
++
++  // Get access to the JS VM for this process (each tab is a process)
++  v8::Isolate *isolate = blink::MainThreadIsolate();
++  // Auto-clean v8 handles
++  v8::HandleScope handle_scope(isolate);
++  // Get the JS context for the current tab
++  v8::Local<v8::Context> context = GetWebFrame()->MainWorldScriptContext();
++  // Auto-clean v8 content
++  v8::Context::Scope context_scope(context);
++  // Get the global object (window)
++  v8::Local<v8::Object> global = context->Global();
++
++  // Create a new JS function binding
++  v8::Local<v8::FunctionTemplate> fn = v8::FunctionTemplate::New(
++      isolate,
++      [](const v8::FunctionCallbackInfo<v8::Value>& args) {
++        // Get access to the JS VM for this process (each Chrome tab is a process)
++        v8::Isolate *isolate = blink::MainThreadIsolate();
++        // Auto-clean v8 handles
++        v8::HandleScope handle_scope(isolate);
++        // Get the WebLocalFrame for the current v8 Context
++        auto *frame = WebLocalFrame::FrameForCurrentContext();
++        // Get access to the root rendering layer
++        auto *host = frame->LocalRoot()->FrameWidget()->LayerTreeHost();
++        auto *root = host->root_layer();
++        // Create a memory stream to save the SVG content
++        SkDynamicMemoryWStream stream;
++
++        {
++          // Create an SVG canvas with the dimensions of the layer
++          int width = 0, height = 0;
++
++          for (auto *layer : *root->layer_tree_host()) {
++            if (layer->parent() == root && layer->draws_content() && layer->IsAttached() && layer->IsUsingLayerLists()) {
++              auto rect = layer->bounds();
++
++              width = rect.width();
++              height = rect.height();
++
++              break;
++            }
++          }
++
++          cc::PaintRecorder recorder;
++          auto rect = SkRect::MakeWH(width, height);
++
++          frame->CapturePaintPreview(
++            gfx::Rect(0, 0, width, height),
++            recorder.beginRecording(rect),
++            false,
++            true
++          );
++
++          auto canvas = SkSVGCanvas::Make(rect, &stream);
++
++          recorder.finishRecordingAsPicture()->Playback(canvas.get());
++        }
++
++        // Allocate a buffer to hold the SVG data
++        auto size = stream.bytesWritten();
++        auto *bytes = new char[size];
++
++        // Copy from the stream to the buffer
++        stream.copyTo(static_cast<void *>(bytes));
++
++        // Return the data to the JS world
++        args.GetReturnValue().Set(
++            // Create a new JS string from our data
++            v8::String::NewFromUtf8(
++                isolate,
++                bytes,
++                v8::NewStringType::kNormal,
++                size
++            ).ToLocalChecked()
++        );
++
++        // Release the allocated data
++        delete[] bytes;
++      }
++  );
++
++  // Register the function as "getPageContentsAsSVG"
++  global->Set(
++      context,
++      v8::String::NewFromUtf8(isolate, "getPageContentsAsSVG").ToLocalChecked(),
++      fn->GetFunction(context).ToLocalChecked()
++  ).Check();
+ }
+ 
+ void RenderFrameImpl::DidCreateDocumentElement() {
+diff --git a/skia/BUILD.gn b/skia/BUILD.gn
+index edc61a93bb7a1..62c4b418aedae 100644
+--- a/skia/BUILD.gn
++++ b/skia/BUILD.gn
+@@ -307,6 +307,15 @@ component("skia") {
+     ]
+   }
+ 
++  deps += [ "//third_party/expat" ]
++  sources += [
++    "//third_party/skia/src/svg/SkSVGCanvas.cpp",
++    "//third_party/skia/src/svg/SkSVGDevice.cpp",
++    "//third_party/skia/src/xml/SkDOM.cpp",
++    "//third_party/skia/src/xml/SkXMLParser.cpp",
++    "//third_party/skia/src/xml/SkXMLWriter.cpp",
++  ]
++
+   # The *_public variables should be added to 'public' not 'sources'.
+   # However, Skia does not export enough *_public variables to make Chromium
+   # 'gn check' clean. Until that can be done add the *_public variables to
+@@ -369,9 +378,6 @@ component("skia") {
+     sources += [ "//third_party/skia/src/core/SkUtilsArm.cpp" ]
+   }
+ 
+-  # Remove unused util sources.
+-  sources -= [ "//third_party/skia/src/utils/SkParsePath.cpp" ]
+-
+   if (is_win) {
+     libs = [ "fontsub.lib" ]
+   }
+diff --git a/third_party/blink/public/web/web_frame_widget.h b/third_party/blink/public/web/web_frame_widget.h
+index 6264d513b398c..f304767c1bcdd 100644
+--- a/third_party/blink/public/web/web_frame_widget.h
++++ b/third_party/blink/public/web/web_frame_widget.h
+@@ -48,6 +48,10 @@
+ #include "ui/gfx/ca_layer_result.h"
+ #include "ui/gfx/geometry/rect.h"
+ 
++namespace content {
++class RenderFrameImpl;
++}  // namespace content
++
+ namespace cc {
+ struct ApplyViewportChangesArgs;
+ class LayerTreeHost;
+@@ -227,6 +231,9 @@ class WebFrameWidget : public WebWidget {
+   // GPU benchmarking extension needs access to the LayerTreeHost
+   friend class GpuBenchmarkingContext;
+ 
++  // Allow RenderFrameImpl to access the LayerTreeHost for html2svg
++  friend class content::RenderFrameImpl;
++
+   // This private constructor and the class/friend declaration ensures that
+   // WebFrameWidgetImpl is the only concrete subclass that implements
+   // WebFrameWidget, so that it is safe to downcast to WebFrameWidgetImpl.
+diff --git a/third_party/blink/renderer/core/frame/remote_frame_view.cc b/third_party/blink/renderer/core/frame/remote_frame_view.cc
+index 52e5d82981643..1d1865d641313 100644
+--- a/third_party/blink/renderer/core/frame/remote_frame_view.cc
++++ b/third_party/blink/renderer/core/frame/remote_frame_view.cc
+@@ -419,7 +419,9 @@ uint32_t RemoteFrameView::Print(const gfx::Rect& rect,
+ uint32_t RemoteFrameView::CapturePaintPreview(const gfx::Rect& rect,
+                                               cc::PaintCanvas* canvas) const {
+   auto* tracker = canvas->GetPaintPreviewTracker();
+-  DCHECK(tracker);  // |tracker| must exist or there is a bug upstream.
++
++  // html2svg doesn't care about paint preview tracking
++  if (!tracker) return 0;
+ 
+   // RACE: there is a possibility that the embedding token will be null and
+   // still be in a valid state. This can occur is the frame has recently
+diff --git a/third_party/blink/renderer/platform/fonts/font.cc b/third_party/blink/renderer/platform/fonts/font.cc
+index 7b5c0ef5121e1..34718e30fb614 100644
+--- a/third_party/blink/renderer/platform/fonts/font.cc
++++ b/third_party/blink/renderer/platform/fonts/font.cc
+@@ -230,15 +230,22 @@ void Font::DrawText(cc::PaintCanvas* canvas,
+   if (ShouldSkipDrawing())
+     return;
+ 
+-  CachingWordShaper word_shaper(*this);
+-  ShapeResultBuffer buffer;
+-  word_shaper.FillResultBuffer(run_info, &buffer);
+-  ShapeResultBloberizer::FillGlyphs bloberizer(
+-      GetFontDescription(), device_scale_factor > 1.0f, run_info, buffer,
+-      draw_type == Font::DrawType::kGlyphsOnly
+-          ? ShapeResultBloberizer::Type::kNormal
+-          : ShapeResultBloberizer::Type::kEmitText);
+-  DrawBlobs(canvas, flags, bloberizer.Blobs(), point, node_id);
++  // Bypass HarfBuzz text shaping for the html2svg Skia back-end
++  auto blob = SkTextBlob::MakeFromString(
++    StringView(run_info.run.ToStringView(), run_info.from, run_info.to - run_info.from).
++      ToString().
++      Utf8().
++      c_str(),
++    PrimaryFont()->
++      PlatformData().
++      CreateSkFont(false, &font_description_)
++  );
++
++  if (node_id != cc::kInvalidNodeId) {
++    canvas->drawTextBlob(blob, point.x(), point.y(), node_id, flags);
++  } else {
++    canvas->drawTextBlob(blob, point.x(), point.y(), flags);
++  }
+ }
+ 
+ void Font::DrawText(cc::PaintCanvas* canvas,
+@@ -253,13 +260,22 @@ void Font::DrawText(cc::PaintCanvas* canvas,
+   if (ShouldSkipDrawing())
+     return;
+ 
+-  ShapeResultBloberizer::FillGlyphsNG bloberizer(
+-      GetFontDescription(), device_scale_factor > 1.0f, text_info.text,
+-      text_info.from, text_info.to, text_info.shape_result,
+-      draw_type == Font::DrawType::kGlyphsOnly
+-          ? ShapeResultBloberizer::Type::kNormal
+-          : ShapeResultBloberizer::Type::kEmitText);
+-  DrawBlobs(canvas, flags, bloberizer.Blobs(), point, node_id);
++  // Bypass HarfBuzz text shaping for the html2svg Skia back-end
++  auto blob = SkTextBlob::MakeFromString(
++    StringView(text_info.text, text_info.from, text_info.Length()).
++      ToString().
++      Utf8().
++      c_str(),
++    PrimaryFont()->
++      PlatformData().
++      CreateSkFont(false, &font_description_)
++  );
++
++  if (node_id != cc::kInvalidNodeId) {
++    canvas->drawTextBlob(blob, point.x(), point.y(), node_id, flags);
++  } else {
++    canvas->drawTextBlob(blob, point.x(), point.y(), flags);
++  }
+ }
+ 
+ bool Font::DrawBidiText(cc::PaintCanvas* canvas,
