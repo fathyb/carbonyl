@@ -4,6 +4,8 @@ Convert HTML and `<canvas>` to SVG using Chromium.
 
 ## Usage
 
+> A Docker image is currently being built.
+
 ### CLI
 
 ```shell
