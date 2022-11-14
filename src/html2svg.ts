@@ -28,6 +28,7 @@ Promise.resolve().then(async () => {
 
             webPreferences: {
                 sandbox: false,
+                webSecurity: false,
             }
         })
 
@@ -57,12 +58,13 @@ Promise.resolve().then(async () => {
                 `
                     new Promise(resolve => {
                         const style = document.createElement('style')
+                        const policy = trustedTypes.createPolicy('html2svg/scrollbar-css', { createHTML: x => x })
 
-                        style.innerHTML = \`
+                        style.innerHTML = policy.createHTML(\`
                             body::-webkit-scrollbar, body::-webkit-scrollbar-track, body::-webkit-scrollbar-thumb {
                                 display: none;
                             }
-                        \`
+                        \`)
 
                         document.head.appendChild(style)
                         scrollTo({ top: document.body.scrollHeight })
