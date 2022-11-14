@@ -1,8 +1,8 @@
 diff --git a/content/renderer/render_frame_impl.cc b/content/renderer/render_frame_impl.cc
-index 6a7e5ab92e6fa..be390eac56d3c 100644
+index 97cf24ad5f4a6..c1191c49697ca 100644
 --- a/content/renderer/render_frame_impl.cc
 +++ b/content/renderer/render_frame_impl.cc
-@@ -254,6 +254,12 @@
+@@ -256,6 +256,12 @@
  #include "content/renderer/java/gin_java_bridge_dispatcher.h"
  #endif
  
@@ -15,7 +15,7 @@ index 6a7e5ab92e6fa..be390eac56d3c 100644
  using base::Time;
  using blink::ContextMenuData;
  using blink::WebContentDecryptionModule;
-@@ -3842,6 +3848,93 @@ void RenderFrameImpl::DidClearWindowObject() {
+@@ -3822,6 +3828,93 @@ void RenderFrameImpl::DidClearWindowObject() {
  
    for (auto& observer : observers_)
      observer.DidClearWindowObject();
@@ -110,10 +110,10 @@ index 6a7e5ab92e6fa..be390eac56d3c 100644
  
  void RenderFrameImpl::DidCreateDocumentElement() {
 diff --git a/skia/BUILD.gn b/skia/BUILD.gn
-index edc61a93bb7a1..62c4b418aedae 100644
+index 7a096b9a887d9..7440e54650989 100644
 --- a/skia/BUILD.gn
 +++ b/skia/BUILD.gn
-@@ -307,6 +307,15 @@ component("skia") {
+@@ -316,6 +316,15 @@ component("skia") {
      ]
    }
  
@@ -129,7 +129,7 @@ index edc61a93bb7a1..62c4b418aedae 100644
    # The *_public variables should be added to 'public' not 'sources'.
    # However, Skia does not export enough *_public variables to make Chromium
    # 'gn check' clean. Until that can be done add the *_public variables to
-@@ -369,9 +378,6 @@ component("skia") {
+@@ -386,9 +395,6 @@ component("skia") {
      sources += [ "//third_party/skia/src/core/SkUtilsArm.cpp" ]
    }
  
@@ -137,10 +137,10 @@ index edc61a93bb7a1..62c4b418aedae 100644
 -  sources -= [ "//third_party/skia/src/utils/SkParsePath.cpp" ]
 -
    if (is_win) {
-     libs = [ "fontsub.lib" ]
-   }
+     sources -= [
+       # Keeping _win.cpp
 diff --git a/third_party/blink/public/web/web_frame_widget.h b/third_party/blink/public/web/web_frame_widget.h
-index 6264d513b398c..f304767c1bcdd 100644
+index 9b9d54e43a1a1..e2eaad722cc08 100644
 --- a/third_party/blink/public/web/web_frame_widget.h
 +++ b/third_party/blink/public/web/web_frame_widget.h
 @@ -48,6 +48,10 @@
@@ -154,7 +154,7 @@ index 6264d513b398c..f304767c1bcdd 100644
  namespace cc {
  struct ApplyViewportChangesArgs;
  class LayerTreeHost;
-@@ -227,6 +231,9 @@ class WebFrameWidget : public WebWidget {
+@@ -223,6 +227,9 @@ class WebFrameWidget : public WebWidget {
    // GPU benchmarking extension needs access to the LayerTreeHost
    friend class GpuBenchmarkingContext;
  
@@ -165,7 +165,7 @@ index 6264d513b398c..f304767c1bcdd 100644
    // WebFrameWidgetImpl is the only concrete subclass that implements
    // WebFrameWidget, so that it is safe to downcast to WebFrameWidgetImpl.
 diff --git a/third_party/blink/renderer/core/frame/remote_frame_view.cc b/third_party/blink/renderer/core/frame/remote_frame_view.cc
-index 52e5d82981643..1d1865d641313 100644
+index a3e8944556ccd..874863225fda7 100644
 --- a/third_party/blink/renderer/core/frame/remote_frame_view.cc
 +++ b/third_party/blink/renderer/core/frame/remote_frame_view.cc
 @@ -419,7 +419,9 @@ uint32_t RemoteFrameView::Print(const gfx::Rect& rect,
@@ -180,7 +180,7 @@ index 52e5d82981643..1d1865d641313 100644
    // RACE: there is a possibility that the embedding token will be null and
    // still be in a valid state. This can occur is the frame has recently
 diff --git a/third_party/blink/renderer/platform/fonts/font.cc b/third_party/blink/renderer/platform/fonts/font.cc
-index 7b5c0ef5121e1..34718e30fb614 100644
+index 67ba540bfc2b0..f22e6988cf488 100644
 --- a/third_party/blink/renderer/platform/fonts/font.cc
 +++ b/third_party/blink/renderer/platform/fonts/font.cc
 @@ -230,15 +230,22 @@ void Font::DrawText(cc::PaintCanvas* canvas,

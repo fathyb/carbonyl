@@ -4,24 +4,21 @@ Convert HTML and `<canvas>` to SVG using Chromium.
 
 ## Usage
 
-> A Docker image is currently being built.
-
-### CLI
-
 ```shell
-$ html2svg http://google.com > google.svg
-```
-
-### Server
-
-```shell
-$ html2svg serve --port 8765
-$ curl -d http://google.com http://localhost:8765 > google.svg
+$ docker run fathyb/html2svg https://google.com > google.svg
 ```
 
 ## Development
 
-> -   Building Chromium for ARM on Linux or Windows is not officially supported, cross-compile from x64 instead.
+> - Building Chromium for ARM on Linux or Windows is not officially supported, cross-compile from x64 instead.
+
+### Docker
+
+```shell
+$ docker buildx build . --platform linux/arm64,linux/amd64
+```
+
+### Local
 
 1. Fetch dependencies:
     ```shell

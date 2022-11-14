@@ -1,14 +1,34 @@
 import { app, BrowserWindow } from 'electron'
 
-app.dock.hide()
-// app.commandLine.appendSwitch('enable-logging')
-app.commandLine.appendSwitch('headless')
-app.whenReady()
-    .then(async () => {
+
+Promise.resolve().then(async () => {
+    const entry = process.argv.find(a => a.endsWith('html2svg.js'))
+    const index = entry ? process.argv.indexOf(entry) : -1
+    const args = process.argv.slice(Math.max(2, index + 1))
+    const [url] = args
+    
+    if (!url) {
+        throw new Error('Usage: html2svg [url]')
+    }
+    
+    app.dock?.hide()
+    app.commandLine.appendSwitch('headless')
+    app.commandLine.appendSwitch('no-sandbox')
+    app.commandLine.appendSwitch('disable-gpu')
+
+    await app.whenReady()
+
+    return url
+})
+    .then(async (url) => {
         const page = new BrowserWindow({
             show: false,
             width: 1920,
             height: 1080,
+
+            webPreferences: {
+                sandbox: false,
+            }
         })
 
         try {
@@ -28,7 +48,7 @@ app.whenReady()
 
                         page.webContents.once('did-finish-load', listener)
 
-                        await page.loadURL('https://yari-demos.prod.mdn.mozit.cloud/en-US/docs/Web/API/Canvas_API/Tutorial/Drawing_shapes/_sample_.making_combinations.html')
+                        await page.loadURL(url)
                     })
                     .catch(reject),
             )
@@ -61,8 +81,8 @@ app.whenReady()
             page.destroy()
         }
     })
-    .then((result) => {
-        console.log(result)
+    .then(async (result) => {
+        await print(result)
 
         process.exit(0)
     })
@@ -71,3 +91,17 @@ app.whenReady()
 
         process.exit(1)
     })
+
+// Electron seems to drop lines if we send them too fast on slow streams like Docker..
+async function print(output: string) {
+    const awfulBugSizeHeuristic = 1024
+
+    for(let i = 0; i < output.length; i += awfulBugSizeHeuristic) {
+        await new Promise<void>((resolve, reject) =>
+            process.stdout.write(
+                output.slice(i, i + awfulBugSizeHeuristic),
+                error => error ? reject(error) : resolve(),
+            )
+        )
+    }
+}
