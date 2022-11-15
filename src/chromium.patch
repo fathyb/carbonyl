@@ -1,12 +1,11 @@
 diff --git a/content/renderer/render_frame_impl.cc b/content/renderer/render_frame_impl.cc
-index 97cf24ad5f4a6..b5cec82ad4a34 100644
+index 97cf24ad5f4a6..ae9f65e7bfcaa 100644
 --- a/content/renderer/render_frame_impl.cc
 +++ b/content/renderer/render_frame_impl.cc
-@@ -256,6 +256,14 @@
+@@ -256,6 +256,13 @@
  #include "content/renderer/java/gin_java_bridge_dispatcher.h"
  #endif
  
-+#include "cc/trees/layer_tree_host.h"
 +#include "cc/paint/paint_recorder.h"
 +#include "cc/paint/skia_paint_canvas.h"
 +#include "third_party/skia/include/core/SkStream.h"
@@ -17,7 +16,7 @@ index 97cf24ad5f4a6..b5cec82ad4a34 100644
  using base::Time;
  using blink::ContextMenuData;
  using blink::WebContentDecryptionModule;
-@@ -3822,6 +3830,110 @@ void RenderFrameImpl::DidClearWindowObject() {
+@@ -3822,6 +3829,96 @@ void RenderFrameImpl::DidClearWindowObject() {
  
    for (auto& observer : observers_)
      observer.DidClearWindowObject();
@@ -45,29 +44,16 @@ index 97cf24ad5f4a6..b5cec82ad4a34 100644
 +        v8::Local<v8::Context> context = isolate->GetCurrentContext();
 +        // Auto-clean v8 content
 +        v8::Context::Scope context_scope(context);
-+        uint32_t mode = args[0]->ToUint32(context).ToLocalChecked()->Value();
 +        // Get the WebLocalFrame for the current v8 Context
 +        auto* frame = WebLocalFrame::FrameForCurrentContext();
-+        // Get access to the root rendering layer
-+        auto* host = frame->LocalRoot()->FrameWidget()->LayerTreeHost();
-+        auto* root = host->root_layer();
++        // Get the page size
++        auto size = frame->DocumentSize();
 +        // Create a memory stream to save the SVG content
 +        SkDynamicMemoryWStream stream;
 +
 +        {
 +          // Create an SVG canvas with the dimensions of the layer
-+          int width = 0, height = 0;
-+
-+          for (auto* layer : *root->layer_tree_host()) {
-+            if (layer->parent() == root && layer->draws_content() && layer->IsAttached() && layer->IsUsingLayerLists()) {
-+              auto rect = layer->bounds();
-+
-+              width = rect.width();
-+              height = rect.height();
-+
-+              break;
-+            }
-+          }
++          int width = size.width(), height = size.height();
 +
 +          cc::PaintRecorder recorder;
 +          auto rect = SkRect::MakeWH(width, height);
@@ -81,7 +67,7 @@ index 97cf24ad5f4a6..b5cec82ad4a34 100644
 +
 +          auto picture = recorder.finishRecordingAsPicture();
 +
-+          switch(mode) {
++          switch(args[0]->ToUint32(context).ToLocalChecked()->Value()) {
 +            // SVG
 +            case 0: {
 +              picture->Playback(SkSVGCanvas::Make(rect, &stream).get());
@@ -108,8 +94,7 @@ index 97cf24ad5f4a6..b5cec82ad4a34 100644
 +        }
 +
 +        // Allocate a buffer to hold the SVG data
-+        auto size = stream.bytesWritten();
-+        auto buffer = v8::ArrayBuffer::New(isolate, size);
++        auto buffer = v8::ArrayBuffer::New(isolate, stream.bytesWritten());
 +
 +        // Copy from the stream to the buffer
 +        stream.copyTo(buffer->GetBackingStore()->Data());
@@ -158,31 +143,6 @@ index 7a096b9a887d9..7440e54650989 100644
    if (is_win) {
      sources -= [
        # Keeping _win.cpp
-diff --git a/third_party/blink/public/web/web_frame_widget.h b/third_party/blink/public/web/web_frame_widget.h
-index 9b9d54e43a1a1..e2eaad722cc08 100644
---- a/third_party/blink/public/web/web_frame_widget.h
-+++ b/third_party/blink/public/web/web_frame_widget.h
-@@ -48,6 +48,10 @@
- #include "ui/gfx/ca_layer_result.h"
- #include "ui/gfx/geometry/rect.h"
- 
-+namespace content {
-+class RenderFrameImpl;
-+}  // namespace content
-+
- namespace cc {
- struct ApplyViewportChangesArgs;
- class LayerTreeHost;
-@@ -223,6 +227,9 @@ class WebFrameWidget : public WebWidget {
-   // GPU benchmarking extension needs access to the LayerTreeHost
-   friend class GpuBenchmarkingContext;
- 
-+  // Allow RenderFrameImpl to access the LayerTreeHost for html2svg
-+  friend class content::RenderFrameImpl;
-+
-   // This private constructor and the class/friend declaration ensures that
-   // WebFrameWidgetImpl is the only concrete subclass that implements
-   // WebFrameWidget, so that it is safe to downcast to WebFrameWidgetImpl.
 diff --git a/third_party/blink/renderer/core/frame/remote_frame_view.cc b/third_party/blink/renderer/core/frame/remote_frame_view.cc
 index a3e8944556ccd..874863225fda7 100644
 --- a/third_party/blink/renderer/core/frame/remote_frame_view.cc
@@ -198,6 +158,20 @@ index a3e8944556ccd..874863225fda7 100644
  
    // RACE: there is a possibility that the embedding token will be null and
    // still be in a valid state. This can occur is the frame has recently
+diff --git a/third_party/blink/renderer/core/html/canvas/html_canvas_element.cc b/third_party/blink/renderer/core/html/canvas/html_canvas_element.cc
+index cb2b900c4ff50..765153f982c29 100644
+--- a/third_party/blink/renderer/core/html/canvas/html_canvas_element.cc
++++ b/third_party/blink/renderer/core/html/canvas/html_canvas_element.cc
+@@ -934,7 +934,8 @@ void HTMLCanvasElement::PaintInternal(GraphicsContext& context,
+ }
+ 
+ bool HTMLCanvasElement::IsPrinting() const {
+-  return GetDocument().BeforePrintingOrPrinting();
++  // Fake printing to vectorize <canvas> elements for html2svg
++  return true;
+ }
+ 
+ UkmParameters HTMLCanvasElement::GetUkmParameters() {
 diff --git a/third_party/blink/renderer/platform/fonts/font.cc b/third_party/blink/renderer/platform/fonts/font.cc
 index 67ba540bfc2b0..f22e6988cf488 100644
 --- a/third_party/blink/renderer/platform/fonts/font.cc
