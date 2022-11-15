@@ -1,6 +1,8 @@
 .DS_Store
 node_modules/
 
+/.ccache
+/.git_cache
 /.vscode
 /build
 /electron/*

@@ -1,11 +1,15 @@
 # `html2svg`
 
-Convert HTML and `<canvas>` to SVG using Chromium.
+Convert HTML and `<canvas>` to SVG or PDF using Chromium.
 
 ## Usage
 
 ```shell
+# export to SVG
 $ docker run fathyb/html2svg https://google.com > google.svg
+$ docker run fathyb/html2svg https://google.com --format svg > google.svg
+# export to PDF
+$ docker run fathyb/html2svg https://google.com --format pdf > google.pdf
 ```
 
 ## Development

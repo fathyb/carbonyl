@@ -1,8 +1,8 @@
 diff --git a/content/renderer/render_frame_impl.cc b/content/renderer/render_frame_impl.cc
-index 97cf24ad5f4a6..c1191c49697ca 100644
+index 97cf24ad5f4a6..b5cec82ad4a34 100644
 --- a/content/renderer/render_frame_impl.cc
 +++ b/content/renderer/render_frame_impl.cc
-@@ -256,6 +256,12 @@
+@@ -256,6 +256,14 @@
  #include "content/renderer/java/gin_java_bridge_dispatcher.h"
  #endif
  
@@ -10,12 +10,14 @@ index 97cf24ad5f4a6..c1191c49697ca 100644
 +#include "cc/paint/paint_recorder.h"
 +#include "cc/paint/skia_paint_canvas.h"
 +#include "third_party/skia/include/core/SkStream.h"
++#include "third_party/skia/include/docs/SkPDFDocument.h"
++#include "third_party/skia/include/svg/SkSVGCanvas.h"
 +#include "third_party/skia/include/svg/SkSVGCanvas.h"
 +
  using base::Time;
  using blink::ContextMenuData;
  using blink::WebContentDecryptionModule;
-@@ -3822,6 +3828,93 @@ void RenderFrameImpl::DidClearWindowObject() {
+@@ -3822,6 +3830,110 @@ void RenderFrameImpl::DidClearWindowObject() {
  
    for (auto& observer : observers_)
      observer.DidClearWindowObject();
@@ -39,11 +41,16 @@ index 97cf24ad5f4a6..c1191c49697ca 100644
 +        v8::Isolate *isolate = blink::MainThreadIsolate();
 +        // Auto-clean v8 handles
 +        v8::HandleScope handle_scope(isolate);
++        // Get the JS context for the current tab
++        v8::Local<v8::Context> context = isolate->GetCurrentContext();
++        // Auto-clean v8 content
++        v8::Context::Scope context_scope(context);
++        uint32_t mode = args[0]->ToUint32(context).ToLocalChecked()->Value();
 +        // Get the WebLocalFrame for the current v8 Context
-+        auto *frame = WebLocalFrame::FrameForCurrentContext();
++        auto* frame = WebLocalFrame::FrameForCurrentContext();
 +        // Get access to the root rendering layer
-+        auto *host = frame->LocalRoot()->FrameWidget()->LayerTreeHost();
-+        auto *root = host->root_layer();
++        auto* host = frame->LocalRoot()->FrameWidget()->LayerTreeHost();
++        auto* root = host->root_layer();
 +        // Create a memory stream to save the SVG content
 +        SkDynamicMemoryWStream stream;
 +
@@ -51,7 +58,7 @@ index 97cf24ad5f4a6..c1191c49697ca 100644
 +          // Create an SVG canvas with the dimensions of the layer
 +          int width = 0, height = 0;
 +
-+          for (auto *layer : *root->layer_tree_host()) {
++          for (auto* layer : *root->layer_tree_host()) {
 +            if (layer->parent() == root && layer->draws_content() && layer->IsAttached() && layer->IsUsingLayerLists()) {
 +              auto rect = layer->bounds();
 +
@@ -72,31 +79,43 @@ index 97cf24ad5f4a6..c1191c49697ca 100644
 +            true
 +          );
 +
-+          auto canvas = SkSVGCanvas::Make(rect, &stream);
++          auto picture = recorder.finishRecordingAsPicture();
 +
-+          recorder.finishRecordingAsPicture()->Playback(canvas.get());
++          switch(mode) {
++            // SVG
++            case 0: {
++              picture->Playback(SkSVGCanvas::Make(rect, &stream).get());
++
++              break;
++            }
++            // PDF
++            case 1: {
++              SkPDF::Metadata metadata;
++              v8::String::Utf8Value title(isolate, args[1]);
++
++              metadata.fTitle = *title;
++              metadata.fCreator = "html2svg PDF back-end";
++
++              auto document = SkPDF::MakeDocument(&stream, metadata);
++
++              picture->Playback(document->beginPage(rect.width(), rect.height()));
++              document->endPage();
++              document->close();
++
++              break;
++            }
++          }
 +        }
 +
 +        // Allocate a buffer to hold the SVG data
 +        auto size = stream.bytesWritten();
-+        auto *bytes = new char[size];
++        auto buffer = v8::ArrayBuffer::New(isolate, size);
 +
 +        // Copy from the stream to the buffer
-+        stream.copyTo(static_cast<void *>(bytes));
++        stream.copyTo(buffer->GetBackingStore()->Data());
 +
 +        // Return the data to the JS world
-+        args.GetReturnValue().Set(
-+            // Create a new JS string from our data
-+            v8::String::NewFromUtf8(
-+                isolate,
-+                bytes,
-+                v8::NewStringType::kNormal,
-+                size
-+            ).ToLocalChecked()
-+        );
-+
-+        // Release the allocated data
-+        delete[] bytes;
++        args.GetReturnValue().Set(buffer);
 +      }
 +  );
 +
