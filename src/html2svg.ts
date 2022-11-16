@@ -11,11 +11,21 @@ program
     .showSuggestionAfterError()
     .argument('<url>', 'URL to the web page to render')
     .option(
+        '-w, --width <width>',
+        'set the viewport width in pixels',
+        '1920',
+    )
+    .option(
+        '-h, --height <height>',
+        "set the viewport height in pixels (this should not affect the export height)",
+        '1080',
+    )
+    .option(
         '-f, --format <format>',
         'set the output format, should one of these values: svg, pdf',
         'svg',
     )
-    .action(async (url, { format }) => {
+    .action(async (url, { format, width, height }) => {
         const mode = getMode(format)
 
         app.dock?.hide()
@@ -27,8 +37,8 @@ program
 
         const page = new BrowserWindow({
             show: false,
-            width: 1920,
-            height: 1080,
+            width: parseInt(width, 10),
+            height: parseInt(height, 10),
             webPreferences: { sandbox: false },
         })
 
@@ -61,7 +71,7 @@ program
                         const policy = trustedTypes.createPolicy('html2svg/scrollbar-css', { createHTML: x => x })
 
                         style.innerHTML = policy.createHTML(\`
-                            body::-webkit-scrollbar, body::-webkit-scrollbar-track, body::-webkit-scrollbar-thumb {
+                            *::-webkit-scrollbar, *::-webkit-scrollbar-track, *::-webkit-scrollbar-thumb {
                                 display: none;
                             }
                         \`)
