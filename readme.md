@@ -10,6 +10,20 @@ $ docker run fathyb/html2svg https://google.com > google.svg
 $ docker run fathyb/html2svg https://google.com --format svg > google.svg
 # export to PDF
 $ docker run fathyb/html2svg https://google.com --format pdf > google.pdf
+# show help
+$ docker run fathyb/html2svg --help
+Usage: html2svg [options] <url>
+
+Arguments:
+  url                    URL to the web page to render
+
+Options:
+  -f, --full             capture the entire page
+  -w, --wait <seconds>   set the amount of seconds to wait between the page loaded event and taking the screenshot (default: 1)
+  -w, --width <width>    set the viewport width in pixels (default: 1920)
+  -h, --height <height>  set the viewport height in pixels (default: 1080)
+  -f, --format <format>  set the output format, should one of these values: svg, pdf (default: "svg")
+  --help                 display help for command
 ```
 
 ## Development
