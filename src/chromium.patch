@@ -1,5 +1,5 @@
 diff --git a/content/renderer/render_frame_impl.cc b/content/renderer/render_frame_impl.cc
-index 97cf24ad5f4a6..c1e9393838a7a 100644
+index 97cf24ad5f4a6..022d02c8cacf9 100644
 --- a/content/renderer/render_frame_impl.cc
 +++ b/content/renderer/render_frame_impl.cc
 @@ -256,6 +256,15 @@
@@ -18,7 +18,7 @@ index 97cf24ad5f4a6..c1e9393838a7a 100644
  using base::Time;
  using blink::ContextMenuData;
  using blink::WebContentDecryptionModule;
-@@ -3822,6 +3831,110 @@ void RenderFrameImpl::DidClearWindowObject() {
+@@ -3822,6 +3831,134 @@ void RenderFrameImpl::DidClearWindowObject() {
  
    for (auto& observer : observers_)
      observer.DidClearWindowObject();
@@ -26,23 +26,48 @@ index 97cf24ad5f4a6..c1e9393838a7a 100644
 +  // A Skia stream writing to stdout
 +  class StdoutStream : public SkWStream {
 +  public:
-+      bool write(const void* data, size_t size) override {
-+        std::cout.write(static_cast<const char*>(data), size);
-+        fBytesWritten += size;
++    ~StdoutStream() override {
++      flush();
++      
++      delete[] fBytes;
++    }
++    
++    bool write(const void* data, size_t size) override {
++      auto* buffer = static_cast<const char*>(data);
++      size_t remaining = size;
++      size_t bufferSize = 8 * 1024;
 +
-+        return true;
++      while (remaining != 0) {
++        ssize_t length = std::min(bufferSize - fBytesBuffered, remaining);
++
++        std::memcpy(&fBytes[fBytesBuffered], &buffer[size - remaining], length);
++
++        remaining -= length;
++        fBytesBuffered += length;
++
++        if (fBytesBuffered == bufferSize) {
++          flush();
++        }
 +      }
 +
-+      void flush() override {
-+        std::cout.flush();
++      return true;
++    }
++    
++    void flush() override {
++      if (::write(1, fBytes, fBytesBuffered) != -1) {
++        fBytesBuffered = 0;
++        fflush(stdout);
 +      }
-+
-+      size_t bytesWritten() const override {
-+        return fBytesWritten;
-+      }
-+
++    }
++    
++    size_t bytesWritten() const override {
++      return fBytesWritten;
++    }
++  
 +  private:
-+      size_t fBytesWritten = 0;
++    char* fBytes = new char[8 * 1024];
++    size_t fBytesWritten = 0;
++    size_t fBytesBuffered = 0;
 +  };
 +
 +  // Get access to the JS VM for this process (each tab is a process)
@@ -72,15 +97,13 @@ index 97cf24ad5f4a6..c1e9393838a7a 100644
 +        auto* frame = WebLocalFrame::FrameForCurrentContext();
 +        // Get the page size
 +        auto size = frame->DocumentSize();
-+        // Create a memory stream to save the SVG content
-+        StdoutStream stream;
 +        // Create an SVG canvas with the dimensions of the layer
-+        uint32_t param = args[0]->ToUint32(context).ToLocalChecked()->Value();
++        uint32_t heightParam = args[0]->ToUint32(context).ToLocalChecked()->Value();
 +        int width = size.width();
-+        int height = param == 0 ? size.height() : param;
++        int height = heightParam == 0 ? size.height() : heightParam;
++        auto rect = SkRect::MakeWH(width, height);
 +
 +        cc::PaintRecorder recorder;
-+        auto rect = SkRect::MakeWH(width, height);
 +
 +        frame->CapturePaintPreview(
 +          gfx::Rect(0, 0, width, height),
@@ -89,6 +112,9 @@ index 97cf24ad5f4a6..c1e9393838a7a 100644
 +          true
 +        );
 +
++        // Create a memory stream to save the SVG content
++        StdoutStream stream;
++        // Get the recording data
 +        auto picture = recorder.finishRecordingAsPicture();
 +
 +        switch(args[1]->ToUint32(context).ToLocalChecked()->Value()) {
@@ -108,15 +134,13 @@ index 97cf24ad5f4a6..c1e9393838a7a 100644
 +
 +            auto document = SkPDF::MakeDocument(&stream, metadata);
 +
-+            picture->Playback(document->beginPage(rect.width(), rect.height()));
++            picture->Playback(document->beginPage(width, height));
 +            document->endPage();
 +            document->close();
 +
 +            break;
 +          }
 +        }
-+
-+        stream.flush();
 +      }
 +  );
 +

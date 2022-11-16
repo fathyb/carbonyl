@@ -95,7 +95,7 @@ program
                             scrollTo({ top: 0 })
 
                             requestAnimationFrame(() =>
-                                setTimeout(resolve, ${wait})
+                                setTimeout(resolve, ${wait * 1000})
                             )
                         })
                     }).then(() =>
