@@ -10,20 +10,23 @@ program
     .showHelpAfterError()
     .showSuggestionAfterError()
     .argument('<url>', 'URL to the web page to render')
+    .option('-f, --full', 'capture the entire page')
     .option(
-        '-f, --full',
-        'capture the entire page',
+        '-w, --wait <seconds>',
+        'amount of time to wait between the page loaded event and taking the screenshot',
+        validateInt,
+        1,
     )
     .option(
         '-w, --width <width>',
         'set the viewport width in pixels',
-        validateNumber,
+        validateInt,
         1920,
     )
     .option(
         '-h, --height <height>',
         'set the viewport height in pixels',
-        validateNumber,
+        validateInt,
         1080,
     )
     .option(
@@ -31,7 +34,7 @@ program
         'set the output format, should one of these values: svg, pdf',
         'svg',
     )
-    .action(async (url, { full, width, height, format }) => {
+    .action(async (url, { full, wait, width, height, format }) => {
         const mode = getMode(format)
 
         app.dock?.hide()
@@ -91,7 +94,9 @@ program
                         requestAnimationFrame(() => {
                             scrollTo({ top: 0 })
 
-                            requestAnimationFrame(resolve)
+                            requestAnimationFrame(() =>
+                                setTimeout(resolve, ${wait})
+                            )
                         })
                     }).then(() =>
                         getPageContentsAsSVG(
@@ -126,10 +131,10 @@ function getMode(format: string) {
     }
 }
 
-function validateNumber(string: string) {
+function validateInt(string: string) {
     const number = parseInt(string, 10)
 
-    if(Number.isNaN(number)) {
+    if (Number.isNaN(number)) {
         throw new Error(`Invalid number value: ${string}`)
     }
 
