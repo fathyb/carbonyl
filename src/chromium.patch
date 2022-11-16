@@ -113,6 +113,19 @@ index 97cf24ad5f4a6..ae9f65e7bfcaa 100644
  }
  
  void RenderFrameImpl::DidCreateDocumentElement() {
+diff --git a/dbus/bus.cc b/dbus/bus.cc
+index 34fe0908ac3c9..172675db23f35 100644
+--- a/dbus/bus.cc
++++ b/dbus/bus.cc
+@@ -396,8 +396,6 @@ bool Bus::Connect() {
+     }
+   }
+   if (!connection_) {
+-    LOG(ERROR) << "Failed to connect to the bus: "
+-               << (error.is_set() ? error.message() : "");
+     return false;
+   }
+ 
 diff --git a/skia/BUILD.gn b/skia/BUILD.gn
 index 7a096b9a887d9..7440e54650989 100644
 --- a/skia/BUILD.gn
@@ -238,3 +251,15 @@ index 67ba540bfc2b0..f22e6988cf488 100644
  }
  
  bool Font::DrawBidiText(cc::PaintCanvas* canvas,
+diff --git a/ui/gfx/linux/gpu_memory_buffer_support_x11.cc b/ui/gfx/linux/gpu_memory_buffer_support_x11.cc
+index a03a63e305027..4335b751e0cf4 100644
+--- a/ui/gfx/linux/gpu_memory_buffer_support_x11.cc
++++ b/ui/gfx/linux/gpu_memory_buffer_support_x11.cc
+@@ -41,7 +41,6 @@ std::unique_ptr<ui::GbmDevice> CreateX11GbmDevice() {
+ 
+   auto& dri3 = connection->dri3();
+   if (!dri3.present()) {
+-    LOG(ERROR) << "dri3 extension not supported.";
+     return nullptr;
+   }
+ 
