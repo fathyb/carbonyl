@@ -89,33 +89,18 @@ program
                     }).then(() => getPageContentsAsSVG(${mode}, document.title))
                 `,
             )
-
-            await print(new Uint8Array(result))
         } finally {
             page.destroy()
         }
+
+        process.exit(0)
     })
     .parseAsync(args, { from: 'user' })
-    .then(() => process.exit(0))
     .catch((error) => {
         console.error(error)
 
         process.exit(1)
     })
-
-// Electron seems to drop lines if we send them too fast on slow streams like Docker..
-async function print(output: Uint8Array) {
-    const awfulBugSizeHeuristic = 1024
-
-    for (let i = 0; i < output.length; i += awfulBugSizeHeuristic) {
-        await new Promise<void>((resolve, reject) =>
-            process.stdout.write(
-                output.slice(i, i + awfulBugSizeHeuristic),
-                (error) => (error ? reject(error) : resolve()),
-            ),
-        )
-    }
-}
 
 function getMode(format: string) {
     switch (format) {

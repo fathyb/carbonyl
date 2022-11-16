@@ -1,11 +1,13 @@
 diff --git a/content/renderer/render_frame_impl.cc b/content/renderer/render_frame_impl.cc
-index 97cf24ad5f4a6..ae9f65e7bfcaa 100644
+index 97cf24ad5f4a6..859cb35da1f54 100644
 --- a/content/renderer/render_frame_impl.cc
 +++ b/content/renderer/render_frame_impl.cc
-@@ -256,6 +256,13 @@
+@@ -256,6 +256,15 @@
  #include "content/renderer/java/gin_java_bridge_dispatcher.h"
  #endif
  
++// html2svg includes
++#include <iostream>
 +#include "cc/paint/paint_recorder.h"
 +#include "cc/paint/skia_paint_canvas.h"
 +#include "third_party/skia/include/core/SkStream.h"
@@ -16,10 +18,32 @@ index 97cf24ad5f4a6..ae9f65e7bfcaa 100644
  using base::Time;
  using blink::ContextMenuData;
  using blink::WebContentDecryptionModule;
-@@ -3822,6 +3829,96 @@ void RenderFrameImpl::DidClearWindowObject() {
+@@ -3822,6 +3831,108 @@ void RenderFrameImpl::DidClearWindowObject() {
  
    for (auto& observer : observers_)
      observer.DidClearWindowObject();
++
++  // A Skia stream writing to stdout
++  class StdoutStream : public SkWStream {
++  public:
++      bool write(const void* data, size_t size) override {
++        std::cout.write(static_cast<const char*>(data), size);
++        fBytesWritten += size;
++
++        return true;
++      }
++
++      void flush() override {
++        std::cout.flush();
++      }
++
++      size_t bytesWritten() const override {
++        return fBytesWritten;
++      }
++
++  private:
++      size_t fBytesWritten = 0;
++  };
 +
 +  // Get access to the JS VM for this process (each tab is a process)
 +  v8::Isolate *isolate = blink::MainThreadIsolate();
@@ -49,58 +73,48 @@ index 97cf24ad5f4a6..ae9f65e7bfcaa 100644
 +        // Get the page size
 +        auto size = frame->DocumentSize();
 +        // Create a memory stream to save the SVG content
-+        SkDynamicMemoryWStream stream;
++        StdoutStream stream;
++        // Create an SVG canvas with the dimensions of the layer
++        int width = size.width(), height = size.height();
 +
-+        {
-+          // Create an SVG canvas with the dimensions of the layer
-+          int width = size.width(), height = size.height();
++        cc::PaintRecorder recorder;
++        auto rect = SkRect::MakeWH(width, height);
 +
-+          cc::PaintRecorder recorder;
-+          auto rect = SkRect::MakeWH(width, height);
++        frame->CapturePaintPreview(
++          gfx::Rect(0, 0, width, height),
++          recorder.beginRecording(rect),
++          false,
++          true
++        );
 +
-+          frame->CapturePaintPreview(
-+            gfx::Rect(0, 0, width, height),
-+            recorder.beginRecording(rect),
-+            false,
-+            true
-+          );
++        auto picture = recorder.finishRecordingAsPicture();
 +
-+          auto picture = recorder.finishRecordingAsPicture();
++        switch(args[0]->ToUint32(context).ToLocalChecked()->Value()) {
++          // SVG
++          case 0: {
++            picture->Playback(SkSVGCanvas::Make(rect, &stream).get());
 +
-+          switch(args[0]->ToUint32(context).ToLocalChecked()->Value()) {
-+            // SVG
-+            case 0: {
-+              picture->Playback(SkSVGCanvas::Make(rect, &stream).get());
++            break;
++          }
++          // PDF
++          case 1: {
++            SkPDF::Metadata metadata;
++            v8::String::Utf8Value title(isolate, args[1]);
 +
-+              break;
-+            }
-+            // PDF
-+            case 1: {
-+              SkPDF::Metadata metadata;
-+              v8::String::Utf8Value title(isolate, args[1]);
++            metadata.fTitle = *title;
++            metadata.fCreator = "html2svg PDF back-end";
 +
-+              metadata.fTitle = *title;
-+              metadata.fCreator = "html2svg PDF back-end";
++            auto document = SkPDF::MakeDocument(&stream, metadata);
 +
-+              auto document = SkPDF::MakeDocument(&stream, metadata);
++            picture->Playback(document->beginPage(rect.width(), rect.height()));
++            document->endPage();
++            document->close();
 +
-+              picture->Playback(document->beginPage(rect.width(), rect.height()));
-+              document->endPage();
-+              document->close();
-+
-+              break;
-+            }
++            break;
 +          }
 +        }
 +
-+        // Allocate a buffer to hold the SVG data
-+        auto buffer = v8::ArrayBuffer::New(isolate, stream.bytesWritten());
-+
-+        // Copy from the stream to the buffer
-+        stream.copyTo(buffer->GetBackingStore()->Data());
-+
-+        // Return the data to the JS world
-+        args.GetReturnValue().Set(buffer);
++        stream.flush();
 +      }
 +  );
 +
