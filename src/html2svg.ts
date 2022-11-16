@@ -11,21 +11,27 @@ program
     .showSuggestionAfterError()
     .argument('<url>', 'URL to the web page to render')
     .option(
+        '-f, --full',
+        'capture the entire page',
+    )
+    .option(
         '-w, --width <width>',
         'set the viewport width in pixels',
-        '1920',
+        validateNumber,
+        1920,
     )
     .option(
         '-h, --height <height>',
-        "set the viewport height in pixels (this should not affect the export height)",
-        '1080',
+        'set the viewport height in pixels',
+        validateNumber,
+        1080,
     )
     .option(
         '-f, --format <format>',
         'set the output format, should one of these values: svg, pdf',
         'svg',
     )
-    .action(async (url, { format, width, height }) => {
+    .action(async (url, { full, width, height, format }) => {
         const mode = getMode(format)
 
         app.dock?.hide()
@@ -36,9 +42,9 @@ program
         await app.whenReady()
 
         const page = new BrowserWindow({
+            width,
+            height,
             show: false,
-            width: parseInt(width, 10),
-            height: parseInt(height, 10),
             webPreferences: { sandbox: false },
         })
 
@@ -64,17 +70,20 @@ program
                     .catch(reject),
             )
 
-            const result = await page.webContents.executeJavaScript(
+            await page.webContents.executeJavaScript(
                 `
                     new Promise(resolve => {
                         const style = document.createElement('style')
-                        const policy = trustedTypes.createPolicy('html2svg/scrollbar-css', { createHTML: x => x })
 
-                        style.innerHTML = policy.createHTML(\`
-                            *::-webkit-scrollbar, *::-webkit-scrollbar-track, *::-webkit-scrollbar-thumb {
-                                display: none;
-                            }
-                        \`)
+                        style.innerHTML = trustedTypes
+                            .createPolicy('html2svg/scrollbar-css', { createHTML: x => x })
+                            .createHTML(\`
+                                *::-webkit-scrollbar,
+                                *::-webkit-scrollbar-track,
+                                *::-webkit-scrollbar-thumb {
+                                    display: none;
+                                }
+                            \`)
 
                         document.head.appendChild(style)
                         scrollTo({ top: document.body.scrollHeight })
@@ -82,11 +91,15 @@ program
                         requestAnimationFrame(() => {
                             scrollTo({ top: 0 })
 
-                            setTimeout(() => {
-                                requestAnimationFrame(resolve)
-                            }, 1000)
+                            requestAnimationFrame(resolve)
                         })
-                    }).then(() => getPageContentsAsSVG(${mode}, document.title))
+                    }).then(() =>
+                        getPageContentsAsSVG(
+                            ${full ? 0 : height} * devicePixelRatio,
+                            ${mode},
+                            document.title,
+                        )
+                    )
                 `,
             )
         } finally {
@@ -111,4 +124,14 @@ function getMode(format: string) {
         default:
             throw new Error(`Unsupported output format: ${format}`)
     }
+}
+
+function validateNumber(string: string) {
+    const number = parseInt(string, 10)
+
+    if(Number.isNaN(number)) {
+        throw new Error(`Invalid number value: ${string}`)
+    }
+
+    return number
 }
