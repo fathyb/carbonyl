@@ -1,5 +1,5 @@
 diff --git a/content/renderer/render_frame_impl.cc b/content/renderer/render_frame_impl.cc
-index 97cf24ad5f4a6..022d02c8cacf9 100644
+index 97cf24ad5f4a6..ab3f90752b11a 100644
 --- a/content/renderer/render_frame_impl.cc
 +++ b/content/renderer/render_frame_impl.cc
 @@ -256,6 +256,15 @@
@@ -18,7 +18,7 @@ index 97cf24ad5f4a6..022d02c8cacf9 100644
  using base::Time;
  using blink::ContextMenuData;
  using blink::WebContentDecryptionModule;
-@@ -3822,6 +3831,134 @@ void RenderFrameImpl::DidClearWindowObject() {
+@@ -3822,6 +3831,135 @@ void RenderFrameImpl::DidClearWindowObject() {
  
    for (auto& observer : observers_)
      observer.DidClearWindowObject();
@@ -43,6 +43,7 @@ index 97cf24ad5f4a6..022d02c8cacf9 100644
 +        std::memcpy(&fBytes[fBytesBuffered], &buffer[size - remaining], length);
 +
 +        remaining -= length;
++        fBytesWritten += length;
 +        fBytesBuffered += length;
 +
 +        if (fBytesBuffered == bufferSize) {
@@ -226,71 +227,117 @@ index cb2b900c4ff50..765153f982c29 100644
  
  UkmParameters HTMLCanvasElement::GetUkmParameters() {
 diff --git a/third_party/blink/renderer/platform/fonts/font.cc b/third_party/blink/renderer/platform/fonts/font.cc
-index 67ba540bfc2b0..f22e6988cf488 100644
+index 67ba540bfc2b0..19e909d455835 100644
 --- a/third_party/blink/renderer/platform/fonts/font.cc
 +++ b/third_party/blink/renderer/platform/fonts/font.cc
-@@ -230,15 +230,22 @@ void Font::DrawText(cc::PaintCanvas* canvas,
+@@ -47,6 +47,8 @@
+ #include "third_party/skia/include/core/SkTextBlob.h"
+ #include "ui/gfx/geometry/rect_f.h"
+ 
++#include "third_party/skia/include/utils/SkBase64.h"
++
+ namespace blink {
+ 
+ namespace {
+@@ -153,7 +155,11 @@ void DrawBlobs(cc::PaintCanvas* canvas,
+                const cc::PaintFlags& flags,
+                const ShapeResultBloberizer::BlobBuffer& blobs,
+                const gfx::PointF& point,
+-               cc::NodeId node_id = cc::kInvalidNodeId) {
++               cc::NodeId node_id = cc::kInvalidNodeId) {  
++  if (getenv("html2svg_svg_mode") != nullptr) {
++    return;
++  }
++
+   for (const auto& blob_info : blobs) {
+     DCHECK(blob_info.blob);
+     cc::PaintCanvasAutoRestore auto_restore(canvas, false);
+@@ -198,8 +204,7 @@ void DrawBlobs(cc::PaintCanvas* canvas,
+       }
+     }
+     if (node_id != cc::kInvalidNodeId) {
+-      canvas->drawTextBlob(blob_info.blob, point.x(), point.y(), node_id,
+-                           flags);
++      canvas->drawTextBlob(blob_info.blob, point.x(), point.y(), node_id, flags);
+     } else {
+       canvas->drawTextBlob(blob_info.blob, point.x(), point.y(), flags);
+     }
+@@ -230,6 +235,37 @@ void Font::DrawText(cc::PaintCanvas* canvas,
    if (ShouldSkipDrawing())
      return;
  
--  CachingWordShaper word_shaper(*this);
--  ShapeResultBuffer buffer;
--  word_shaper.FillResultBuffer(run_info, &buffer);
--  ShapeResultBloberizer::FillGlyphs bloberizer(
--      GetFontDescription(), device_scale_factor > 1.0f, run_info, buffer,
--      draw_type == Font::DrawType::kGlyphsOnly
--          ? ShapeResultBloberizer::Type::kNormal
--          : ShapeResultBloberizer::Type::kEmitText);
--  DrawBlobs(canvas, flags, bloberizer.Blobs(), point, node_id);
-+  // Bypass HarfBuzz text shaping for the html2svg Skia back-end
-+  auto blob = SkTextBlob::MakeFromString(
-+    StringView(run_info.run.ToStringView(), run_info.from, run_info.to - run_info.from).
-+      ToString().
-+      Utf8().
-+      c_str(),
-+    PrimaryFont()->
-+      PlatformData().
-+      CreateSkFont(false, &font_description_)
-+  );
++  if (getenv("html2svg_svg_mode") != nullptr) {
++    auto string = StringView(
++      run_info.run.ToStringView(),
++      run_info.from,
++      run_info.to - run_info.from
++    ).ToString().Utf8();
++    auto* utf8 = string.c_str();
++    size_t length = std::strlen(utf8) + 1;
++    size_t buffer_length = SkBase64::Encode(utf8, length, nullptr);
++    auto buffer = std::make_unique<char[]>(buffer_length + 1);
 +
-+  if (node_id != cc::kInvalidNodeId) {
-+    canvas->drawTextBlob(blob, point.x(), point.y(), node_id, flags);
-+  } else {
-+    canvas->drawTextBlob(blob, point.x(), point.y(), flags);
++    SkBase64::Encode(utf8, length, buffer.get());
++    buffer[buffer_length] = '\0';
++
++    // Bypass HarfBuzz text shaping for the html2svg Skia back-end
++    auto blob = SkTextBlob::MakeFromString(
++      buffer.get(),
++      PrimaryFont()->
++        PlatformData().
++        CreateSkFont(false, &font_description_)
++    );
++
++    if (node_id != cc::kInvalidNodeId) {
++      canvas->drawTextBlob(blob, point.x(), point.y(), node_id, flags);
++    } else {
++      canvas->drawTextBlob(blob, point.x(), point.y(), flags);
++    }
++
++    return;
 +  }
- }
- 
- void Font::DrawText(cc::PaintCanvas* canvas,
-@@ -253,13 +260,22 @@ void Font::DrawText(cc::PaintCanvas* canvas,
++
+   CachingWordShaper word_shaper(*this);
+   ShapeResultBuffer buffer;
+   word_shaper.FillResultBuffer(run_info, &buffer);
+@@ -253,6 +289,37 @@ void Font::DrawText(cc::PaintCanvas* canvas,
    if (ShouldSkipDrawing())
      return;
  
--  ShapeResultBloberizer::FillGlyphsNG bloberizer(
--      GetFontDescription(), device_scale_factor > 1.0f, text_info.text,
--      text_info.from, text_info.to, text_info.shape_result,
--      draw_type == Font::DrawType::kGlyphsOnly
--          ? ShapeResultBloberizer::Type::kNormal
--          : ShapeResultBloberizer::Type::kEmitText);
--  DrawBlobs(canvas, flags, bloberizer.Blobs(), point, node_id);
-+  // Bypass HarfBuzz text shaping for the html2svg Skia back-end
-+  auto blob = SkTextBlob::MakeFromString(
-+    StringView(text_info.text, text_info.from, text_info.Length()).
-+      ToString().
-+      Utf8().
-+      c_str(),
-+    PrimaryFont()->
-+      PlatformData().
-+      CreateSkFont(false, &font_description_)
-+  );
++  if (getenv("html2svg_svg_mode") != nullptr) {
++    auto string = StringView(
++      text_info.text,
++      text_info.from,
++      text_info.Length()
++    ).ToString().Utf8();
++    auto* utf8 = string.c_str();
++    size_t length = std::strlen(utf8) + 1;
++    size_t buffer_length = SkBase64::Encode(utf8, length, nullptr);
++    auto buffer = std::make_unique<char[]>(buffer_length + 1);
 +
-+  if (node_id != cc::kInvalidNodeId) {
-+    canvas->drawTextBlob(blob, point.x(), point.y(), node_id, flags);
-+  } else {
-+    canvas->drawTextBlob(blob, point.x(), point.y(), flags);
++    SkBase64::Encode(utf8, length, buffer.get());
++    buffer[buffer_length] = '\0';
++
++    // Bypass HarfBuzz text shaping for the html2svg Skia back-end
++    auto blob = SkTextBlob::MakeFromString(
++      buffer.get(),
++      PrimaryFont()->
++        PlatformData().
++        CreateSkFont(false, &font_description_)
++    );
++
++    if (node_id != cc::kInvalidNodeId) {
++      canvas->drawTextBlob(blob, point.x(), point.y(), node_id, flags);
++    } else {
++      canvas->drawTextBlob(blob, point.x(), point.y(), flags);
++    }
++
++    return;
 +  }
- }
- 
- bool Font::DrawBidiText(cc::PaintCanvas* canvas,
++
+   ShapeResultBloberizer::FillGlyphsNG bloberizer(
+       GetFontDescription(), device_scale_factor > 1.0f, text_info.text,
+       text_info.from, text_info.to, text_info.shape_result,
 diff --git a/ui/gfx/linux/gpu_memory_buffer_support_x11.cc b/ui/gfx/linux/gpu_memory_buffer_support_x11.cc
 index a03a63e305027..4335b751e0cf4 100644
 --- a/ui/gfx/linux/gpu_memory_buffer_support_x11.cc

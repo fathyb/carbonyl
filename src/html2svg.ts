@@ -37,7 +37,12 @@ program
     .action(async (url, { full, wait, width, height, format }) => {
         const mode = getMode(format)
 
+        if (format === 'svg') {
+            process.env.html2svg_svg_mode = 'true'
+        }
+
         app.dock?.hide()
+        app.disableHardwareAcceleration()
         app.commandLine.appendSwitch('headless')
         app.commandLine.appendSwitch('no-sandbox')
         app.commandLine.appendSwitch('disable-gpu')
