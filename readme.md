@@ -28,15 +28,12 @@ Options:
 
 ## Development
 
-> - Building Chromium for ARM on Linux or Windows is not officially supported, cross-compile from x64 instead.
-
-### Docker
-
-```shell
-$ docker buildx build . --platform linux/arm64,linux/amd64
-```
+> Building Chromium is only officially supported on AMD64. If you'd like to target ARM64, cross-compile from AMD64 instead.
 
 ### Local
+
+> You'll need to install all tools required to build Chromium: https://www.chromium.org/developers/how-tos/get-the-code/
+> If you're running Linux, you can use [the Docker build instructions](#docker) to generate binaries.
 
 1. Fetch dependencies:
     ```shell
@@ -62,3 +59,44 @@ $ docker buildx build . --platform linux/arm64,linux/amd64
     # make a release build
     $ yarn ninja release
     ```
+
+### Docker
+
+> We use `docker run` instead of `Dockerfile` for building Chromium to support incremental building.
+
+```shell
+# Create the build environment
+$ docker build . --build-arg "WORKDIR=$(pwd)" --target build-env --tag html2svg-build-env
+# Clone the Chromium/Electron code
+$ docker run -ti -v $(pwd):$(pwd) html2svg-build-env scripts/gclient.sh --revision "src/electron@cb22573c3e76e09df9fbad36dc372080c04d349e"
+# Apply html2svg patches
+$ docker run -ti -v $(pwd):$(pwd) html2svg-build-env scripts/patch.sh
+# Install build dependencies
+$ docker run -ti -v $(pwd):$(pwd) html2svg-build-env electron/src/build/install-build-deps.sh
+```
+
+Now you'll have to build binaries, steps differs depending on the platform you'd like to target:
+- AMD64:
+  ```shell
+  # Fetch compiler files
+  $ docker run -ti -v $(pwd):$(pwd) html2svg-build-env electron/src/build/linux/sysroot_scripts/install-sysroot.py --arch=amd64
+  # Generate build files
+  $ docker run -ti -v $(pwd):$(pwd) --workdir $(pwd)/electron/src html2svg-build-env gn gen "out/release-amd64" --args="import(\"//electron/build/args/release.gn\") cc_wrapper=\"ccache\""
+  # Build binaries
+  $ docker run -ti -v $(pwd):$(pwd) html2svg-build-env scripts/build.sh release-amd64
+  ```
+- ARM64:
+  ```shell
+  # Fetch compiler files
+  $ docker run -ti -v $(pwd):$(pwd) html2svg-build-env electron/src/build/linux/sysroot_scripts/install-sysroot.py --arch=arm64
+  # Generate build files
+  $ docker run -ti -v $(pwd):$(pwd) --workdir $(pwd)/electron/src html2svg-build-env gn gen "out/release-arm64" --args="import(\"//electron/build/args/release.gn\") cc_wrapper=\"ccache\" target_cpu=\"arm64\""
+  # Build binaries
+  $ docker run -ti -v $(pwd):$(pwd) html2svg-build-env scripts/build.sh release-arm64 --target-cpu=arm64
+  ```
+
+Finally, build the Docker image:
+```shell
+docker build .
+```
+

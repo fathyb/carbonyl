@@ -1,13 +1,14 @@
 FROM debian:11 AS build-env
 
-WORKDIR /app
+ARG WORKDIR
+WORKDIR ${WORKDIR} 
 
 ENV PATH="${PATH}:/depot_tools"
-ENV CCACHE_DIR=/app/.ccache
-ENV GIT_CACHE_PATH=/app/.git_cache
+ENV CCACHE_DIR="${WORKDIR}/.ccache"
+ENV GIT_CACHE_PATH="${WORKDIR}/.git_cache"
 ENV DEBIAN_FRONTEND=noninteractive
-ENV CHROMIUM_BUILDTOOLS_PATH=/app/electron/src/buildtools
-ENV CCACHE_DIR=/app/.ccache
+ENV CHROMIUM_BUILDTOOLS_PATH="${WORKDIR}/electron/src/buildtools"
+ENV CCACHE_DIR="${WORKDIR}/.ccache"
 ENV CCACHE_CPP2=yes
 ENV CCACHE_SLOPPINESS=time_macros
 RUN apt-get update && \
@@ -17,59 +18,6 @@ RUN apt-get update && \
     apt-get install -y nodejs && \
     git clone --depth 1 --single-branch https://chromium.googlesource.com/chromium/tools/depot_tools.git /depot_tools && \
     ccache --max-size=256G
-
-# Build environment
-# ==========================
-FROM --platform=linux/amd64 build-env AS chromium-build
-
-COPY electron/.gclient electron/
-COPY scripts/gclient.sh scripts/
-RUN --mount=type=cache,target=/app/.git_cache scripts/gclient.sh --revision "src/electron@e857073d6519e498970d017a74d7ca4a5a74c02e"
-
-RUN electron/src/build/install-build-deps.sh
-
-COPY scripts/patch.sh /app/scripts/
-COPY src/chromium.patch /app/src/
-COPY src/skia.patch /app/src/
-RUN scripts/patch.sh && ccache --max-size=256G
-
-# ARM64 binaries
-# ==============
-FROM --platform=linux/amd64 chromium-build AS chromium-arm64
-
-RUN electron/src/build/linux/sysroot_scripts/install-sysroot.py --arch=arm64
-
-COPY scripts/gn.sh /app/scripts/
-RUN --mount=type=cache,target=/app/.git_cache \
-        GN_ARGS='cc_wrapper="ccache" target_cpu="arm64"' scripts/gn.sh release
-
-COPY scripts/ninja.sh /app/scripts/
-RUN --mount=type=cache,target=/app/.ccache \
-    --mount=type=cache,target=/app/.git_cache \
-    scripts/ninja.sh release -j200
-
-RUN electron/src/electron/script/strip-binaries.py -d electron/src/out/release --target-cpu=arm64 && \
-    ninja -C electron/src/out/release electron:electron_dist_zip
-
-
-# AMD64 binaries
-# ==============
-FROM --platform=linux/amd64 chromium-build AS chromium-amd64
-
-RUN electron/src/build/linux/sysroot_scripts/install-sysroot.py --arch=amd64
-
-COPY scripts/gn.sh /app/scripts/
-RUN --mount=type=cache,target=/app/.git_cache \
-        GN_ARGS='cc_wrapper="ccache"' scripts/gn.sh release
-
-COPY scripts/ninja.sh /app/scripts/
-RUN --mount=type=cache,target=/app/.ccache \
-    --mount=type=cache,target=/app/.git_cache \
-    scripts/ninja.sh release -j200
-
-RUN electron/src/electron/script/strip-binaries.py -d electron/src/out/release && \
-    ninja -C electron/src/out/release electron:electron_dist_zip
-
 
 # Release binaries
 # ================
