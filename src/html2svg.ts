@@ -1,129 +1,110 @@
-import { program } from 'commander'
 import { app, BrowserWindow } from 'electron'
 
-const entry = process.argv.find((a) => a.endsWith('html2svg.js'))
-const index = entry ? process.argv.indexOf(entry) : -1
-const args = process.argv.slice(Math.max(2, index + 1))
+export interface Options {
+    full?: boolean
+    wait?: number
+    width?: number
+    height?: number
+    format?: 'svg' | 'pdf' | 'png' | 'jpg' | 'webp'
+}
 
-program
-    .name('html2svg')
-    .showHelpAfterError()
-    .showSuggestionAfterError()
-    .argument('<url>', 'URL to the web page to render')
-    .option('-f, --full', 'capture the entire page')
-    .option(
-        '-w, --wait <seconds>',
-        'set the amount of seconds to wait between the page loaded event and taking the screenshot',
-        validateInt,
-        1,
-    )
-    .option(
-        '-w, --width <width>',
-        'set the viewport width in pixels',
-        validateInt,
-        1920,
-    )
-    .option(
-        '-h, --height <height>',
-        'set the viewport height in pixels',
-        validateInt,
-        1080,
-    )
-    .option(
-        '-f, --format <format>',
-        'set the output format, should one of these values: svg, pdf',
-        'svg',
-    )
-    .action(async (url, { full, wait, width, height, format }) => {
-        const mode = getMode(format)
+app.dock?.hide()
+app.disableHardwareAcceleration()
+app.commandLine.appendSwitch('no-sandbox')
+app.on('window-all-closed', () => {})
 
-        if (format === 'svg') {
-            process.env.html2svg_svg_mode = 'true'
-        }
+export async function html2svg(
+    url: string,
+    { full, wait, format, width = 1920, height = 1080 }: Options = {},
+) {
+    const mode = getMode(format ?? 'svg')
 
-        app.dock?.hide()
-        app.disableHardwareAcceleration()
-        app.commandLine.appendSwitch('headless')
-        app.commandLine.appendSwitch('no-sandbox')
-        app.commandLine.appendSwitch('disable-gpu')
+    await app.whenReady()
 
-        await app.whenReady()
+    const args = [
+        '--mute-audio',
+        '--disable-audio-output',
+        '--disable-dev-shm-usage',
+        '--force-color-profile=srgb',
+    ]
 
-        const page = new BrowserWindow({
-            width,
-            height,
-            show: false,
-            webPreferences: { sandbox: false },
-        })
+    if (mode === 0) {
+        args.push('--html2svg-svg-mode', '--disable-remote-fonts')
+    }
 
-        try {
-            await new Promise<void>((resolve, reject) =>
-                Promise.resolve()
-                    .then(async () => {
-                        const timeout = setTimeout(() => {
-                            page.webContents.off('did-finish-load', listener)
+    const page = new BrowserWindow({
+        width,
+        height,
+        show: false,
+        webPreferences: {
+            sandbox: false,
+            offscreen: true,
+            additionalArguments: args,
+        },
+    })
 
-                            reject(new Error('timeout'))
-                        }, 10_000)
-                        const listener = () => {
-                            clearTimeout(timeout)
+    try {
+        await new Promise<void>((resolve, reject) =>
+            Promise.resolve()
+                .then(async () => {
+                    const timeout = setTimeout(() => {
+                        page.webContents.off('did-finish-load', listener)
 
-                            resolve()
-                        }
+                        reject(new Error('timeout'))
+                    }, 10_000)
+                    const listener = () => {
+                        clearTimeout(timeout)
 
-                        page.webContents.once('did-finish-load', listener)
+                        resolve()
+                    }
 
-                        await page.loadURL(url)
-                    })
-                    .catch(reject),
-            )
+                    page.webContents.once('did-finish-load', listener)
 
-            await page.webContents.executeJavaScript(
-                `
-                    new Promise(resolve => {
-                        const style = document.createElement('style')
+                    await page.loadURL(url)
+                })
+                .catch(reject),
+        )
 
-                        style.innerHTML = trustedTypes
-                            .createPolicy('html2svg/scrollbar-css', { createHTML: x => x })
-                            .createHTML(\`
-                                *::-webkit-scrollbar,
-                                *::-webkit-scrollbar-track,
-                                *::-webkit-scrollbar-thumb {
-                                    display: none;
-                                }
-                            \`)
+        const buffer: ArrayBuffer = await page.webContents.executeJavaScript(
+            `
+                new Promise(resolve => {
+                    const style = document.createElement('style')
 
-                        document.head.appendChild(style)
-                        scrollTo({ top: document.body.scrollHeight })
+                    style.innerHTML = trustedTypes
+                        .createPolicy('html2svg/scrollbar-css', { createHTML: x => x })
+                        .createHTML(\`
+                            *::-webkit-scrollbar,
+                            *::-webkit-scrollbar-track,
+                            *::-webkit-scrollbar-thumb {
+                                display: none;
+                            }
+                        \`)
 
-                        requestAnimationFrame(() => {
-                            scrollTo({ top: 0 })
+                    document.head.appendChild(style)
+                    scrollTo({ top: document.body.scrollHeight })
 
-                            requestAnimationFrame(() =>
-                                setTimeout(resolve, ${wait * 1000})
-                            )
-                        })
-                    }).then(() =>
-                        getPageContentsAsSVG(
-                            ${full ? 0 : height} * devicePixelRatio,
-                            ${mode},
-                            document.title,
+                    requestAnimationFrame(() => {
+                        scrollTo({ top: 0 })
+
+                        requestAnimationFrame(() =>
+                            setTimeout(resolve, ${(wait ?? 0) * 1000})
                         )
+                    })
+                }).then(() =>
+                    getPageContentsAsSVG(
+                        ${full ? 0 : height} * devicePixelRatio,
+                        ${mode},
+                        document.title,
                     )
-                `,
-            )
-        } finally {
-            page.destroy()
-        }
+                )
+            `,
+        )
 
-        process.exit(0)
-    })
-    .parseAsync(args, { from: 'user' })
-    .catch((error) => {
-        console.error(error)
-
-        process.exit(1)
-    })
+        return Buffer.from(buffer)
+    } finally {
+        page.destroy()
+    }
+}
 
 function getMode(format: string) {
     switch (format) {
@@ -131,17 +112,14 @@ function getMode(format: string) {
             return 0
         case 'pdf':
             return 1
+        case 'png':
+            return 2
+        case 'jpg':
+        case 'jpeg':
+            return 3
+        case 'webp':
+            return 4
         default:
             throw new Error(`Unsupported output format: ${format}`)
     }
-}
-
-function validateInt(string: string) {
-    const number = parseInt(string, 10)
-
-    if (Number.isNaN(number)) {
-        throw new Error(`Invalid number value: ${string}`)
-    }
-
-    return number
 }

@@ -56,7 +56,7 @@ COPY package.json yarn.lock /app/
 RUN yarn --production
 
 COPY --from=html2svg-js /app/build /app/build
-COPY --from=html2svg-binaries /runtime /runtime
+COPY --from=html2svg-binaries /runtime /app/build/runtime
 COPY /scripts/docker-entrypoint.sh /app/scripts/docker-entrypoint.sh
 
 ENTRYPOINT ["/app/scripts/docker-entrypoint.sh"]

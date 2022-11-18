@@ -1,16 +1,19 @@
 diff --git a/content/renderer/render_frame_impl.cc b/content/renderer/render_frame_impl.cc
-index 97cf24ad5f4a6..ab3f90752b11a 100644
+index 97cf24ad5f4a6..ce12415534d20 100644
 --- a/content/renderer/render_frame_impl.cc
 +++ b/content/renderer/render_frame_impl.cc
-@@ -256,6 +256,15 @@
+@@ -256,6 +256,18 @@
  #include "content/renderer/java/gin_java_bridge_dispatcher.h"
  #endif
  
 +// html2svg includes
++#include <stdlib.h>
 +#include <iostream>
 +#include "cc/paint/paint_recorder.h"
 +#include "cc/paint/skia_paint_canvas.h"
++#include "third_party/skia/include/core/SkEncodedImageFormat.h"
 +#include "third_party/skia/include/core/SkStream.h"
++#include "third_party/skia/include/core/SkSurface.h"
 +#include "third_party/skia/include/docs/SkPDFDocument.h"
 +#include "third_party/skia/include/svg/SkSVGCanvas.h"
 +#include "third_party/skia/include/svg/SkSVGCanvas.h"
@@ -18,58 +21,10 @@ index 97cf24ad5f4a6..ab3f90752b11a 100644
  using base::Time;
  using blink::ContextMenuData;
  using blink::WebContentDecryptionModule;
-@@ -3822,6 +3831,135 @@ void RenderFrameImpl::DidClearWindowObject() {
+@@ -3822,6 +3834,126 @@ void RenderFrameImpl::DidClearWindowObject() {
  
    for (auto& observer : observers_)
      observer.DidClearWindowObject();
-+
-+  // A Skia stream writing to stdout
-+  class StdoutStream : public SkWStream {
-+  public:
-+    ~StdoutStream() override {
-+      flush();
-+      
-+      delete[] fBytes;
-+    }
-+    
-+    bool write(const void* data, size_t size) override {
-+      auto* buffer = static_cast<const char*>(data);
-+      size_t remaining = size;
-+      size_t bufferSize = 8 * 1024;
-+
-+      while (remaining != 0) {
-+        ssize_t length = std::min(bufferSize - fBytesBuffered, remaining);
-+
-+        std::memcpy(&fBytes[fBytesBuffered], &buffer[size - remaining], length);
-+
-+        remaining -= length;
-+        fBytesWritten += length;
-+        fBytesBuffered += length;
-+
-+        if (fBytesBuffered == bufferSize) {
-+          flush();
-+        }
-+      }
-+
-+      return true;
-+    }
-+    
-+    void flush() override {
-+      if (::write(1, fBytes, fBytesBuffered) != -1) {
-+        fBytesBuffered = 0;
-+        fflush(stdout);
-+      }
-+    }
-+    
-+    size_t bytesWritten() const override {
-+      return fBytesWritten;
-+    }
-+  
-+  private:
-+    char* fBytes = new char[8 * 1024];
-+    size_t fBytesWritten = 0;
-+    size_t fBytesBuffered = 0;
-+  };
 +
 +  // Get access to the JS VM for this process (each tab is a process)
 +  v8::Isolate *isolate = blink::MainThreadIsolate();
@@ -114,11 +69,12 @@ index 97cf24ad5f4a6..ab3f90752b11a 100644
 +        );
 +
 +        // Create a memory stream to save the SVG content
-+        StdoutStream stream;
++        SkDynamicMemoryWStream stream;
 +        // Get the recording data
 +        auto picture = recorder.finishRecordingAsPicture();
++        auto mode = args[1]->ToUint32(context).ToLocalChecked()->Value();
 +
-+        switch(args[1]->ToUint32(context).ToLocalChecked()->Value()) {
++        switch(mode) {
 +          // SVG
 +          case 0: {
 +            picture->Playback(SkSVGCanvas::Make(rect, &stream).get());
@@ -141,16 +97,54 @@ index 97cf24ad5f4a6..ab3f90752b11a 100644
 +
 +            break;
 +          }
++          default: {
++            auto surface = SkSurface::MakeRasterN32Premul(width, height);
++
++            picture->Playback(surface->getCanvas());
++
++            auto img = surface->makeImageSnapshot();
++
++            assert(img != nullptr);
++
++            auto result = img->encodeToData(
++              [mode]() -> SkEncodedImageFormat {
++                switch(mode) {
++                  case 3:
++                    return SkEncodedImageFormat::kJPEG;
++                  case 4:
++                    return SkEncodedImageFormat::kWEBP;
++                  default:
++                    return SkEncodedImageFormat::kPNG;
++                }
++              }(),
++              100
++            );
++
++            assert(result != nullptr);
++
++            stream.write(result->data(), result->size());
++
++            break;
++          }
 +        }
++
++        auto buffer = v8::ArrayBuffer::New(isolate, stream.bytesWritten());
++
++        stream.copyTo(buffer->Data());
++        args.GetReturnValue().Set(buffer);
 +      }
 +  );
 +
 +  // Register the function as "getPageContentsAsSVG"
 +  global->Set(
-+      context,
-+      v8::String::NewFromUtf8(isolate, "getPageContentsAsSVG").ToLocalChecked(),
-+      fn->GetFunction(context).ToLocalChecked()
++    context,
++    v8::String::NewFromUtf8(isolate, "getPageContentsAsSVG").ToLocalChecked(),
++    fn->GetFunction(context).ToLocalChecked()
 +  ).Check();
++
++  if (command_line.HasSwitch("html2svg-svg-mode")) {
++    setenv("html2svg_svg_mode", "true", 1);
++  }
  }
  
  void RenderFrameImpl::DidCreateDocumentElement() {
