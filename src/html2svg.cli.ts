@@ -32,7 +32,7 @@ export async function cli(args: string[]) {
         .argument('<url>', 'URL to the web page to render')
         .option('-f, --full', 'capture the entire page')
         .option(
-            '-w, --wait <seconds>',
+            '-W, --wait <seconds>',
             'set the amount of seconds to wait between the page loaded event and taking the screenshot',
             validateInt,
             1,
