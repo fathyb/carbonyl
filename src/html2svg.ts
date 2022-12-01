@@ -65,40 +65,44 @@ export async function html2svg(
                 .catch(reject),
         )
 
-        const buffer: ArrayBuffer = await page.webContents.executeJavaScript(
-            `
-                new Promise(resolve => {
-                    const style = document.createElement('style')
+        await page.webContents.executeJavaScriptInIsolatedWorld(1, [
+            {
+                code: `
+                    new Promise(resolve => {
+                        const style = document.createElement('style')
 
-                    style.innerHTML = trustedTypes
-                        .createPolicy('html2svg/scrollbar-css', { createHTML: x => x })
-                        .createHTML(\`
-                            *::-webkit-scrollbar,
-                            *::-webkit-scrollbar-track,
-                            *::-webkit-scrollbar-thumb {
-                                display: none;
-                            }
-                        \`)
+                        style.innerHTML = trustedTypes
+                            .createPolicy('html2svg/scrollbar-css', { createHTML: x => x })
+                            .createHTML(\`
+                                *::-webkit-scrollbar,
+                                *::-webkit-scrollbar-track,
+                                *::-webkit-scrollbar-thumb {
+                                    display: none;
+                                }
+                            \`)
 
-                    document.head.appendChild(style)
-                    scrollTo({ top: document.body.scrollHeight })
+                        document.head.appendChild(style)
+                        scrollTo({ top: document.body.scrollHeight })
 
-                    requestAnimationFrame(() => {
-                        scrollTo({ top: 0 })
+                        requestAnimationFrame(() => {
+                            scrollTo({ top: 0 })
 
-                        requestAnimationFrame(() =>
-                            setTimeout(resolve, ${(wait ?? 0) * 1000})
-                        )
+                            requestAnimationFrame(() =>
+                                setTimeout(resolve, ${(wait ?? 0) * 1000})
+                            )
+                        })
                     })
-                }).then(() =>
-                    getPageContentsAsSVG(
-                        ${full ? 0 : height} * devicePixelRatio,
-                        ${mode},
-                        document.title,
-                    )
-                )
-            `,
-        )
+                `,
+            },
+        ])
+
+        const buffer: ArrayBuffer = await page.webContents.executeJavaScript(`
+            getPageContentsAsSVG(
+                ${full ? 0 : height} * devicePixelRatio,
+                ${mode},
+                document.title,
+            )
+        `)
 
         return Buffer.from(buffer)
     } finally {

@@ -1,5 +1,5 @@
 diff --git a/src/svg/SkSVGDevice.cpp b/src/svg/SkSVGDevice.cpp
-index dcb51de458..6f9ee45e72 100644
+index dcb51de458..9049072b19 100644
 --- a/src/svg/SkSVGDevice.cpp
 +++ b/src/svg/SkSVGDevice.cpp
 @@ -48,6 +48,7 @@
@@ -10,16 +10,17 @@ index dcb51de458..6f9ee45e72 100644
  #include "src/core/SkTLazy.h"
  #include "src/image/SkImage_Base.h"
  #include "src/shaders/SkShaderBase.h"
-@@ -58,6 +59,8 @@
+@@ -57,6 +58,9 @@
+ #include <memory>
  #include <string>
  #include <utility>
- 
-+#include "src/utils/SkUTF.h"
++#include <iostream>
 +
++#include "src/utils/SkUTF.h"
+ 
  #if SK_SUPPORT_GPU
  class SkMesh;
- #endif
-@@ -185,6 +188,7 @@ struct Resources {
+@@ -185,6 +189,7 @@ struct Resources {
  
      SkString fPaintServer;
      SkString fColorFilter;
@@ -27,7 +28,7 @@ index dcb51de458..6f9ee45e72 100644
  };
  
  // Determine if the paint requires us to reset the viewport.
-@@ -241,7 +245,9 @@ public:
+@@ -241,7 +246,9 @@ public:
              , fPathCount(0)
              , fImageCount(0)
              , fPatternCount(0)
@@ -38,7 +39,7 @@ index dcb51de458..6f9ee45e72 100644
  
      SkString addLinearGradient() {
          return SkStringPrintf("gradient_%d", fGradientCount++);
-@@ -261,12 +267,22 @@ public:
+@@ -261,12 +268,22 @@ public:
        return SkStringPrintf("pattern_%d", fPatternCount++);
      }
  
@@ -61,7 +62,7 @@ index dcb51de458..6f9ee45e72 100644
  };
  
  struct SkSVGDevice::MxCp {
-@@ -296,6 +312,14 @@ public:
+@@ -296,6 +313,14 @@ public:
          svgdev->syncClipStack(*mc.fClipStack);
          Resources res = this->addResources(mc, paint);
  
@@ -76,7 +77,7 @@ index dcb51de458..6f9ee45e72 100644
          fWriter->startElement(name);
  
          this->addPaint(paint, res);
-@@ -307,6 +331,10 @@ public:
+@@ -307,6 +332,10 @@ public:
  
      ~AutoElement() {
          fWriter->endElement();
@@ -87,7 +88,7 @@ index dcb51de458..6f9ee45e72 100644
      }
  
      void addAttribute(const char name[], const char val[]) {
-@@ -351,6 +379,7 @@ private:
+@@ -351,6 +380,7 @@ private:
  
      SkXMLWriter*               fWriter;
      ResourceBucket*            fResourceBucket;
@@ -95,7 +96,7 @@ index dcb51de458..6f9ee45e72 100644
  };
  
  void SkSVGDevice::AutoElement::addPaint(const SkPaint& paint, const Resources& resources) {
-@@ -366,18 +395,25 @@ void SkSVGDevice::AutoElement::addPaint(const SkPaint& paint, const Resources& r
+@@ -366,18 +396,25 @@ void SkSVGDevice::AutoElement::addPaint(const SkPaint& paint, const Resources& r
          static constexpr char kDefaultFill[] = "black";
          if (!resources.fPaintServer.equals(kDefaultFill)) {
              this->addAttribute("fill", resources.fPaintServer);
@@ -126,7 +127,7 @@ index dcb51de458..6f9ee45e72 100644
      }
  
      if (style == SkPaint::kStroke_Style || style == SkPaint::kStrokeAndFill_Style) {
-@@ -416,16 +452,29 @@ Resources SkSVGDevice::AutoElement::addResources(const MxCp& mc, const SkPaint&
+@@ -416,16 +453,29 @@ Resources SkSVGDevice::AutoElement::addResources(const MxCp& mc, const SkPaint&
      Resources resources(paint);
  
      if (paint.getShader()) {
@@ -161,7 +162,7 @@ index dcb51de458..6f9ee45e72 100644
          }
      }
  
-@@ -464,6 +513,14 @@ void SkSVGDevice::AutoElement::addGradientShaderResources(const SkShader* shader
+@@ -464,6 +514,14 @@ void SkSVGDevice::AutoElement::addGradientShaderResources(const SkShader* shader
  void SkSVGDevice::AutoElement::addColorFilterResources(const SkColorFilter& cf,
                                                         Resources* resources) {
      SkString colorfilterID = fResourceBucket->addColorFilter();
@@ -176,7 +177,7 @@ index dcb51de458..6f9ee45e72 100644
      {
          AutoElement filterElement("filter", fWriter);
          filterElement.addAttribute("id", colorfilterID);
-@@ -472,12 +529,6 @@ void SkSVGDevice::AutoElement::addColorFilterResources(const SkColorFilter& cf,
+@@ -472,12 +530,6 @@ void SkSVGDevice::AutoElement::addColorFilterResources(const SkColorFilter& cf,
          filterElement.addAttribute("width", "100%");
          filterElement.addAttribute("height", "100%");
  
@@ -189,7 +190,7 @@ index dcb51de458..6f9ee45e72 100644
          {
              // first flood with filter color
              AutoElement floodElement("feFlood", fWriter);
-@@ -490,7 +541,7 @@ void SkSVGDevice::AutoElement::addColorFilterResources(const SkColorFilter& cf,
+@@ -490,7 +542,7 @@ void SkSVGDevice::AutoElement::addColorFilterResources(const SkColorFilter& cf,
              // apply the transform to filter color
              AutoElement compositeElement("feComposite", fWriter);
              compositeElement.addAttribute("in", "flood");
@@ -198,7 +199,7 @@ index dcb51de458..6f9ee45e72 100644
          }
      }
      resources->fColorFilter.printf("url(#%s)", colorfilterID.c_str());
-@@ -707,12 +758,16 @@ void SkSVGDevice::AutoElement::addTextAttributes(const SkFont& font) {
+@@ -707,12 +759,16 @@ void SkSVGDevice::AutoElement::addTextAttributes(const SkFont& font) {
                  continue;
              }
              familySet.add(familyString.fString);
@@ -219,7 +220,7 @@ index dcb51de458..6f9ee45e72 100644
  }
  
  sk_sp<SkBaseDevice> SkSVGDevice::Make(const SkISize& size, std::unique_ptr<SkXMLWriter> writer,
-@@ -721,12 +776,18 @@ sk_sp<SkBaseDevice> SkSVGDevice::Make(const SkISize& size, std::unique_ptr<SkXML
+@@ -721,12 +777,18 @@ sk_sp<SkBaseDevice> SkSVGDevice::Make(const SkISize& size, std::unique_ptr<SkXML
                    : nullptr;
  }
  
@@ -239,7 +240,7 @@ index dcb51de458..6f9ee45e72 100644
  {
      SkASSERT(fWriter);
  
-@@ -739,15 +800,44 @@ SkSVGDevice::SkSVGDevice(const SkISize& size, std::unique_ptr<SkXMLWriter> write
+@@ -739,15 +801,44 @@ SkSVGDevice::SkSVGDevice(const SkISize& size, std::unique_ptr<SkXMLWriter> write
      fRootElement->addAttribute("xmlns:xlink", "http://www.w3.org/1999/xlink");
      fRootElement->addAttribute("width", size.width());
      fRootElement->addAttribute("height", size.height());
@@ -285,7 +286,7 @@ index dcb51de458..6f9ee45e72 100644
  SkParsePath::PathEncoding SkSVGDevice::pathEncoding() const {
      return (fFlags & SkSVGCanvas::kRelativePathEncoding_Flag)
          ? SkParsePath::PathEncoding::Relative
-@@ -762,7 +852,7 @@ void SkSVGDevice::syncClipStack(const SkClipStack& cs) {
+@@ -762,7 +853,7 @@ void SkSVGDevice::syncClipStack(const SkClipStack& cs) {
  
      // First, find/preserve the common bottom.
      while ((elem = iter.next()) && (rec_idx < fClipStack.size())) {
@@ -294,7 +295,7 @@ index dcb51de458..6f9ee45e72 100644
              break;
          }
          rec_idx++;
-@@ -779,6 +869,13 @@ void SkSVGDevice::syncClipStack(const SkClipStack& cs) {
+@@ -779,6 +870,13 @@ void SkSVGDevice::syncClipStack(const SkClipStack& cs) {
          AutoElement clip_path("clipPath", fWriter);
          clip_path.addAttribute("id", cid);
  
@@ -308,7 +309,7 @@ index dcb51de458..6f9ee45e72 100644
          // TODO: handle non-intersect clips.
  
          switch (e->getDeviceSpaceType()) {
-@@ -812,25 +909,25 @@ void SkSVGDevice::syncClipStack(const SkClipStack& cs) {
+@@ -812,25 +910,25 @@ void SkSVGDevice::syncClipStack(const SkClipStack& cs) {
              // TODO: handle shader clipping, perhaps rasterize and apply as a mask image?
              break;
          }
@@ -343,7 +344,7 @@ index dcb51de458..6f9ee45e72 100644
      rect.addRectAttributes(SkRect::MakeWH(SkIntToScalar(this->width()),
                                            SkIntToScalar(this->height())));
  }
-@@ -890,11 +987,11 @@ void SkSVGDevice::drawPoints(SkCanvas::PointMode mode, size_t count,
+@@ -890,11 +988,11 @@ void SkSVGDevice::drawPoints(SkCanvas::PointMode mode, size_t count,
  void SkSVGDevice::drawRect(const SkRect& r, const SkPaint& paint) {
      std::unique_ptr<AutoElement> svg;
      if (RequiresViewportReset(paint)) {
@@ -357,7 +358,7 @@ index dcb51de458..6f9ee45e72 100644
  
      if (svg) {
        rect.addAttribute("x", 0);
-@@ -907,7 +1004,7 @@ void SkSVGDevice::drawRect(const SkRect& r, const SkPaint& paint) {
+@@ -907,7 +1005,7 @@ void SkSVGDevice::drawRect(const SkRect& r, const SkPaint& paint) {
  }
  
  void SkSVGDevice::drawOval(const SkRect& oval, const SkPaint& paint) {
@@ -366,7 +367,7 @@ index dcb51de458..6f9ee45e72 100644
      ellipse.addAttribute("cx", oval.centerX());
      ellipse.addAttribute("cy", oval.centerY());
      ellipse.addAttribute("rx", oval.width() / 2);
-@@ -915,7 +1012,7 @@ void SkSVGDevice::drawOval(const SkRect& oval, const SkPaint& paint) {
+@@ -915,7 +1013,7 @@ void SkSVGDevice::drawOval(const SkRect& oval, const SkPaint& paint) {
  }
  
  void SkSVGDevice::drawRRect(const SkRRect& rr, const SkPaint& paint) {
@@ -375,7 +376,7 @@ index dcb51de458..6f9ee45e72 100644
      elem.addPathAttributes(SkPath::RRect(rr), this->pathEncoding());
  }
  
-@@ -948,7 +1045,7 @@ void SkSVGDevice::drawPath(const SkPath& path, const SkPaint& paint, bool pathIs
+@@ -948,7 +1046,7 @@ void SkSVGDevice::drawPath(const SkPath& path, const SkPaint& paint, bool pathIs
      }
  
      // Create path element.
@@ -384,7 +385,7 @@ index dcb51de458..6f9ee45e72 100644
      elem.addPathAttributes(*pathPtr, this->pathEncoding());
  
      // TODO: inverse fill types?
-@@ -975,7 +1072,7 @@ void SkSVGDevice::drawBitmapCommon(const MxCp& mc, const SkBitmap& bm, const SkP
+@@ -975,7 +1073,7 @@ void SkSVGDevice::drawBitmapCommon(const MxCp& mc, const SkBitmap& bm, const SkP
      SkString svgImageData("data:image/png;base64,");
      svgImageData.append(b64Data.get(), b64Size);
  
@@ -393,7 +394,7 @@ index dcb51de458..6f9ee45e72 100644
      {
          AutoElement defs("defs", fWriter);
          {
-@@ -988,7 +1085,7 @@ void SkSVGDevice::drawBitmapCommon(const MxCp& mc, const SkBitmap& bm, const SkP
+@@ -988,7 +1086,7 @@ void SkSVGDevice::drawBitmapCommon(const MxCp& mc, const SkBitmap& bm, const SkP
      }
  
      {
@@ -402,7 +403,7 @@ index dcb51de458..6f9ee45e72 100644
          imageUse.addAttribute("xlink:href", SkStringPrintf("#%s", imageID.c_str()));
      }
  }
-@@ -1023,18 +1120,52 @@ public:
+@@ -1023,18 +1121,60 @@ public:
          SkAutoSTArray<64, SkUnichar> unichars(runSize);
          SkFontPriv::GlyphsToUnichars(glyphRun.font(), glyphRun.glyphsIDs().data(),
                                       runSize, unichars.get());
@@ -426,13 +427,21 @@ index dcb51de458..6f9ee45e72 100644
 +        size_t size = 0;
 +        auto error = SkBase64::Decode(input.get(), runSize, nullptr, &size);
 +
-+        SkASSERT(error == SkBase64::kNoError);
++        if (error != SkBase64::kNoError) {
++            std::cerr << "Failed to decode SVG base64 text data, size=" << runSize << std::endl;
++
++            return;
++        }
 +
 +        auto utf8 = std::make_unique<char[]>(size);
 +
 +        error = SkBase64::Decode(input.get(), runSize, utf8.get(), &size);
 +
-+        SkASSERT(error == SkBase64::kNoError);
++        if (error != SkBase64::kNoError) {
++            std::cerr << "Failed to decode SVG base64 text data, size=" << runSize << std::endl;
++
++            return;
++        }
 +
 +        auto* utf8_start = static_cast<const char*>(utf8.get());
 +        auto* utf8_end = utf8_start + std::strlen(utf8_start);
@@ -459,7 +468,7 @@ index dcb51de458..6f9ee45e72 100644
          bool discardPos = false;
          bool isWhitespace = false;
  
-@@ -1077,31 +1208,13 @@ private:
+@@ -1077,31 +1217,13 @@ private:
          }
  
          fLastCharWasWhitespace = isWhitespace;
@@ -493,7 +502,7 @@ index dcb51de458..6f9ee45e72 100644
  };
  
  void SkSVGDevice::onDrawGlyphRunList(SkCanvas* canvas,
-@@ -1126,7 +1239,7 @@ void SkSVGDevice::onDrawGlyphRunList(SkCanvas* canvas,
+@@ -1126,7 +1248,7 @@ void SkSVGDevice::onDrawGlyphRunList(SkCanvas* canvas,
  
      // Emit one <text> element for each run.
      for (auto& glyphRun : glyphRunList) {
@@ -502,7 +511,7 @@ index dcb51de458..6f9ee45e72 100644
          elem.addTextAttributes(glyphRun.font());
  
          SVGTextBuilder builder(glyphRunList.origin(), glyphRun);
-@@ -1145,3 +1258,106 @@ void SkSVGDevice::drawMesh(const SkMesh&, sk_sp<SkBlender>, const SkPaint&) {
+@@ -1145,3 +1267,106 @@ void SkSVGDevice::drawMesh(const SkMesh&, sk_sp<SkBlender>, const SkPaint&) {
      // todo
  }
  #endif

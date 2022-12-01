@@ -16,7 +16,7 @@ if (require.main === module) {
                         path ? `unix socket ${path}` : `${host}:${port}`
                     }\n`,
                 )
-	    }
+            }
         })
         .catch((error) => {
             console.error(error)
