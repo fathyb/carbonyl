@@ -1,0 +1,14 @@
+module carbonyl.mojom;
+
+import "ui/gfx/geometry/mojom/geometry.mojom";
+import "skia/public/mojom/skcolor.mojom";
+
+struct TextData {
+    string contents;
+    gfx.mojom.RectF bounds;
+    skia.mojom.SkColor color;
+};
+
+interface CarbonylRenderService {
+    DrawText(array<TextData> data);
+};

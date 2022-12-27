@@ -1,0 +1,3 @@
+[build]
+rustflags = ["-L", "/Users/fathy/Git/carbonyl/chromium/src/out/Default/obj/headless"]
+target-dir = "build"

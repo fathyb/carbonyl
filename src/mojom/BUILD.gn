@@ -1,0 +1,10 @@
+import("//mojo/public/tools/bindings/mojom.gni")
+
+mojom("mojom") {
+  sources = [ "carbonyl.mojom" ]
+
+  deps = [
+    "//ui/gfx/geometry/mojom",
+    "//skia/public/mojom",
+  ]
+}

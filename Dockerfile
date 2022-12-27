@@ -21,7 +21,7 @@ RUN apt-get update && \
 
 # Release binaries
 # ================
-FROM --platform=$BUILDPLATFORM debian:11 AS html2svg-binaries
+FROM --platform=$BUILDPLATFORM debian:11 AS carbonyl-binaries
 
 RUN apt-get update && apt-get install -y unzip
 
@@ -31,7 +31,7 @@ RUN unzip /runtime.zip -d /runtime
 
 # TypeScript build
 # ================
-FROM --platform=$BUILDPLATFORM node:18 AS html2svg-js 
+FROM --platform=$BUILDPLATFORM node:18 AS carbonyl-js 
 
 WORKDIR /app
 COPY package.json yarn.lock /app/
@@ -55,8 +55,8 @@ WORKDIR /app
 COPY package.json yarn.lock /app/
 RUN yarn --production
 
-COPY --from=html2svg-js /app/build /app/build
-COPY --from=html2svg-binaries /runtime /app/build/runtime
+COPY --from=carbonyl-js /app/build /app/build
+COPY --from=carbonyl-binaries /runtime /app/build/runtime
 COPY /scripts/docker-entrypoint.sh /app/scripts/docker-entrypoint.sh
 
 ENTRYPOINT ["/app/scripts/docker-entrypoint.sh"]

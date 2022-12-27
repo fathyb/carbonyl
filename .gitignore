@@ -5,5 +5,6 @@ node_modules/
 /.git_cache
 /.vscode
 /build
-/electron/*
-!/electron/.gclient
+/chromium/*
+!/chromium/.gclient
+/Cargo.lock
