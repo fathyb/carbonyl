@@ -8,6 +8,26 @@ It's snappy, starts in less than a second, runs at 60 FPS, and idles at 0% CPU u
 
 Carbonyl originally started as [`html2svg`](https://github.com/fathyb/html2svg) and is now the runtime behind it.
 
+## Demo
+
+<table>
+  <tbody>
+    <tr>
+      <td>
+        <video src="https://user-images.githubusercontent.com/5746414/213682926-f1cc2de7-a38c-4125-9257-92faecfc7e24.mp4">
+      </td>
+      <td>
+        <video src="https://user-images.githubusercontent.com/5746414/213682913-398d3d11-1af8-4ae6-a0cd-a7f878efd88b.mp4">
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <video src="https://user-images.githubusercontent.com/5746414/213682918-d6396a4f-ee23-431d-828e-4ad6a00e690e.mp4">
+      </td>
+    </tr>
+  </tbody>
+</table>
+  
 ## Usage
 
 > Currently building...
