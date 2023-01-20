@@ -21,7 +21,7 @@ Carbonyl originally started as [`html2svg`](https://github.com/fathyb/html2svg) 
       </td>
     </tr>
     <tr>
-      <td>
+      <td colspan="2">
         <video src="https://user-images.githubusercontent.com/5746414/213682918-d6396a4f-ee23-431d-828e-4ad6a00e690e.mp4">
       </td>
     </tr>
