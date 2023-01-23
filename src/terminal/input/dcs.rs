@@ -1,3 +1,5 @@
+use super::TerminalEvent;
+
 #[derive(Clone)]
 enum State {
     Code,
@@ -14,7 +16,7 @@ pub struct DeviceControl {
 pub enum DeviceControlEvent {
     Break,
     Continue,
-    TerminalName(String),
+    Terminal(TerminalEvent),
     TrueColorSupported,
 }
 
@@ -96,7 +98,7 @@ impl DeviceControlResource {
 
                     if let (Some(name), Some(value)) = (name, value) {
                         if name == "TN" {
-                            return TerminalName(value);
+                            return Terminal(TerminalEvent::Name(value));
                         }
                     }
                 }
@@ -175,7 +177,7 @@ impl DeviceControlStatus {
                         set.push(val);
 
                         if set.len() > 4 && set[1] == 2 && (set[0] == 38 || set[0] == 48) {
-                            return TrueColorSupported;
+                            return Terminal(TerminalEvent::TrueColorSupported);
                         }
                     }
                 }

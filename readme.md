@@ -8,6 +8,13 @@ It's snappy, starts in less than a second, runs at 60 FPS, and idles at 0% CPU u
 
 Carbonyl originally started as [`html2svg`](https://github.com/fathyb/html2svg) and is now the runtime behind it.
 
+## Usage
+
+```shell
+# Watch YouTube inside a Docker container
+$ docker run -ti fathyb/carbonyl https://youtube.com
+```
+
 ## Demo
 
 <table>
@@ -27,15 +34,10 @@ Carbonyl originally started as [`html2svg`](https://github.com/fathyb/html2svg) 
     </tr>
   </tbody>
 </table>
-  
-## Usage
 
-> Currently building...
+## Know issues
 
-```shell
-# Watch YouTube inside a Docker container
-$ docker run fathyb/carbonyl youtube.com
-```
+- Fullscreen mode not supported yet
 
 ## Development
 
