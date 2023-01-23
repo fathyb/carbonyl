@@ -2,10 +2,6 @@ use std::io::{self, Read};
 
 use crate::terminal::input::*;
 
-pub fn setup() -> io::Result<()> {
-    raw_tty::setup()
-}
-
 /// Listen for input events in stdin.
 /// This will block, so it should run from a dedicated thread.
 pub fn listen<T, F>(mut callback: F) -> io::Result<T>

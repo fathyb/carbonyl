@@ -247,6 +247,28 @@ macro_rules! impl_vector_traits {
             {
                 self.iter().map(f).collect()
             }
+
+            pub fn reduce<F>(&self, f: F) -> T
+            where
+                T: Default,
+                F: FnMut(T, T) -> T
+            {
+                self.iter().fold(<T as Default>::default(), f)
+            }
+
+            pub fn min_val(&self) -> T
+            where
+                T: Default + Ord
+            {
+                self.reduce(|a, b| a.min(b))
+            }
+
+            pub fn max_val(&self) -> T
+            where
+                T: Default + Ord
+            {
+                self.reduce(|a, b| a.max(b))
+            }
         }
 
         crate::impl_vector_traits!($struct $vector i8);
@@ -274,7 +296,7 @@ macro_rules! impl_vector_traits {
         impl $struct<$type> {
             pub fn avg_with<T>(&self, rhs: T) -> Self
             where
-                T: Into<$struct<$type>>
+                T: Into<Self>
             {
                 let rhs = rhs.into();
 
@@ -294,8 +316,8 @@ macro_rules! impl_vector_traits {
 
             pub fn mul_add<M, A>(&self, mul: M, add: A) -> Self
             where
-                M: Into<$struct<$type>>,
-                A: Into<$struct<$type>>,
+                M: Into<Self>,
+                A: Into<Self>,
             {
                 self.iter()
                     .zip(mul.into().iter())
@@ -310,7 +332,7 @@ macro_rules! impl_vector_traits {
 
             pub fn min<U>(&self, min: U) -> Self
             where
-                U: Into<$struct<$type>>
+                U: Into<Self>
             {
                 self.iter()
                     .zip(min.into().iter())
@@ -320,7 +342,7 @@ macro_rules! impl_vector_traits {
 
             pub fn max<U>(&self, max: U) -> Self
             where
-                U: Into<$struct<$type>>
+                U: Into<Self>
             {
                 self.iter()
                     .zip(max.into().iter())
@@ -330,7 +352,7 @@ macro_rules! impl_vector_traits {
 
             pub fn clamp<U>(&self, min: U, max: U) -> Self
             where
-                U: Into<$struct<$type>>
+                U: Into<Self>
             {
                 self.iter()
                     .zip(min.into().iter())
@@ -345,7 +367,7 @@ macro_rules! impl_vector_traits {
             pub fn $name<U>(&self, rhs: U) -> Self
             where
                 T: std::ops::$trait<T, Output = T>,
-                U: Copy + Into<$struct<T>>
+                U: Copy + Into<Self>
             {
                 self.iter()
                     .zip(rhs.into().iter())

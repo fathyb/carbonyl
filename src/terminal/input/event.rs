@@ -3,42 +3,46 @@ use std::ops::BitAnd;
 use super::Mouse;
 
 #[derive(Debug)]
+pub enum TerminalEvent {
+    Name(String),
+    TrueColorSupported,
+}
+
+#[derive(Debug)]
 pub enum Event {
     KeyPress { key: u8 },
     MouseUp { row: usize, col: usize },
     MouseDown { row: usize, col: usize },
     MouseMove { row: usize, col: usize },
     Scroll { delta: isize },
+    Terminal(TerminalEvent),
     Exit,
 }
 
 impl Event {
-    pub fn from(mouse: &mut Mouse, release: bool) -> Option<Event> {
-        if !mouse.read() {
-            return None;
-        }
+    pub fn parse(mouse: &mut Mouse, release: bool) -> Option<Event> {
+        mouse.parse()?;
 
-        match (mouse.btn, mouse.col, mouse.row) {
-            (Some(btn), Some(col), Some(row)) => Some({
-                if Mask::ScrollDown & btn {
-                    Event::Scroll { delta: -1 }
-                } else if Mask::ScrollUp & btn {
-                    Event::Scroll { delta: 1 }
+        let btn = mouse.btn?;
+
+        Some({
+            if Mask::ScrollDown & btn {
+                Event::Scroll { delta: -1 }
+            } else if Mask::ScrollUp & btn {
+                Event::Scroll { delta: 1 }
+            } else {
+                let col = mouse.col? as usize - 1;
+                let row = mouse.row? as usize - 1;
+
+                if release {
+                    Event::MouseUp { row, col }
+                } else if Mask::MouseMove & btn {
+                    Event::MouseMove { row, col }
                 } else {
-                    let col = col as usize - 1;
-                    let row = row as usize - 1;
-
-                    if release {
-                        Event::MouseUp { row, col }
-                    } else if Mask::MouseMove & btn {
-                        Event::MouseMove { row, col }
-                    } else {
-                        Event::MouseDown { row, col }
-                    }
+                    Event::MouseDown { row, col }
                 }
-            }),
-            _ => None,
-        }
+            }
+        })
     }
 }
 

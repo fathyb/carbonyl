@@ -1,15 +1,9 @@
-use std::{
-    io::{self, Write as _},
-    rc::Rc,
-};
+use std::{io, rc::Rc};
 
 use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::UnicodeWidthStr;
 
-use crate::{
-    gfx::{Color, Point, Rect, Size},
-    terminal,
-};
+use crate::gfx::{Color, Point, Rect, Size};
 
 use super::{Cell, Grapheme, Painter};
 
@@ -28,8 +22,6 @@ pub struct Renderer {
     painter: Painter,
 }
 
-const SEQUENCES: [(u32, bool); 4] = [(1049, true), (1003, true), (1006, true), (25, false)];
-
 impl Renderer {
     pub fn new() -> Renderer {
         Renderer {
@@ -43,30 +35,8 @@ impl Renderer {
         }
     }
 
-    pub fn setup() -> io::Result<()> {
-        terminal::input::setup()?;
-
-        let mut out = io::stdout();
-
-        for (sequence, enable) in SEQUENCES {
-            write!(out, "\x1b[?{}{}", sequence, if enable { "h" } else { "l" })?;
-        }
-
-        out.flush()?;
-
-        Ok(())
-    }
-
-    pub fn teardown() -> io::Result<()> {
-        let mut out = io::stdout();
-
-        for (sequence, enable) in SEQUENCES {
-            write!(out, "\x1b[?{}{}", sequence, if enable { "l" } else { "h" })?;
-        }
-
-        out.flush()?;
-
-        Ok(())
+    pub fn enable_true_color(&mut self) {
+        self.painter.set_true_color(true)
     }
 
     pub fn set_size(&mut self, cell: Size, terminal: Size) {

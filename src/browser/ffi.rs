@@ -1,11 +1,11 @@
 use std::ffi::CStr;
 use std::io::{stderr, Write};
-use std::process::{self, Command, Stdio};
+use std::process::{Command, Stdio};
 use std::{env, io};
 
 use libc::{c_char, c_int, c_uchar, c_uint, size_t};
 
-use crate::gfx::{Color, Point, Rect, Size};
+use crate::gfx::{Cast, Color, Point, Rect, Size};
 use crate::terminal::output::Renderer;
 use crate::terminal::{input, output};
 
@@ -35,6 +35,23 @@ pub struct CColor {
     b: u8,
 }
 
+impl<T: Copy> From<&CPoint> for Point<T>
+where
+    c_uint: Cast<T>,
+{
+    fn from(value: &CPoint) -> Self {
+        Point::new(value.x, value.y).cast()
+    }
+}
+impl<T: Copy> From<&CSize> for Size<T>
+where
+    c_uint: Cast<T>,
+{
+    fn from(value: &CSize) -> Self {
+        Size::new(value.width, value.height).cast()
+    }
+}
+
 #[repr(C)]
 pub struct BrowserDelegate {
     shutdown: extern "C" fn(),
@@ -45,16 +62,14 @@ pub struct BrowserDelegate {
     mouse_move: extern "C" fn(c_uint, c_uint),
 }
 
-fn main() -> io::Result<()> {
+fn main() -> io::Result<Option<i32>> {
     const CARBONYL_INSIDE_SHELL: &str = "CARBONYL_INSIDE_SHELL";
 
     if env::vars().find(|(key, value)| key == CARBONYL_INSIDE_SHELL && value == "1") != None {
-        return Ok(());
+        return Ok(None);
     }
 
-    input::setup()?;
-    Renderer::setup()?;
-
+    let mut terminal = input::Terminal::setup();
     let output = Command::new(env::current_exe()?)
         .args(env::args().skip(1))
         .arg("--disable-threaded-scrolling")
@@ -65,19 +80,19 @@ fn main() -> io::Result<()> {
         .stderr(Stdio::piped())
         .output()?;
 
-    Renderer::teardown()?;
+    terminal.teardown();
     stderr().write_all(&output.stderr)?;
 
-    if let Some(code) = output.status.code() {
-        process::exit(code);
-    } else {
-        process::exit(127);
-    }
+    let code = output.status.code();
+
+    Ok(if code == None { Some(127) } else { code })
 }
 
 #[no_mangle]
 pub extern "C-unwind" fn carbonyl_shell_main() {
-    main().unwrap()
+    if let Some(code) = main().unwrap() {
+        std::process::exit(code)
+    }
 }
 
 #[no_mangle]
@@ -109,8 +124,8 @@ pub extern "C-unwind" fn carbonyl_renderer_draw_text(
 
     renderer.draw_text(
         string.to_str().unwrap(),
-        Point::new(rect.origin.x as i32, rect.origin.y as i32),
-        Size::new(rect.size.width as u32, rect.size.height as u32),
+        Point::from(&rect.origin),
+        Size::from(&rect.size),
         Color::new(color.r, color.g, color.b),
     )
 }
@@ -134,8 +149,8 @@ pub extern "C-unwind" fn carbonyl_renderer_draw_background(
         .draw_background(
             pixels,
             Rect {
-                origin: Point::new(rect.origin.x as i32, rect.origin.y as i32),
-                size: Size::new(rect.size.width, rect.size.height),
+                origin: Point::from(&rect.origin),
+                size: Size::from(&rect.size),
             },
         )
         .unwrap()
@@ -155,32 +170,46 @@ pub extern "C-unwind" fn carbonyl_output_get_size(size: *mut CSize) {
 /// This will block so the calling code should start and own a dedicated thread.
 /// It will panic if there is any error.
 #[no_mangle]
-pub extern "C-unwind" fn carbonyl_input_listen(delegate: *mut BrowserDelegate) {
+pub extern "C-unwind" fn carbonyl_input_listen(
+    renderer: *mut Renderer,
+    delegate: *mut BrowserDelegate,
+) {
     let char_width = 7;
     let char_height = 14;
-    let BrowserDelegate {
-        shutdown,
-        scroll,
-        key_press,
-        mouse_up,
-        mouse_down,
-        mouse_move,
-    } = unsafe { &*delegate };
+    let (
+        renderer,
+        BrowserDelegate {
+            shutdown,
+            scroll,
+            key_press,
+            mouse_up,
+            mouse_down,
+            mouse_move,
+        },
+    ) = unsafe { (&mut *renderer, &*delegate) };
 
-    input::listen(|event| {
+    use input::*;
+
+    listen(|event| {
+        use Event::*;
+
         match event {
-            input::Event::Exit => return Some(shutdown()),
-            input::Event::KeyPress { key } => key_press(key as c_char),
-            input::Event::Scroll { delta } => scroll(delta as c_int * char_height as c_int),
-            input::Event::MouseUp { col, row } => {
+            Exit => return Some(shutdown()),
+            KeyPress { key } => key_press(key as c_char),
+            Scroll { delta } => scroll(delta as c_int * char_height as c_int),
+            MouseUp { col, row } => {
                 mouse_up(col as c_uint * char_width, row as c_uint * char_height)
             }
-            input::Event::MouseDown { col, row } => {
+            MouseDown { col, row } => {
                 mouse_down(col as c_uint * char_width, row as c_uint * char_height)
             }
-            input::Event::MouseMove { col, row } => {
+            MouseMove { col, row } => {
                 mouse_move(col as c_uint * char_width, row as c_uint * char_height)
             }
+            Terminal(terminal) => match terminal {
+                TerminalEvent::Name(name) => eprintln!("Terminal name: {name}"),
+                TerminalEvent::TrueColorSupported => renderer.enable_true_color(),
+            },
         }
 
         None

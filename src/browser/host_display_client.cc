@@ -1,8 +1,4 @@
-// Copyright (c) 2019 GitHub, Inc.
-// Use of this source code is governed by the MIT license that can be
-// found in the LICENSE file.
-
-#include "headless/lib/browser/headless_host_display_client.h"
+#include "carbonyl/src/browser/host_display_client.h"
 
 #include <utility>
 
@@ -19,7 +15,7 @@
 #include "skia/ext/skia_utils_win.h"
 #endif
 
-#include "headless/app/carbonyl_rust_bridge.h"
+#include "carbonyl/src/browser/bridge.h"
 
 namespace carbonyl {
 
@@ -40,7 +36,8 @@ void LayeredWindowUpdater::Draw(const gfx::Rect& damage_rect,
                                 DrawCallback draw_callback) {
   Renderer::Main()->DrawBackgrond(
     shm_mapping_.GetMemoryAs<uint8_t>(),
-    shm_mapping_.size()
+    shm_mapping_.size(),
+    damage_rect
   );
 
   std::move(draw_callback).Run();
@@ -55,6 +52,11 @@ void HostDisplayClient::CreateLayeredWindowUpdater(
   layered_window_updater_ =
       std::make_unique<LayeredWindowUpdater>(std::move(receiver));
 }
+
+#if BUILDFLAG(IS_MAC)
+void HostDisplayClient::OnDisplayReceivedCALayerParams(
+    const gfx::CALayerParams& ca_layer_params) {}
+#endif
 
 #if BUILDFLAG(IS_LINUX) && !BUILDFLAG(IS_CHROMEOS)
 void HostDisplayClient::DidCompleteSwapWithNewSize(

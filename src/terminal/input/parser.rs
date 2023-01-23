@@ -1,92 +1,116 @@
 use crate::terminal::input::*;
 
+#[derive(Clone)]
+enum State {
+    CharSequence,
+    EscapeSequence,
+    ControlSequence,
+    MouseSequence(Mouse),
+    DeviceControlSequence(DeviceControl),
+}
+
 pub struct Parser {
-    esc: bool,
-    csi: bool,
-    mouse: Mouse,
+    state: State,
 }
 
 impl Parser {
     pub fn new() -> Parser {
         Parser {
-            esc: false,
-            csi: false,
-            mouse: Mouse {
-                buf: None,
-                btn: None,
-                col: None,
-                row: None,
-            },
+            state: State::CharSequence,
         }
     }
 
     pub fn parse(&mut self, input: &[u8]) -> Vec<Event> {
         let mut events = Vec::new();
-        let Parser {
-            mut esc,
-            mut csi,
-            ref mut mouse,
-        } = self;
+        let mut emit = |e| events.push(e);
+        let mut state = self.state.clone();
+
+        use Event::*;
+        use State::*;
 
         for &key in input {
-            if esc {
-                // Inside an escape sequence
-                if let Some(ref mut buf) = mouse.buf {
-                    // Process mouse input sequence
-                    match key {
-                        // Delimiter: concat characters, parse number, and clear buffer
-                        0x3b => esc = mouse.read(),
-                        // Terminator: emit mouse move, movement, or release based on terminator
-                        0x4d | 0x6d => {
-                            mouse.end(key, &mut events);
+            match state {
+                CharSequence => match key {
+                    // ESC character, start an escape sequence
+                    0x1b => state = EscapeSequence,
+                    // CTRL-C pressed
+                    0x03 => emit(Exit),
+                    // Any other character should be parsed as text input
+                    key => emit(KeyPress { key }),
+                },
+                EscapeSequence => match key {
+                    // CSI
+                    b'[' => state = ControlSequence,
+                    // DCS
+                    b'P' => state = DeviceControlSequence(DeviceControl::new()),
+                    key => {
+                        // Unrecognized sequence, emit an escape keypress
+                        emit(KeyPress { key: 0x1b });
 
-                            esc = false
+                        // If this isn't an escape character, emit a
+                        // keypress for this key and close the sequence
+                        if key != 0x1b {
+                            state = CharSequence;
+
+                            emit(KeyPress { key });
                         }
-                        // Consider anything else part of the value
-                        _ => buf.push(key),
                     }
-                } else if csi {
-                    // Inside a control sequence
-                    match key {
-                        // Mouse input
-                        0x3c => mouse.start(),
-                        // Map arrow keys events to key codes
-                        0x41..=0x44 => events.push(Event::KeyPress {
-                            key: [0x26, 0x28, 0x27, 0x25][(key - 0x41) as usize],
-                        }),
-                        // Ignore anything else
-                        _ => esc = false,
-                    }
-                } else if key == 0x5b {
-                    // [ character, start a CSI sequence
-                    csi = true
-                } else {
-                    // Unrecognized sequence, emit an ESC keypress
-                    events.push(Event::KeyPress { key: 0x1b });
+                },
+                ControlSequence => match key {
+                    // Mouse input
+                    b'<' => state = MouseSequence(Mouse::new()),
+                    _ => {
+                        state = CharSequence;
 
-                    if key != 0x1b {
-                        // Cancel the sequence only if this isn't an ESC character
-                        esc = false;
-
-                        events.push(Event::KeyPress { key });
+                        match key {
+                            // Map arrow keys events to key codes
+                            b'A' => emit(KeyPress { key: 0x26 }),
+                            b'B' => emit(KeyPress { key: 0x28 }),
+                            b'C' => emit(KeyPress { key: 0x27 }),
+                            b'D' => emit(KeyPress { key: 0x25 }),
+                            // Ignore anything else
+                            _ => continue,
+                        }
                     }
-                }
-            } else if key == 0x1b {
-                // ESC character, start an escape sequence
-                esc = true;
-                csi = false;
-                mouse.reset();
-            } else if key == 0x03 {
-                // CTRL-C pressed
-                events.push(Event::Exit)
-            } else {
-                // Any other character should be parser as text input
-                events.push(Event::KeyPress { key })
+                },
+                MouseSequence(ref mut mouse) => match key {
+                    // Delimiter
+                    b';' => {
+                        if mouse.parse() == None {
+                            state = CharSequence
+                        }
+                    }
+                    // Terminator
+                    b'm' | b'M' => {
+                        if let Some(event) = Event::parse(mouse, key == b'm') {
+                            emit(event)
+                        }
+
+                        state = CharSequence
+                    }
+                    // Consider anything else part of the value
+                    key => mouse.push(key),
+                },
+                DeviceControlSequence(ref mut dcs) => match dcs.parse(key) {
+                    DeviceControlEvent::Continue => continue,
+                    event => {
+                        state = CharSequence;
+
+                        match event {
+                            DeviceControlEvent::TerminalName(name) => {
+                                emit(Terminal(TerminalEvent::Name(name)))
+                            }
+                            DeviceControlEvent::TrueColorSupported => {
+                                emit(Terminal(TerminalEvent::TrueColorSupported))
+                            }
+                            DeviceControlEvent::Break | DeviceControlEvent::Continue => continue,
+                        }
+                    }
+                },
             }
         }
 
-        self.esc = esc;
-        self.csi = csi;
+        self.state = state;
 
         events
     }

@@ -395,30 +395,31 @@ index 8af69cac78b74..9f74e511c263d 100644
   private:
    const HWND hwnd_;
 diff --git a/components/viz/service/BUILD.gn b/components/viz/service/BUILD.gn
-index fb793e98d5939..403a0a7ea1614 100644
+index fb793e98d5939..fdcddb36c4a09 100644
 --- a/components/viz/service/BUILD.gn
 +++ b/components/viz/service/BUILD.gn
-@@ -139,6 +139,8 @@ viz_component("service") {
-     "display_embedder/skia_render_copy_results.h",
-     "display_embedder/software_output_surface.cc",
-     "display_embedder/software_output_surface.h",
-+    "display_embedder/software_output_device_proxy.cc",
-+    "display_embedder/software_output_device_proxy.h",
-     "display_embedder/vsync_parameter_listener.cc",
-     "display_embedder/vsync_parameter_listener.h",
-     "frame_sinks/begin_frame_tracker.cc",
+@@ -16,6 +16,8 @@ config("viz_service_implementation") {
+ 
+ viz_component("service") {
+   sources = [
++    "../../../carbonyl/src/browser/software_output_device_proxy.cc",
++    "../../../carbonyl/src/browser/software_output_device_proxy.h",
+     "debugger/rwlock.cc",
+     "debugger/rwlock.h",
+     "debugger/viz_debugger.cc",
 diff --git a/components/viz/service/display_embedder/output_surface_provider_impl.cc b/components/viz/service/display_embedder/output_surface_provider_impl.cc
-index d8f25c1435d4b..cd6f81dfa8b1d 100644
+index d8f25c1435d4b..2929ebd3887c2 100644
 --- a/components/viz/service/display_embedder/output_surface_provider_impl.cc
 +++ b/components/viz/service/display_embedder/output_surface_provider_impl.cc
-@@ -23,12 +23,14 @@
- #include "components/viz/service/display_embedder/server_shared_bitmap_manager.h"
- #include "components/viz/service/display_embedder/skia_output_surface_dependency_impl.h"
- #include "components/viz/service/display_embedder/skia_output_surface_impl.h"
-+#include "components/viz/service/display_embedder/software_output_device_proxy.h"
- #include "components/viz/service/display_embedder/software_output_surface.h"
- #include "components/viz/service/gl/gpu_service_impl.h"
- #include "gpu/command_buffer/client/shared_memory_limits.h"
+@@ -16,6 +16,7 @@
+ #include "build/build_config.h"
+ #include "build/chromecast_buildflags.h"
+ #include "build/chromeos_buildflags.h"
++#include "carbonyl/src/browser/software_output_device_proxy.h"
+ #include "cc/base/switches.h"
+ #include "components/viz/common/display/renderer_settings.h"
+ #include "components/viz/common/frame_sinks/begin_frame_source.h"
+@@ -29,6 +30,7 @@
  #include "gpu/command_buffer/service/scheduler_sequence.h"
  #include "gpu/config/gpu_finch_features.h"
  #include "gpu/ipc/common/surface_handle.h"
@@ -484,272 +485,6 @@ index b09785bfc8143..a6cd4e2399b1b 100644
    gfx::Size pixel_size_;
    float scale_factor_ = 1;
  
-diff --git a/components/viz/service/display_embedder/software_output_device_proxy.cc b/components/viz/service/display_embedder/software_output_device_proxy.cc
-new file mode 100644
-index 0000000000000..4ade5df6934ce
---- /dev/null
-+++ b/components/viz/service/display_embedder/software_output_device_proxy.cc
-@@ -0,0 +1,159 @@
-+// Copyright 2014 The Chromium Authors. All rights reserved.
-+// Use of this source code is governed by a BSD-style license that can be
-+// found in the LICENSE file.
-+
-+#include "components/viz/service/display_embedder/software_output_device_proxy.h"
-+
-+#include "base/memory/unsafe_shared_memory_region.h"
-+#include "base/threading/thread_checker.h"
-+#include "base/trace_event/trace_event.h"
-+#include "build/build_config.h"
-+#include "components/viz/common/resources/resource_sizes.h"
-+#include "components/viz/service/display_embedder/output_device_backing.h"
-+#include "mojo/public/cpp/system/platform_handle.h"
-+#include "services/viz/privileged/mojom/compositing/layered_window_updater.mojom.h"
-+#include "skia/ext/platform_canvas.h"
-+#include "third_party/skia/include/core/SkCanvas.h"
-+#include "ui/gfx/skia_util.h"
-+
-+#if BUILDFLAG(IS_WIN)
-+#include "skia/ext/skia_utils_win.h"
-+#include "ui/gfx/gdi_util.h"
-+#include "ui/gfx/win/hwnd_util.h"
-+#else
-+#include "mojo/public/cpp/base/shared_memory_utils.h"
-+#endif
-+
-+namespace viz {
-+
-+SoftwareOutputDeviceBase::~SoftwareOutputDeviceBase() {
-+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
-+  DCHECK(!in_paint_);
-+}
-+
-+void SoftwareOutputDeviceBase::Resize(const gfx::Size& viewport_pixel_size,
-+                                         float scale_factor) {
-+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
-+  DCHECK(!in_paint_);
-+
-+  if (viewport_pixel_size_ == viewport_pixel_size)
-+    return;
-+
-+  viewport_pixel_size_ = viewport_pixel_size;
-+  ResizeDelegated();
-+}
-+
-+SkCanvas* SoftwareOutputDeviceBase::BeginPaint(
-+    const gfx::Rect& damage_rect) {
-+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
-+  DCHECK(!in_paint_);
-+
-+  damage_rect_ = damage_rect;
-+  in_paint_ = true;
-+  return BeginPaintDelegated();
-+}
-+
-+void SoftwareOutputDeviceBase::EndPaint() {
-+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
-+  DCHECK(in_paint_);
-+
-+  in_paint_ = false;
-+
-+  gfx::Rect intersected_damage_rect = damage_rect_;
-+  intersected_damage_rect.Intersect(gfx::Rect(viewport_pixel_size_));
-+  if (intersected_damage_rect.IsEmpty())
-+    return;
-+
-+  EndPaintDelegated(intersected_damage_rect);
-+}
-+
-+SoftwareOutputDeviceProxy::~SoftwareOutputDeviceProxy() = default;
-+
-+SoftwareOutputDeviceProxy::SoftwareOutputDeviceProxy(
-+    mojo::PendingRemote<mojom::LayeredWindowUpdater> layered_window_updater)
-+    : layered_window_updater_(std::move(layered_window_updater)) {
-+  DCHECK(layered_window_updater_.is_bound());
-+}
-+
-+void SoftwareOutputDeviceProxy::OnSwapBuffers(
-+    SoftwareOutputDevice::SwapBuffersCallback swap_ack_callback,
-+    gfx::FrameData data) {
-+  DCHECK(swap_ack_callback_.is_null());
-+
-+  // We aren't waiting on DrawAck() and can immediately run the callback.
-+  if (!waiting_on_draw_ack_) {
-+    task_runner_->PostTask(FROM_HERE,
-+        base::BindOnce(std::move(swap_ack_callback), viewport_pixel_size_));
-+    return;
-+  }
-+
-+  swap_ack_callback_ = std::move(swap_ack_callback);
-+}
-+
-+void SoftwareOutputDeviceProxy::ResizeDelegated() {
-+  canvas_.reset();
-+
-+  size_t required_bytes;
-+  if (!ResourceSizes::MaybeSizeInBytes(
-+          viewport_pixel_size_, ResourceFormat::RGBA_8888, &required_bytes)) {
-+    DLOG(ERROR) << "Invalid viewport size " << viewport_pixel_size_.ToString();
-+    return;
-+  }
-+
-+  base::UnsafeSharedMemoryRegion region =
-+      base::UnsafeSharedMemoryRegion::Create(required_bytes);
-+  if (!region.IsValid()) {
-+    DLOG(ERROR) << "Failed to allocate " << required_bytes << " bytes";
-+    return;
-+  }
-+
-+  #if defined(WIN32)
-+  canvas_ = skia::CreatePlatformCanvasWithSharedSection(
-+      viewport_pixel_size_.width(), viewport_pixel_size_.height(), false,
-+      region.GetPlatformHandle(), skia::CRASH_ON_FAILURE);
-+  #else
-+  shm_mapping_ = region.Map();
-+  if (!shm_mapping_.IsValid()) {
-+    DLOG(ERROR) << "Failed to map " << required_bytes << " bytes";
-+    return;
-+  }
-+
-+  canvas_ = skia::CreatePlatformCanvasWithPixels(
-+      viewport_pixel_size_.width(), viewport_pixel_size_.height(), false,
-+      static_cast<uint8_t*>(shm_mapping_.memory()), skia::CRASH_ON_FAILURE);
-+  #endif
-+
-+  // Transfer region ownership to the browser process.
-+  layered_window_updater_->OnAllocatedSharedMemory(viewport_pixel_size_,
-+                                                   std::move(region));
-+}
-+
-+SkCanvas* SoftwareOutputDeviceProxy::BeginPaintDelegated() {
-+  return canvas_.get();
-+}
-+
-+void SoftwareOutputDeviceProxy::EndPaintDelegated(
-+    const gfx::Rect& damage_rect) {
-+  DCHECK(!waiting_on_draw_ack_);
-+
-+  if (!canvas_)
-+    return;
-+
-+  layered_window_updater_->Draw(damage_rect, base::BindOnce(
-+      &SoftwareOutputDeviceProxy::DrawAck, base::Unretained(this)));
-+  waiting_on_draw_ack_ = true;
-+
-+  TRACE_EVENT_ASYNC_BEGIN0("viz", "SoftwareOutputDeviceProxy::Draw", this);
-+}
-+
-+void SoftwareOutputDeviceProxy::DrawAck() {
-+  DCHECK(waiting_on_draw_ack_);
-+  DCHECK(!swap_ack_callback_.is_null());
-+
-+  TRACE_EVENT_ASYNC_END0("viz", "SoftwareOutputDeviceProxy::Draw", this);
-+
-+  waiting_on_draw_ack_ = false;
-+  std::move(swap_ack_callback_).Run(viewport_pixel_size_);
-+}
-+
-+}  // namespace viz
-diff --git a/components/viz/service/display_embedder/software_output_device_proxy.h b/components/viz/service/display_embedder/software_output_device_proxy.h
-new file mode 100644
-index 0000000000000..67fa7b73fa659
---- /dev/null
-+++ b/components/viz/service/display_embedder/software_output_device_proxy.h
-@@ -0,0 +1,95 @@
-+// Copyright 2014 The Chromium Authors. All rights reserved.
-+// Use of this source code is governed by a BSD-style license that can be
-+// found in the LICENSE file.
-+
-+#ifndef COMPONENTS_VIZ_SERVICE_DISPLAY_EMBEDDER_SOFTWARE_OUTPUT_DEVICE_PROXY_H_
-+#define COMPONENTS_VIZ_SERVICE_DISPLAY_EMBEDDER_SOFTWARE_OUTPUT_DEVICE_PROXY_H_
-+
-+#include <memory>
-+
-+#include "base/memory/shared_memory_mapping.h"
-+#include "base/threading/thread_checker.h"
-+#include "build/build_config.h"
-+#include "components/viz/host/host_display_client.h"
-+#include "components/viz/service/display/software_output_device.h"
-+#include "components/viz/service/viz_service_export.h"
-+#include "mojo/public/cpp/bindings/pending_remote.h"
-+#include "mojo/public/cpp/bindings/remote.h"
-+#include "services/viz/privileged/mojom/compositing/display_private.mojom.h"
-+#include "services/viz/privileged/mojom/compositing/layered_window_updater.mojom.h"
-+
-+#if BUILDFLAG(IS_WIN)
-+#include <windows.h>
-+#endif
-+
-+namespace viz {
-+
-+// Shared base class for SoftwareOutputDevice implementations.
-+class SoftwareOutputDeviceBase : public SoftwareOutputDevice {
-+ public:
-+  SoftwareOutputDeviceBase() = default;
-+  ~SoftwareOutputDeviceBase() override;
-+
-+  SoftwareOutputDeviceBase(const SoftwareOutputDeviceBase&) = delete;
-+  SoftwareOutputDeviceBase& operator=(const SoftwareOutputDeviceBase&) = delete;
-+
-+  // SoftwareOutputDevice implementation.
-+  void Resize(const gfx::Size& viewport_pixel_size,
-+              float scale_factor) override;
-+  SkCanvas* BeginPaint(const gfx::Rect& damage_rect) override;
-+  void EndPaint() override;
-+
-+  // Called from Resize() if |viewport_pixel_size_| has changed.
-+  virtual void ResizeDelegated() = 0;
-+
-+  // Called from BeginPaint() and should return an SkCanvas.
-+  virtual SkCanvas* BeginPaintDelegated() = 0;
-+
-+  // Called from EndPaint() if there is damage.
-+  virtual void EndPaintDelegated(const gfx::Rect& damage_rect) = 0;
-+
-+ private:
-+  bool in_paint_ = false;
-+
-+  THREAD_CHECKER(thread_checker_);
-+};
-+
-+// SoftwareOutputDevice implementation that draws indirectly. An implementation
-+// of mojom::LayeredWindowUpdater in the browser process handles the actual
-+// drawing. Pixel backing is in SharedMemory so no copying between processes
-+// is required.
-+class SoftwareOutputDeviceProxy : public SoftwareOutputDeviceBase {
-+ public:
-+  explicit SoftwareOutputDeviceProxy(
-+      mojo::PendingRemote<mojom::LayeredWindowUpdater> layered_window_updater);
-+  ~SoftwareOutputDeviceProxy() override;
-+
-+  SoftwareOutputDeviceProxy(const SoftwareOutputDeviceProxy&) = delete;
-+  SoftwareOutputDeviceProxy& operator=(const SoftwareOutputDeviceProxy&) = delete;
-+
-+  // SoftwareOutputDevice implementation.
-+  void OnSwapBuffers(SoftwareOutputDevice::SwapBuffersCallback swap_ack_callback, gfx::FrameData data) override;
-+
-+  // SoftwareOutputDeviceBase implementation.
-+  void ResizeDelegated() override;
-+  SkCanvas* BeginPaintDelegated() override;
-+  void EndPaintDelegated(const gfx::Rect& rect) override;
-+
-+ private:
-+  // Runs |swap_ack_callback_| after draw has happened.
-+  void DrawAck();
-+
-+  mojo::Remote<mojom::LayeredWindowUpdater> layered_window_updater_;
-+
-+  std::unique_ptr<SkCanvas> canvas_;
-+  bool waiting_on_draw_ack_ = false;
-+  SoftwareOutputDevice::SwapBuffersCallback swap_ack_callback_;
-+
-+#if !defined(WIN32)
-+  base::WritableSharedMemoryMapping shm_mapping_;
-+#endif
-+};
-+
-+}  // namespace viz
-+
-+#endif  // COMPONENTS_VIZ_SERVICE_DISPLAY_EMBEDDER_SOFTWARE_OUTPUT_DEVICE_PROXY_H_
 diff --git a/content/browser/browser_interface_binders.cc b/content/browser/browser_interface_binders.cc
 index 6e62b36a76799..e07dcb983698b 100644
 --- a/content/browser/browser_interface_binders.cc
@@ -766,14 +501,14 @@ index 6e62b36a76799..e07dcb983698b 100644
        base::BindRepeating(&BindDevicePostureProvider));
  
 diff --git a/content/browser/compositor/viz_process_transport_factory.cc b/content/browser/compositor/viz_process_transport_factory.cc
-index 3b44531f2618f..943cd7b03aecd 100644
+index 3b44531f2618f..fae71c1c19a4f 100644
 --- a/content/browser/compositor/viz_process_transport_factory.cc
 +++ b/content/browser/compositor/viz_process_transport_factory.cc
 @@ -53,6 +53,8 @@
  #include "ui/gfx/win/rendering_window_manager.h"
  #endif
  
-+#include "headless/lib/browser/headless_host_display_client.h"
++#include "carbonyl/src/browser/host_display_client.h"
 +
  namespace content {
  namespace {
@@ -805,14 +540,14 @@ index 8ba82589beb32..cc0ad634bcb4c 100644
      mojo::PendingReceiver<blink::mojom::AudioContextManager> receiver) {
    AudioContextManagerImpl::Create(this, std::move(receiver));
 diff --git a/content/browser/renderer_host/render_frame_host_impl.h b/content/browser/renderer_host/render_frame_host_impl.h
-index db16f07685acf..2abeb5ea306d2 100644
+index db16f07685acf..8c36cce0ec604 100644
 --- a/content/browser/renderer_host/render_frame_host_impl.h
 +++ b/content/browser/renderer_host/render_frame_host_impl.h
 @@ -176,6 +176,8 @@
  #include "media/mojo/mojom/remoting.mojom-forward.h"
  #endif
  
-+#include "headless/lib/browser/carbonyl_render_service_impl.h"
++#include "carbonyl/src/browser/render_service_impl.h"
 +
  namespace blink {
  class AssociatedInterfaceRegistry;
@@ -1275,49 +1010,27 @@ index 35b1eda284846..a79c1aa1b6ae7 100644
    }
  
 diff --git a/headless/BUILD.gn b/headless/BUILD.gn
-index bfae1e3290de0..3cbc0989c09aa 100644
+index bfae1e3290de0..eb00b495c6c72 100644
 --- a/headless/BUILD.gn
 +++ b/headless/BUILD.gn
-@@ -325,8 +325,12 @@ component("headless_non_renderer") {
+@@ -323,6 +323,12 @@ static_library("backend_cdp_bindings") {
+ # Code that is not needed in a renderer process.
+ component("headless_non_renderer") {
    sources = [
++    "../carbonyl/src/browser/bridge.cc",
++    "../carbonyl/src/browser/bridge.h",
++    "../carbonyl/src/browser/host_display_client.cc",
++    "../carbonyl/src/browser/host_display_client.h",
++    "../carbonyl/src/browser/render_service_impl.cc",
++    "../carbonyl/src/browser/render_service_impl.h",
      "app/headless_shell_switches.cc",
      "app/headless_shell_switches.h",
-+    "app/carbonyl_rust_bridge.cc",
-+    "app/carbonyl_rust_bridge.h",
      "lib/browser/directory_enumerator.cc",
-     "lib/browser/directory_enumerator.h",
-+    "lib/browser/carbonyl_render_service_impl.cc",
-+    "lib/browser/carbonyl_render_service_impl.h",
-     "lib/browser/headless_browser_context_impl.cc",
-     "lib/browser/headless_browser_context_impl.h",
-     "lib/browser/headless_browser_context_options.cc",
-@@ -343,6 +347,8 @@ component("headless_non_renderer") {
-     "lib/browser/headless_devtools_agent_host_client.h",
-     "lib/browser/headless_devtools_manager_delegate.cc",
-     "lib/browser/headless_devtools_manager_delegate.h",
-+    "lib/browser/headless_host_display_client.cc",
-+    "lib/browser/headless_host_display_client.h",
-     "lib/browser/headless_permission_manager.cc",
-     "lib/browser/headless_permission_manager.h",
-     "lib/browser/headless_platform_event_source.cc",
-@@ -393,6 +399,7 @@ component("headless_non_renderer") {
-     sources += [
-       "lib/browser/headless_browser_impl_mac.mm",
-       "lib/browser/headless_browser_main_parts_mac.mm",
-+      "lib/browser/headless_host_display_client_mac.mm",
-       "lib/browser/headless_shell_application_mac.h",
-       "lib/browser/headless_shell_application_mac.mm",
-     ]
-@@ -448,13 +455,16 @@ component("headless_non_renderer") {
-     ":gen_devtools_client_api",
-     ":version_header",
-     ":version_header",
-+    "//carbonyl/src/mojom",
-     "//base:base_static",
-     "//base:base_static",
+@@ -453,8 +459,11 @@ component("headless_non_renderer") {
      "//build:branding_buildflags",
      "//build:branding_buildflags",
      "//build:chromeos_buildflags",
++    "//carbonyl/src/browser:mojom",
      "//components/cookie_config",
 +    "//components/content_capture/browser",
      "//components/crash/core/common:common",
@@ -1325,185 +1038,40 @@ index bfae1e3290de0..3cbc0989c09aa 100644
      "//components/embedder_support",
      "//components/embedder_support:embedder_support",
      "//components/embedder_support/origin_trials",
-@@ -993,6 +1003,14 @@ static_library("headless_shell_lib") {
+@@ -993,6 +1002,24 @@ static_library("headless_shell_lib") {
  }
  
  executable("headless_shell") {
 +  ldflags = [ "-Wl,-no_compact_unwind" ]
 +
-+  if (is_debug) {
-+    libs = ["//carbonyl/build/debug/libcarbonyl.a"]
-+  } else {
-+    libs = ["//carbonyl/build/release/libcarbonyl.a"]
++  target = ""
++
++  if (target_cpu == "x64") {
++    target += "x86_64-"
++  } else if (target_cpu == "arm64") {
++    target += "aarch64-"
 +  }
++
++  if (is_linux) {
++    target += "unknown-linux-gnu"
++  } else if (is_mac) {
++    target += "apple-darwin"
++  }
++
++  libs = ["//carbonyl/build/$target/release/libcarbonyl.a"]
 +
    configs -= [ "//build/config/compiler:thinlto_optimize_default" ]
    configs += [ "//build/config/compiler:thinlto_optimize_max" ]
  
-diff --git a/headless/app/carbonyl_rust_bridge.cc b/headless/app/carbonyl_rust_bridge.cc
-new file mode 100644
-index 0000000000000..dbc7db506107e
---- /dev/null
-+++ b/headless/app/carbonyl_rust_bridge.cc
-@@ -0,0 +1,78 @@
-+#include "headless/app/carbonyl_rust_bridge.h"
-+
-+#include <memory>
-+#include <iostream>
-+#include <stdio.h>
-+
-+extern "C" {
-+    void* carbonyl_renderer_create();
-+    void carbonyl_renderer_clear_text(void* renderer);
-+    void carbonyl_renderer_draw_text(
-+        void* renderer,
-+        const char* utf8,
-+        const struct carbonyl_bridge_rect* rect,
-+        const struct carbonyl_bridge_color* color
-+    );
-+    void carbonyl_renderer_draw_background(
-+        void* renderer,
-+        const unsigned char* pixels,
-+        size_t pixels_size,
-+        const struct carbonyl_bridge_rect* rect
-+    );
-+}
-+
-+namespace carbonyl {
-+
-+namespace {
-+    static std::unique_ptr<Renderer> globalInstance;
-+}
-+
-+Renderer::Renderer(void* ptr): ptr_(ptr) {}
-+
-+Renderer* Renderer::Main() {
-+    if (!globalInstance) {
-+        globalInstance = std::make_unique<Renderer>(
-+            carbonyl_renderer_create()
-+        );
-+    }
-+
-+    return globalInstance.get();
-+}
-+
-+void Renderer::ClearText() {
-+    carbonyl_renderer_clear_text(ptr_);
-+}
-+
-+void Renderer::DrawText(const std::string& text, const gfx::RectF& bounds, SkColor sk_color) {
-+    struct carbonyl_bridge_rect rect;
-+    struct carbonyl_bridge_color color;
-+
-+    rect.origin.x = bounds.x();
-+    rect.origin.y = bounds.y();
-+    rect.size.width = bounds.width();
-+    rect.size.height = bounds.height();
-+
-+    color.r = SkColorGetR(sk_color);
-+    color.g = SkColorGetG(sk_color);
-+    color.b = SkColorGetB(sk_color);
-+
-+    carbonyl_renderer_draw_text(
-+        ptr_,
-+        text.c_str(),
-+        &rect,
-+        &color
-+    );
-+}
-+
-+void Renderer::DrawBackgrond(const unsigned char* pixels, size_t pixels_size, const gfx::Rect& bounds) {
-+    struct carbonyl_bridge_rect rect;
-+
-+    rect.origin.x = bounds.x();
-+    rect.origin.y = bounds.y();
-+    rect.size.width = bounds.width();
-+    rect.size.height = bounds.height();
-+
-+    carbonyl_renderer_draw_background(ptr_, pixels, pixels_size, &rect);
-+}
-+
-+}
-diff --git a/headless/app/carbonyl_rust_bridge.h b/headless/app/carbonyl_rust_bridge.h
-new file mode 100644
-index 0000000000000..b042b84b298f6
---- /dev/null
-+++ b/headless/app/carbonyl_rust_bridge.h
-@@ -0,0 +1,65 @@
-+#ifndef HEADLESS_APP_CARBONYL_RUST_BRIDGE_H_
-+#define HEADLESS_APP_CARBONYL_RUST_BRIDGE_H_
-+
-+#include <stdio.h>
-+
-+#include "ui/gfx/geometry/rect_f.h"
-+#include "third_party/skia/include/core/SkColor.h"
-+
-+#ifdef  __cplusplus
-+extern "C" {
-+#endif
-+
-+struct carbonyl_bridge_size {
-+    unsigned int width;
-+    unsigned int height;
-+};
-+struct carbonyl_bridge_point {
-+    unsigned int x;
-+    unsigned int y;
-+};
-+struct carbonyl_bridge_rect {
-+    struct carbonyl_bridge_point origin;
-+    struct carbonyl_bridge_size size;
-+};
-+struct carbonyl_bridge_color {
-+    uint8_t r;
-+    uint8_t g;
-+    uint8_t b;
-+};
-+struct carbonyl_bridge_browser_delegate {
-+    void (*shutdown) ();
-+    void (*scroll) (int);
-+    void (*key_press) (char);
-+    void (*mouse_up) (unsigned int, unsigned int);
-+    void (*mouse_down) (unsigned int, unsigned int);
-+    void (*mouse_move) (unsigned int, unsigned int);
-+};
-+
-+void carbonyl_shell_main();
-+void carbonyl_input_listen(struct carbonyl_bridge_browser_delegate* delegate);
-+void carbonyl_output_get_size(struct carbonyl_bridge_size* size);
-+
-+#ifdef  __cplusplus
-+} /* end extern "C" */
-+#endif
-+
-+namespace carbonyl {
-+
-+class Renderer {
-+public:
-+    Renderer(void* ptr);
-+
-+    static Renderer* Main();
-+
-+    void ClearText();
-+    void DrawText(const std::string& text, const gfx::RectF& bounds, SkColor color);
-+    void DrawBackgrond(const unsigned char* pixels, size_t pixels_size, const gfx::Rect& bounds);
-+
-+private:
-+    void* ptr_;
-+};
-+
-+}
-+
-+#endif  // HEADLESS_APP_CARBONYL_RUST_BRIDGE_H_
 diff --git a/headless/app/headless_shell.cc b/headless/app/headless_shell.cc
-index e08385b9cf740..b56ec62411d01 100644
+index e08385b9cf740..bfb05adf56cc2 100644
 --- a/headless/app/headless_shell.cc
 +++ b/headless/app/headless_shell.cc
 @@ -4,6 +4,8 @@
  
  #include "headless/app/headless_shell.h"
  
-+#include "headless/app/carbonyl_rust_bridge.h"
++#include "carbonyl/src/browser/bridge.h"
 +
  #include <memory>
  
@@ -1564,7 +1132,7 @@ index e08385b9cf740..b56ec62411d01 100644
  
  void HeadlessShell::ShutdownSoon() {
 diff --git a/headless/app/headless_shell_main.cc b/headless/app/headless_shell_main.cc
-index 35736145f5caf..6a74e766a4d72 100644
+index 35736145f5caf..f9b8bac5c18a5 100644
 --- a/headless/app/headless_shell_main.cc
 +++ b/headless/app/headless_shell_main.cc
 @@ -13,7 +13,12 @@
@@ -1572,7 +1140,7 @@ index 35736145f5caf..6a74e766a4d72 100644
  #endif
  
 +#include "base/at_exit.h"
-+#include "headless/app/carbonyl_rust_bridge.h"
++#include "carbonyl/src/browser/bridge.h"
 +
  int main(int argc, const char** argv) {
 +  carbonyl_shell_main();
@@ -1580,74 +1148,8 @@ index 35736145f5caf..6a74e766a4d72 100644
  #if BUILDFLAG(IS_WIN)
    sandbox::SandboxInterfaceInfo sandbox_info = {nullptr};
    content::InitializeSandboxInfo(&sandbox_info);
-diff --git a/headless/lib/browser/carbonyl_render_service_impl.cc b/headless/lib/browser/carbonyl_render_service_impl.cc
-new file mode 100644
-index 0000000000000..d09ecca11bd91
---- /dev/null
-+++ b/headless/lib/browser/carbonyl_render_service_impl.cc
-@@ -0,0 +1,25 @@
-+#include <iostream>
-+
-+#include "headless/app/carbonyl_rust_bridge.h"
-+#include "headless/lib/browser/carbonyl_render_service_impl.h"
-+
-+namespace carbonyl {
-+
-+CarbonylRenderServiceImpl::CarbonylRenderServiceImpl(
-+    mojo::PendingReceiver<mojom::CarbonylRenderService> receiver):
-+    receiver_(this, std::move(receiver))
-+{}
-+
-+CarbonylRenderServiceImpl::~CarbonylRenderServiceImpl() = default;
-+
-+void CarbonylRenderServiceImpl::DrawText(std::vector<mojom::TextDataPtr> data) {
-+    auto* renderer = Renderer::Main();
-+
-+    renderer->ClearText();
-+
-+    for (auto& text: data) {
-+        renderer->DrawText(text->contents, text->bounds, text->color);
-+    }
-+}
-+
-+}
-diff --git a/headless/lib/browser/carbonyl_render_service_impl.h b/headless/lib/browser/carbonyl_render_service_impl.h
-new file mode 100644
-index 0000000000000..bd15ebe8aaa83
---- /dev/null
-+++ b/headless/lib/browser/carbonyl_render_service_impl.h
-@@ -0,0 +1,28 @@
-+#ifndef HEADLESS_LIB_BROWSER_CARBONYL_RESPONSER_IMPL_H_
-+#define HEADLESS_LIB_BROWSER_CARBONYL_RESPONSER_IMPL_H_
-+
-+#include "carbonyl/src/mojom/carbonyl.mojom.h"
-+
-+#include "mojo/public/cpp/bindings/pending_receiver.h"
-+#include "mojo/public/cpp/bindings/receiver.h"
-+
-+namespace carbonyl {
-+
-+class CarbonylRenderServiceImpl: public mojom::CarbonylRenderService {
-+ public:
-+  explicit CarbonylRenderServiceImpl(mojo::PendingReceiver<mojom::CarbonylRenderService> receiver);
-+  CarbonylRenderServiceImpl(const CarbonylRenderServiceImpl&) = delete;
-+  CarbonylRenderServiceImpl& operator=(const CarbonylRenderServiceImpl&) = delete;
-+
-+  ~CarbonylRenderServiceImpl() override;
-+
-+  // carbonyl::mojom::CarbonylRenderService:
-+  void DrawText(std::vector<mojom::TextDataPtr> data) override;
-+
-+ private:
-+  mojo::Receiver<mojom::CarbonylRenderService> receiver_;
-+};
-+
-+}  // namespace carbonyl
-+
-+#endif  // HEADLESS_LIB_BROWSER_CARBONYL_RESPONSER_IMPL_H_
-\ No newline at end of file
 diff --git a/headless/lib/browser/headless_browser_impl.cc b/headless/lib/browser/headless_browser_impl.cc
-index 1a1223108be6d..3b2a7ffb3e1bd 100644
+index 1a1223108be6d..6c229edba58d6 100644
 --- a/headless/lib/browser/headless_browser_impl.cc
 +++ b/headless/lib/browser/headless_browser_impl.cc
 @@ -27,6 +27,21 @@
@@ -1656,7 +1158,7 @@ index 1a1223108be6d..3b2a7ffb3e1bd 100644
  
 +#include "content/public/browser/render_frame_host.h"
 +#include "content/public/browser/render_widget_host.h"
-+#include "headless/app/carbonyl_rust_bridge.h"
++#include "carbonyl/src/browser/bridge.h"
 +#include "third_party/blink/public/common/input/web_mouse_event.h"
 +#include "third_party/blink/public/common/input/web_mouse_wheel_event.h"
 +#include "ui/events/keycodes/keyboard_codes.h"
@@ -2015,7 +1517,7 @@ index 1a1223108be6d..3b2a7ffb3e1bd 100644
 +      },
 +    };
 +
-+    carbonyl_input_listen(&delegate);
++    carbonyl::Renderer::Main()->Listen(&delegate);
 +  });
  }
  
@@ -2052,196 +1554,6 @@ index a2d531ab32ff5..b3527db4c154f 100644
  #if BUILDFLAG(IS_MAC)
    std::unique_ptr<display::ScopedNativeScreen> screen_;
  #endif
-diff --git a/headless/lib/browser/headless_host_display_client.cc b/headless/lib/browser/headless_host_display_client.cc
-new file mode 100644
-index 0000000000000..60367c0af4bcd
---- /dev/null
-+++ b/headless/lib/browser/headless_host_display_client.cc
-@@ -0,0 +1,85 @@
-+// Copyright (c) 2019 GitHub, Inc.
-+// Use of this source code is governed by the MIT license that can be
-+// found in the LICENSE file.
-+
-+#include "headless/lib/browser/headless_host_display_client.h"
-+
-+#include <utility>
-+
-+#include "components/viz/common/resources/resource_format.h"
-+#include "components/viz/common/resources/resource_sizes.h"
-+#include "mojo/public/cpp/system/platform_handle.h"
-+#include "skia/ext/platform_canvas.h"
-+#include "third_party/skia/include/core/SkColor.h"
-+#include "third_party/skia/include/core/SkRect.h"
-+#include "third_party/skia/src/core/SkDevice.h"
-+#include "ui/gfx/skia_util.h"
-+
-+#if BUILDFLAG(IS_WIN)
-+#include "skia/ext/skia_utils_win.h"
-+#endif
-+
-+#include "headless/app/carbonyl_rust_bridge.h"
-+
-+namespace carbonyl {
-+
-+LayeredWindowUpdater::LayeredWindowUpdater(
-+    mojo::PendingReceiver<viz::mojom::LayeredWindowUpdater> receiver)
-+    : receiver_(this, std::move(receiver)) {}
-+
-+LayeredWindowUpdater::~LayeredWindowUpdater() = default;
-+
-+void LayeredWindowUpdater::OnAllocatedSharedMemory(
-+    const gfx::Size& pixel_size,
-+    base::UnsafeSharedMemoryRegion region) {
-+  if (!region.IsValid())
-+    return;
-+
-+  // Make sure |pixel_size| is sane.
-+  size_t expected_bytes;
-+  bool size_result = viz::ResourceSizes::MaybeSizeInBytes(
-+      pixel_size, viz::ResourceFormat::RGBA_8888, &expected_bytes);
-+  if (!size_result)
-+    return;
-+
-+#if !defined(WIN32)
-+  shm_mapping_ = region.Map();
-+  if (!shm_mapping_.IsValid()) {
-+    DLOG(ERROR) << "Failed to map shared memory region";
-+    return;
-+  }
-+#endif
-+}
-+
-+void LayeredWindowUpdater::Draw(const gfx::Rect& damage_rect,
-+                                DrawCallback draw_callback) {
-+  Renderer::Main()->DrawBackgrond(
-+    shm_mapping_.GetMemoryAs<uint8_t>(),
-+    shm_mapping_.size(),
-+    damage_rect
-+  );
-+
-+  std::move(draw_callback).Run();
-+}
-+
-+HostDisplayClient::HostDisplayClient()
-+    : viz::HostDisplayClient(gfx::kNullAcceleratedWidget) {}
-+HostDisplayClient::~HostDisplayClient() = default;
-+
-+void HostDisplayClient::CreateLayeredWindowUpdater(
-+    mojo::PendingReceiver<viz::mojom::LayeredWindowUpdater> receiver) {
-+  layered_window_updater_ =
-+      std::make_unique<LayeredWindowUpdater>(std::move(receiver));
-+}
-+
-+#if BUILDFLAG(IS_MAC)
-+void HostDisplayClient::OnDisplayReceivedCALayerParams(
-+    const gfx::CALayerParams& ca_layer_params) {}
-+#endif
-+
-+#if BUILDFLAG(IS_LINUX) && !BUILDFLAG(IS_CHROMEOS)
-+void HostDisplayClient::DidCompleteSwapWithNewSize(
-+    const gfx::Size& size) {}
-+#endif
-+
-+}  // namespace carbonyl
-diff --git a/headless/lib/browser/headless_host_display_client.h b/headless/lib/browser/headless_host_display_client.h
-new file mode 100644
-index 0000000000000..dc120368cf9f2
---- /dev/null
-+++ b/headless/lib/browser/headless_host_display_client.h
-@@ -0,0 +1,76 @@
-+// Copyright (c) 2019 GitHub, Inc.
-+// Use of this source code is governed by the MIT license that can be
-+// found in the LICENSE file.
-+
-+#ifndef HEADLESS_LIB_BROWSER_HEADLESS_FOCUS_HOST_DISPLAY_CLIENT_H_
-+#define HEADLESS_LIB_BROWSER_HEADLESS_FOCUS_HOST_DISPLAY_CLIENT_H_
-+
-+#include <memory>
-+
-+#include "base/callback.h"
-+#include "base/memory/shared_memory_mapping.h"
-+#include "components/viz/host/host_display_client.h"
-+#include "services/viz/privileged/mojom/compositing/layered_window_updater.mojom.h"
-+#include "third_party/skia/include/core/SkBitmap.h"
-+#include "third_party/skia/include/core/SkCanvas.h"
-+#include "ui/gfx/native_widget_types.h"
-+
-+namespace carbonyl {
-+
-+typedef base::RepeatingCallback<void(const gfx::Rect&, const SkBitmap&)>
-+    OnPaintCallback;
-+
-+class LayeredWindowUpdater : public viz::mojom::LayeredWindowUpdater {
-+ public:
-+  explicit LayeredWindowUpdater(
-+      mojo::PendingReceiver<viz::mojom::LayeredWindowUpdater> receiver);
-+  ~LayeredWindowUpdater() override;
-+
-+  // disable copy
-+  LayeredWindowUpdater(const LayeredWindowUpdater&) = delete;
-+  LayeredWindowUpdater& operator=(const LayeredWindowUpdater&) = delete;
-+
-+  // viz::mojom::LayeredWindowUpdater implementation.
-+  void OnAllocatedSharedMemory(const gfx::Size& pixel_size,
-+                               base::UnsafeSharedMemoryRegion region) override;
-+  void Draw(const gfx::Rect& damage_rect, DrawCallback draw_callback) override;
-+
-+ private:
-+  mojo::Receiver<viz::mojom::LayeredWindowUpdater> receiver_;
-+
-+#if !defined(WIN32)
-+  base::WritableSharedMemoryMapping shm_mapping_;
-+#endif
-+};
-+
-+class HostDisplayClient : public viz::HostDisplayClient {
-+ public:
-+  explicit HostDisplayClient();
-+  ~HostDisplayClient() override;
-+
-+  // disable copy
-+  HostDisplayClient(const HostDisplayClient&) = delete;
-+  HostDisplayClient& operator=(const HostDisplayClient&) =
-+      delete;
-+
-+ private:
-+#if BUILDFLAG(IS_MAC)
-+  void OnDisplayReceivedCALayerParams(
-+      const gfx::CALayerParams& ca_layer_params) override;
-+#endif
-+
-+  void CreateLayeredWindowUpdater(
-+      mojo::PendingReceiver<viz::mojom::LayeredWindowUpdater> receiver)
-+      override;
-+
-+#if BUILDFLAG(IS_LINUX) && !BUILDFLAG(IS_CHROMEOS)
-+  void DidCompleteSwapWithNewSize(const gfx::Size& size) override;
-+#endif
-+
-+  std::unique_ptr<LayeredWindowUpdater> layered_window_updater_;
-+  OnPaintCallback callback_;
-+};
-+
-+}  // namespace carbonyl
-+
-+#endif  // HEADLESS_LIB_BROWSER_HEADLESS_FOCUS_HOST_DISPLAY_CLIENT_H_
-diff --git a/headless/lib/browser/headless_host_display_client_mac.mm b/headless/lib/browser/headless_host_display_client_mac.mm
-new file mode 100644
-index 0000000000000..9005fb7334734
---- /dev/null
-+++ b/headless/lib/browser/headless_host_display_client_mac.mm
-@@ -0,0 +1,11 @@
-+// Copyright (c) 2019 GitHub, Inc.
-+// Use of this source code is governed by the MIT license that can be
-+// found in the LICENSE file.
-+
-+#include "headless/lib/browser/headless_host_display_client.h"
-+
-+#include <iostream>
-+
-+namespace carbonyl {
-+
-+}  // namespace carbonyl
 diff --git a/headless/lib/browser/headless_web_contents_impl.cc b/headless/lib/browser/headless_web_contents_impl.cc
 index 010ff2c94287e..17f63933357f6 100644
 --- a/headless/lib/browser/headless_web_contents_impl.cc
@@ -2570,6 +1882,47 @@ index 2e8500ac411be..9689ab3634c3b 100644
    // Don't bother to save/restore here as the caller is expecting the canvas
    // to be modified and take care of it.
    canvas->clipRect(gfx::RectToSkRect(rect));
+diff --git a/third_party/blink/renderer/core/paint/ng/ng_text_painter_base.cc b/third_party/blink/renderer/core/paint/ng/ng_text_painter_base.cc
+index 008d80040e719..c11da51d0e906 100644
+--- a/third_party/blink/renderer/core/paint/ng/ng_text_painter_base.cc
++++ b/third_party/blink/renderer/core/paint/ng/ng_text_painter_base.cc
+@@ -123,21 +123,21 @@ void NGTextPainterBase::PaintUnderOrOverLineDecorations(
+       continue;
+     }
+ 
+-    if (decoration_info.HasUnderline() && decoration_info.FontData() &&
+-        EnumHasFlags(lines_to_paint, TextDecorationLine::kUnderline)) {
+-      decoration_info.SetUnderlineLineData(decoration_offset);
+-      PaintDecorationUnderOrOverLine(fragment_paint_info, context,
+-                                     decoration_info,
+-                                     TextDecorationLine::kUnderline, flags);
+-    }
+-
+-    if (decoration_info.HasOverline() && decoration_info.FontData() &&
+-        EnumHasFlags(lines_to_paint, TextDecorationLine::kOverline)) {
+-      decoration_info.SetOverlineLineData(decoration_offset);
+-      PaintDecorationUnderOrOverLine(fragment_paint_info, context,
+-                                     decoration_info,
+-                                     TextDecorationLine::kOverline, flags);
+-    }
++    // if (decoration_info.HasUnderline() && decoration_info.FontData() &&
++    //     EnumHasFlags(lines_to_paint, TextDecorationLine::kUnderline)) {
++    //   decoration_info.SetUnderlineLineData(decoration_offset);
++    //   PaintDecorationUnderOrOverLine(fragment_paint_info, context,
++    //                                  decoration_info,
++    //                                  TextDecorationLine::kUnderline, flags);
++    // }
++
++    // if (decoration_info.HasOverline() && decoration_info.FontData() &&
++    //     EnumHasFlags(lines_to_paint, TextDecorationLine::kOverline)) {
++    //   decoration_info.SetOverlineLineData(decoration_offset);
++    //   PaintDecorationUnderOrOverLine(fragment_paint_info, context,
++    //                                  decoration_info,
++    //                                  TextDecorationLine::kOverline, flags);
++    // }
+   }
+ }
+ 
 diff --git a/third_party/blink/renderer/core/paint/paint_flags.h b/third_party/blink/renderer/core/paint/paint_flags.h
 index d860456a9a369..9320b07c9baa0 100644
 --- a/third_party/blink/renderer/core/paint/paint_flags.h
@@ -2930,3 +2283,62 @@ index b6d3f2fea1d66..e06f7d3184d66 100644
    static float scale_factor(const gfx::CALayerParams& ca_layer_params) {
      return ca_layer_params.scale_factor;
    }
+diff --git a/ui/gfx/render_text.cc b/ui/gfx/render_text.cc
+index 67fbf128ea158..a645ba61c8597 100644
+--- a/ui/gfx/render_text.cc
++++ b/ui/gfx/render_text.cc
+@@ -55,9 +55,9 @@ constexpr char16_t kEllipsisCodepoint = 0x2026;
+ 
+ // Fraction of the text size to raise the center of a strike-through line above
+ // the baseline.
+-const SkScalar kStrikeThroughOffset = (SK_Scalar1 * 65 / 252);
++// const SkScalar kStrikeThroughOffset = (SK_Scalar1 * 65 / 252);
+ // Fraction of the text size to lower an underline below the baseline.
+-const SkScalar kUnderlineOffset = (SK_Scalar1 / 9);
++// const SkScalar kUnderlineOffset = (SK_Scalar1 / 9);
+ 
+ // Float comparison needs epsilon to consider rounding errors in float
+ // arithmetic. Epsilon should be dependent on the context and here, we are
+@@ -374,27 +374,27 @@ void SkiaTextRenderer::DrawUnderline(int x,
+                                      int y,
+                                      int width,
+                                      SkScalar thickness_factor) {
+-  SkScalar x_scalar = SkIntToScalar(x);
+-  const SkScalar text_size = font_.getSize();
+-  SkRect r = SkRect::MakeLTRB(
+-      x_scalar, y + text_size * kUnderlineOffset, x_scalar + width,
+-      y + (text_size *
+-           (kUnderlineOffset +
+-            (thickness_factor * RenderText::kLineThicknessFactor))));
+-  canvas_skia_->drawRect(r, flags_);
++  // SkScalar x_scalar = SkIntToScalar(x);
++  // const SkScalar text_size = font_.getSize();
++  // SkRect r = SkRect::MakeLTRB(
++  //     x_scalar, y + text_size * kUnderlineOffset, x_scalar + width,
++  //     y + (text_size *
++  //          (kUnderlineOffset +
++  //           (thickness_factor * RenderText::kLineThicknessFactor))));
++  // canvas_skia_->drawRect(r, flags_);
+ }
+ 
+ void SkiaTextRenderer::DrawStrike(int x,
+                                   int y,
+                                   int width,
+                                   SkScalar thickness_factor) {
+-  const SkScalar text_size = font_.getSize();
+-  const SkScalar height = text_size * thickness_factor;
+-  const SkScalar top = y - text_size * kStrikeThroughOffset - height / 2;
+-  SkScalar x_scalar = SkIntToScalar(x);
+-  const SkRect r =
+-      SkRect::MakeLTRB(x_scalar, top, x_scalar + width, top + height);
+-  canvas_skia_->drawRect(r, flags_);
++  // const SkScalar text_size = font_.getSize();
++  // const SkScalar height = text_size * thickness_factor;
++  // const SkScalar top = y - text_size * kStrikeThroughOffset - height / 2;
++  // SkScalar x_scalar = SkIntToScalar(x);
++  // const SkRect r =
++  //     SkRect::MakeLTRB(x_scalar, top, x_scalar + width, top + height);
++  // canvas_skia_->drawRect(r, flags_);
+ }
+ 
+ StyleIterator::StyleIterator(const BreakList<SkColor>* colors,

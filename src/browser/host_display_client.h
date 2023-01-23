@@ -1,9 +1,5 @@
-// Copyright (c) 2019 GitHub, Inc.
-// Use of this source code is governed by the MIT license that can be
-// found in the LICENSE file.
-
-#ifndef HEADLESS_LIB_BROWSER_HEADLESS_FOCUS_HOST_DISPLAY_CLIENT_H_
-#define HEADLESS_LIB_BROWSER_HEADLESS_FOCUS_HOST_DISPLAY_CLIENT_H_
+#ifndef CARBONYL_SRC_BROWSER_HOST_DISPLAY_CLIENT_H_
+#define CARBONYL_SRC_BROWSER_HOST_DISPLAY_CLIENT_H_
 
 #include <memory>
 
@@ -64,9 +60,8 @@ class HostDisplayClient : public viz::HostDisplayClient {
 
   std::unique_ptr<LayeredWindowUpdater> layered_window_updater_;
   OnPaintCallback callback_;
-  bool active_ = false;
 };
 
 }  // namespace carbonyl
 
-#endif  // HEADLESS_LIB_BROWSER_HEADLESS_FOCUS_HOST_DISPLAY_CLIENT_H_
+#endif  // CARBONYL_SRC_BROWSER_HOST_DISPLAY_CLIENT_H_

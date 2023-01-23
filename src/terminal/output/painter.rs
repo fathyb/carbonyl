@@ -29,23 +29,23 @@ impl Painter {
             buffer: Vec::new(),
             cursor: None,
             output: io::stdout(),
-            true_color: if let Ok(value) = std::env::var("COLORTERM") {
-                match value.as_str() {
-                    "truecolor" | "24bit" => true,
-                    _ => false,
-                }
-            } else {
-                false
-            },
             background: None,
             foreground: None,
             background_code: None,
             foreground_code: None,
+            true_color: match std::env::var("COLORTERM").unwrap_or_default().as_str() {
+                "truecolor" | "24bit" => true,
+                _ => false,
+            },
         }
     }
 
     pub fn true_color(&self) -> bool {
         self.true_color
+    }
+
+    pub fn set_true_color(&mut self, true_color: bool) {
+        self.true_color = true_color
     }
 
     pub fn flush(&mut self) -> io::Result<()> {
