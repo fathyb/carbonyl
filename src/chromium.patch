@@ -1590,10 +1590,18 @@ index 28f1a65f6dce5..e595735be187b 100644
  }
  
 diff --git a/headless/lib/browser/headless_web_contents_impl.cc b/headless/lib/browser/headless_web_contents_impl.cc
-index 010ff2c94287e..17f63933357f6 100644
+index 010ff2c94287e..69e7897de00d7 100644
 --- a/headless/lib/browser/headless_web_contents_impl.cc
 +++ b/headless/lib/browser/headless_web_contents_impl.cc
-@@ -21,6 +21,8 @@
+@@ -8,6 +8,7 @@
+ #include <string>
+ #include <utility>
+ #include <vector>
++#include <iostream>
+ 
+ #include "base/bind.h"
+ #include "base/command_line.h"
+@@ -21,10 +22,14 @@
  #include "base/values.h"
  #include "build/build_config.h"
  #include "build/chromeos_buildflags.h"
@@ -1602,7 +1610,13 @@ index 010ff2c94287e..17f63933357f6 100644
  #include "content/public/browser/browser_thread.h"
  #include "content/public/browser/child_process_termination_info.h"
  #include "content/public/browser/devtools_agent_host.h"
-@@ -299,6 +301,48 @@ HeadlessWebContentsImpl::CreateForChildContents(
+ #include "content/public/browser/navigation_controller.h"
++#include "content/public/browser/navigation_entry.h"
++#include "content/public/browser/navigation_details.h"
+ #include "content/public/browser/navigation_handle.h"
+ #include "content/public/browser/render_frame_host.h"
+ #include "content/public/browser/render_process_host.h"
+@@ -299,6 +304,48 @@ HeadlessWebContentsImpl::CreateForChildContents(
    return child;
  }
  
@@ -1651,7 +1665,7 @@ index 010ff2c94287e..17f63933357f6 100644
  void HeadlessWebContentsImpl::InitializeWindow(
      const gfx::Rect& initial_bounds) {
    static int window_id = 1;
-@@ -307,6 +351,14 @@ void HeadlessWebContentsImpl::InitializeWindow(
+@@ -307,6 +354,14 @@ void HeadlessWebContentsImpl::InitializeWindow(
  
    browser()->PlatformInitializeWebContents(this);
    SetBounds(initial_bounds);
@@ -1666,6 +1680,34 @@ index 010ff2c94287e..17f63933357f6 100644
  }
  
  void HeadlessWebContentsImpl::SetBounds(const gfx::Rect& bounds) {
+@@ -390,6 +445,15 @@ void HeadlessWebContentsImpl::RenderViewReady() {
+   devtools_target_ready_notification_sent_ = true;
+ }
+ 
++void HeadlessWebContentsImpl::TitleWasSet(content::NavigationEntry* entry) {
++  auto title = base::UTF16ToUTF8(entry->GetTitleForDisplay());
++
++  std::cout <<
++    "\x1b]0;" << title << "\x07" <<
++    "\x1b]1;" << title << "\x07" <<
++  std::flush;
++}
++
+ int HeadlessWebContentsImpl::GetMainFrameRenderProcessId() const {
+   if (!web_contents() || !web_contents()->GetPrimaryMainFrame())
+     return -1;
+diff --git a/headless/lib/browser/headless_web_contents_impl.h b/headless/lib/browser/headless_web_contents_impl.h
+index b80147fd06be8..18b02bf7297be 100644
+--- a/headless/lib/browser/headless_web_contents_impl.h
++++ b/headless/lib/browser/headless_web_contents_impl.h
+@@ -91,6 +91,7 @@ class HEADLESS_EXPORT HeadlessWebContentsImpl
+   void RenderFrameCreated(content::RenderFrameHost* render_frame_host) override;
+   void RenderFrameDeleted(content::RenderFrameHost* render_frame_host) override;
+   void RenderViewReady() override;
++  void TitleWasSet(content::NavigationEntry* entry) override;
+ 
+   content::WebContents* web_contents() const;
+   bool OpenURL(const GURL& url);
 diff --git a/headless/lib/renderer/headless_content_renderer_client.cc b/headless/lib/renderer/headless_content_renderer_client.cc
 index d102fb57dd9c2..392b114d737a0 100644
 --- a/headless/lib/renderer/headless_content_renderer_client.cc

@@ -1,105 +1,102 @@
+use std::ops::ControlFlow;
+
 use crate::terminal::input::*;
 
-#[derive(Clone)]
-enum State {
-    CharSequence,
-    EscapeSequence,
-    ControlSequence,
-    MouseSequence(Mouse),
-    DeviceControlSequence(DeviceControl),
+#[derive(Default)]
+pub struct Parser {
+    events: Vec<Event>,
+    sequence: Sequence,
 }
 
-pub struct Parser {
-    state: State,
+#[derive(Default)]
+enum Sequence {
+    #[default]
+    Char,
+    Escape,
+    Control,
+    Mouse(Mouse),
+    DeviceControl(DeviceControl),
 }
+
+#[derive(Debug)]
+pub enum TerminalEvent {
+    Name(String),
+    TrueColorSupported,
+}
+
+#[derive(Debug)]
+pub enum Event {
+    KeyPress { key: u8 },
+    MouseUp { row: usize, col: usize },
+    MouseDown { row: usize, col: usize },
+    MouseMove { row: usize, col: usize },
+    Scroll { delta: isize },
+    Terminal(TerminalEvent),
+    Exit,
+}
+
+pub type ParseControlFlow = ControlFlow<Option<Event>, Option<Event>>;
 
 impl Parser {
     pub fn new() -> Parser {
-        Parser {
-            state: State::CharSequence,
-        }
+        Self::default()
     }
 
     pub fn parse(&mut self, input: &[u8]) -> Vec<Event> {
-        let mut events = Vec::new();
-        let mut state = self.state.clone();
-        let mut emit = |e| {
-            events.push(e);
+        let mut sequence = std::mem::take(&mut self.sequence);
 
-            CharSequence
-        };
-
-        use Event::*;
-        use State::*;
+        macro_rules! emit {
+            ($event:expr) => {{
+                self.events.push($event);
+                Sequence::Char
+            }};
+            ($event:expr; continue) => {{
+                self.events.push($event);
+                continue;
+            }};
+        }
+        macro_rules! parse {
+            ($flow:expr) => (
+                match $flow {
+                    ControlFlow::Break(None) => Sequence::Char,
+                    ControlFlow::Break(Some(event)) => emit!(event),
+                    ControlFlow::Continue(None) => continue,
+                    ControlFlow::Continue(Some(event)) => emit!(event; continue),
+                }
+            );
+        }
 
         for &key in input {
-            state = match state {
-                CharSequence => match key {
-                    // ESC character, start an escape sequence
-                    0x1b => EscapeSequence,
-                    // CTRL-C pressed
-                    0x03 => emit(Exit),
-                    // Any other character should be parsed as text input
-                    key => emit(KeyPress { key }),
+            sequence = match sequence {
+                Sequence::Char => match key {
+                    0x1b => Sequence::Escape,
+                    0x03 => emit!(Event::Exit),
+                    key => emit!(Event::KeyPress { key }),
                 },
-                EscapeSequence => match key {
-                    // CSI
-                    b'[' => ControlSequence,
-                    // DCS
-                    b'P' => DeviceControlSequence(DeviceControl::new()),
-                    0x1b => {
-                        emit(KeyPress { key: 0x1b });
-
-                        continue;
-                    }
+                Sequence::Escape => match key {
+                    b'[' => Sequence::Control,
+                    b'P' => Sequence::DeviceControl(DeviceControl::new()),
+                    0x1b => emit!(Event::KeyPress { key: 0x1b }; continue),
                     key => {
-                        emit(KeyPress { key: 0x1b });
-                        emit(KeyPress { key })
+                        emit!(Event::KeyPress { key: 0x1b });
+                        emit!(Event::KeyPress { key })
                     }
                 },
-                ControlSequence => match key {
-                    // Mouse input
-                    b'<' => MouseSequence(Mouse::new()),
-                    b'A' => emit(KeyPress { key: 0x26 }),
-                    b'B' => emit(KeyPress { key: 0x28 }),
-                    b'C' => emit(KeyPress { key: 0x27 }),
-                    b'D' => emit(KeyPress { key: 0x25 }),
-                    _ => CharSequence,
+                Sequence::Control => match key {
+                    b'<' => Sequence::Mouse(Mouse::new()),
+                    b'A' => emit!(Event::KeyPress { key: 0x26 }),
+                    b'B' => emit!(Event::KeyPress { key: 0x28 }),
+                    b'C' => emit!(Event::KeyPress { key: 0x27 }),
+                    b'D' => emit!(Event::KeyPress { key: 0x25 }),
+                    _ => Sequence::Char,
                 },
-                MouseSequence(ref mut mouse) => match key {
-                    // Delimiter
-                    b';' => {
-                        if mouse.parse() == None {
-                            CharSequence
-                        } else {
-                            continue;
-                        }
-                    }
-                    // Terminator
-                    b'm' | b'M' => {
-                        if let Some(event) = Event::parse(mouse, key == b'm') {
-                            emit(event)
-                        } else {
-                            CharSequence
-                        }
-                    }
-                    // Consider anything else part of the value
-                    key => {
-                        mouse.push(key);
-
-                        continue;
-                    }
-                },
-                DeviceControlSequence(ref mut dcs) => match dcs.parse(key) {
-                    DeviceControlEvent::Continue => continue,
-                    DeviceControlEvent::Terminal(terminal) => emit(Terminal(terminal)),
-                    _ => CharSequence,
-                },
+                Sequence::Mouse(ref mut mouse) => parse!(mouse.parse(key)),
+                Sequence::DeviceControl(ref mut dcs) => parse!(dcs.parse(key)),
             }
         }
 
-        self.state = state;
+        self.sequence = sequence;
 
-        events
+        std::mem::take(&mut self.events)
     }
 }

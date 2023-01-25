@@ -98,6 +98,13 @@ macro_rules! impl_vector_overload {
             pub fn iter(&self) -> std::array::IntoIter<T, 2> {
                 self.to_array().into_iter()
             }
+
+            pub fn reduce<F>(&self, mut f: F) -> T
+            where
+                F: FnMut(T, T) -> T
+            {
+                f(self.$x, self.$y)
+            }
         }
 
         impl<T: Copy> Vector2<T> for $struct<T> {
@@ -160,6 +167,15 @@ macro_rules! impl_vector_overload {
 
             pub fn iter(&self) -> std::array::IntoIter<T, 3> {
                 self.to_array().into_iter()
+            }
+
+            pub fn reduce<F>(&self, mut f: F) -> T
+            where
+                F: FnMut(T, T) -> T
+            {
+                let a = f(self.$x, self.$y);
+
+                f(a, self.$z)
             }
         }
 
@@ -246,14 +262,6 @@ macro_rules! impl_vector_traits {
                 F: FnMut(T) -> U
             {
                 self.iter().map(f).collect()
-            }
-
-            pub fn reduce<F>(&self, f: F) -> T
-            where
-                T: Default,
-                F: FnMut(T, T) -> T
-            {
-                self.iter().fold(<T as Default>::default(), f)
             }
 
             pub fn min_val(&self) -> T

@@ -2,12 +2,12 @@ use crate::gfx::Color;
 
 impl Color {
     pub fn to_xterm(&self) -> u8 {
-        if self.max_val() - self.min_val() < 5 {
+        if self.max_val() - self.min_val() < 8 {
             match self.r {
-                r if r < 4 => 16,
-                r if r < 8 => 232,
-                r if r > 246 => 231,
-                r if r > 238 => 255,
+                0..=4 => 16,
+                5..=8 => 232,
+                238..=246 => 255,
+                247..=255 => 231,
                 r => 232 + (r - 8) / 10,
             }
         } else {
