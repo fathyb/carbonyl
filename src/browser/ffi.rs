@@ -6,8 +6,8 @@ use std::{env, io};
 use libc::{c_char, c_int, c_uchar, c_uint, size_t};
 
 use crate::gfx::{Cast, Color, Point, Rect, Size};
-use crate::terminal::output::Renderer;
-use crate::terminal::{input, output};
+use crate::output::Renderer;
+use crate::{input, output};
 
 /// This file bridges the C++ code with Rust.
 /// "C-unwind" combined with .unwrap() is used to allow catching Rust panics
@@ -81,11 +81,15 @@ fn main() -> io::Result<Option<i32>> {
         .output()?;
 
     terminal.teardown();
-    stderr().write_all(&output.stderr)?;
 
-    let code = output.status.code();
+    match output.status.code() {
+        Some(0) => Ok(Some(0)),
+        code => {
+            stderr().write_all(&output.stderr)?;
 
-    Ok(if code == None { Some(127) } else { code })
+            Ok(if code == None { Some(127) } else { code })
+        }
+    }
 }
 
 #[no_mangle]

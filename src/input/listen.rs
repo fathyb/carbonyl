@@ -1,6 +1,6 @@
 use std::io::{self, Read};
 
-use crate::terminal::input::*;
+use crate::input::*;
 
 /// Listen for input events in stdin.
 /// This will block, so it should run from a dedicated thread.

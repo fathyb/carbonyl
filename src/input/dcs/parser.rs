@@ -1,4 +1,4 @@
-use crate::{control_flow, terminal::input::ParseControlFlow};
+use crate::{control_flow, input::ParseControlFlow};
 
 use super::{resource::*, status::*};
 

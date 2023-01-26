@@ -1,6 +1,6 @@
 use crate::{
     control_flow,
-    terminal::input::{Event, ParseControlFlow, TerminalEvent},
+    input::{Event, ParseControlFlow, TerminalEvent},
 };
 
 #[derive(Clone)]

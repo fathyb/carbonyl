@@ -1,6 +1,6 @@
 use std::ops::ControlFlow;
 
-use crate::terminal::input::*;
+use crate::input::*;
 
 #[derive(Default)]
 pub struct Parser {
@@ -56,8 +56,8 @@ impl Parser {
             }};
         }
         macro_rules! parse {
-            ($flow:expr) => (
-                match $flow {
+            ($parser:expr, $key:expr) => (
+                match $parser.parse($key) {
                     ControlFlow::Break(None) => Sequence::Char,
                     ControlFlow::Break(Some(event)) => emit!(event),
                     ControlFlow::Continue(None) => continue,
@@ -90,8 +90,8 @@ impl Parser {
                     b'D' => emit!(Event::KeyPress { key: 0x25 }),
                     _ => Sequence::Char,
                 },
-                Sequence::Mouse(ref mut mouse) => parse!(mouse.parse(key)),
-                Sequence::DeviceControl(ref mut dcs) => parse!(dcs.parse(key)),
+                Sequence::Mouse(ref mut mouse) => parse!(mouse, key),
+                Sequence::DeviceControl(ref mut dcs) => parse!(dcs, key),
             }
         }
 
