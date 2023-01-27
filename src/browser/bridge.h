@@ -7,6 +7,8 @@
 
 extern "C" {
 
+struct carbonyl_renderer;
+
 struct carbonyl_bridge_size {
     unsigned int width;
     unsigned int height;
@@ -42,17 +44,18 @@ namespace carbonyl {
 
 class Renderer {
 public:
-    Renderer(void* ptr);
-
     static Renderer* Main();
 
-    void Listen(void* delegate);
+    void Listen(const struct carbonyl_bridge_browser_delegate* delegate);
+    void SetTitle(const std::string& title);
     void ClearText();
     void DrawText(const std::string& text, const gfx::RectF& bounds, uint32_t color);
     void DrawBackgrond(const unsigned char* pixels, size_t pixels_size, const gfx::Rect& bounds);
 
 private:
-    void* ptr_;
+    Renderer(struct carbonyl_renderer* ptr);
+
+    struct carbonyl_renderer* ptr_;
 };
 
 }

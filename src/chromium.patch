@@ -1590,21 +1590,14 @@ index 28f1a65f6dce5..e595735be187b 100644
  }
  
 diff --git a/headless/lib/browser/headless_web_contents_impl.cc b/headless/lib/browser/headless_web_contents_impl.cc
-index 010ff2c94287e..69e7897de00d7 100644
+index 010ff2c94287e..122beed6b11e2 100644
 --- a/headless/lib/browser/headless_web_contents_impl.cc
 +++ b/headless/lib/browser/headless_web_contents_impl.cc
-@@ -8,6 +8,7 @@
- #include <string>
- #include <utility>
- #include <vector>
-+#include <iostream>
- 
- #include "base/bind.h"
- #include "base/command_line.h"
-@@ -21,10 +22,14 @@
+@@ -21,10 +21,15 @@
  #include "base/values.h"
  #include "build/build_config.h"
  #include "build/chromeos_buildflags.h"
++#include "carbonyl/src/browser/bridge.h"
 +#include "components/content_capture/browser/content_capture_consumer.h"
 +#include "components/content_capture/browser/onscreen_content_provider.h"
  #include "content/public/browser/browser_thread.h"
@@ -1680,17 +1673,12 @@ index 010ff2c94287e..69e7897de00d7 100644
  }
  
  void HeadlessWebContentsImpl::SetBounds(const gfx::Rect& bounds) {
-@@ -390,6 +445,15 @@ void HeadlessWebContentsImpl::RenderViewReady() {
+@@ -390,6 +445,10 @@ void HeadlessWebContentsImpl::RenderViewReady() {
    devtools_target_ready_notification_sent_ = true;
  }
  
 +void HeadlessWebContentsImpl::TitleWasSet(content::NavigationEntry* entry) {
-+  auto title = base::UTF16ToUTF8(entry->GetTitleForDisplay());
-+
-+  std::cout <<
-+    "\x1b]0;" << title << "\x07" <<
-+    "\x1b]1;" << title << "\x07" <<
-+  std::flush;
++  carbonyl::Renderer::Main()->SetTitle(base::UTF16ToUTF8(entry->GetTitleForDisplay()));
 +}
 +
  int HeadlessWebContentsImpl::GetMainFrameRenderProcessId() const {

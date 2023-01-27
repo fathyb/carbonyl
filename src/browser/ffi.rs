@@ -1,5 +1,5 @@
 use std::ffi::CStr;
-use std::io::{stderr, Write};
+use std::io::Write;
 use std::process::{Command, Stdio};
 use std::{env, io};
 
@@ -82,14 +82,13 @@ fn main() -> io::Result<Option<i32>> {
 
     terminal.teardown();
 
-    match output.status.code() {
-        Some(0) => Ok(Some(0)),
-        code => {
-            stderr().write_all(&output.stderr)?;
+    let code = output.status.code().unwrap_or(127);
 
-            Ok(if code == None { Some(127) } else { code })
-        }
+    if code != 0 {
+        io::stderr().write_all(&output.stderr)?;
     }
+
+    Ok(Some(code))
 }
 
 #[no_mangle]
@@ -117,17 +116,27 @@ pub extern "C-unwind" fn carbonyl_renderer_clear_text(renderer: *mut Renderer) {
 }
 
 #[no_mangle]
+pub extern "C-unwind" fn carbonyl_renderer_set_title(
+    renderer: *mut Renderer,
+    title: *const c_char,
+) {
+    let (renderer, title) = unsafe { (&mut *renderer, CStr::from_ptr(title)) };
+
+    renderer.set_title(title.to_str().unwrap()).unwrap()
+}
+
+#[no_mangle]
 pub extern "C-unwind" fn carbonyl_renderer_draw_text(
     renderer: *mut Renderer,
-    utf8: *const c_char,
+    text: *const c_char,
     rect: *const CRect,
     color: *const CColor,
 ) {
-    let (renderer, string, rect, color) =
-        unsafe { (&mut *renderer, CStr::from_ptr(utf8), &*rect, &*color) };
+    let (renderer, text, rect, color) =
+        unsafe { (&mut *renderer, CStr::from_ptr(text), &*rect, &*color) };
 
     renderer.draw_text(
-        string.to_str().unwrap(),
+        text.to_str().unwrap(),
         Point::from(&rect.origin),
         Size::from(&rect.size),
         Color::new(color.r, color.g, color.b),

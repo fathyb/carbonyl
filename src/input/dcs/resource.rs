@@ -3,7 +3,7 @@ use crate::{
     input::{Event, ParseControlFlow, TerminalEvent},
 };
 
-#[derive(Clone)]
+#[derive(Copy, Clone)]
 enum Sequence {
     Start,
     Name,
@@ -32,37 +32,49 @@ impl ResourceParser {
     pub fn parse(&mut self, key: u8) -> ParseControlFlow {
         use Sequence::*;
 
-        match self.sequence {
+        self.sequence = match self.sequence {
             Start => match key {
-                b'r' => control_flow!(self.sequence = Name; continue),
-                _ => control_flow!(break),
+                b'r' => Name,
+                _ => control_flow!(break)?,
             },
             Name => match key {
-                0x1b => control_flow!(self.sequence = Terminator; continue),
-                b'=' => control_flow!(self.sequence = Value; continue),
-                key => control_flow!(self.name.push(key); continue),
+                0x1b => Terminator,
+                b'=' => Value,
+                key => self.push_char(key),
             },
             Value => match key {
-                0x1b => control_flow!(self.sequence = Terminator; continue),
-                key => control_flow!(self.value.push(key); continue),
+                0x1b => Terminator,
+                key => self.push_char(key),
             },
-            Terminator => {
-                if key == b'\\' && self.code == b'1' {
-                    let name = read_hex_string(self.name.as_slice());
-                    let value = read_hex_string(self.value.as_slice());
+            Terminator => control_flow!(break self.parse_event(key))?,
+        };
 
-                    if let (Some(name), Some(value)) = (name, value) {
-                        if name == "TN" {
-                            return control_flow!(
-                                break Event::Terminal(TerminalEvent::Name(value))
-                            );
-                        }
-                    }
+        control_flow!(continue)
+    }
+
+    fn push_char(&mut self, key: u8) -> Sequence {
+        match self.sequence {
+            Sequence::Name => self.name.push(key),
+            Sequence::Value => self.value.push(key),
+            _ => (),
+        }
+
+        self.sequence
+    }
+
+    fn parse_event(&self, key: u8) -> Option<Event> {
+        if key == b'\\' && self.code == b'1' {
+            let name = read_hex_string(self.name.as_slice());
+            let value = read_hex_string(self.value.as_slice());
+
+            if let (Some(name), Some(value)) = (name, value) {
+                if name == "TN" {
+                    return Some(Event::Terminal(TerminalEvent::Name(value)));
                 }
-
-                control_flow!(break)
             }
         }
+
+        None
     }
 }
 

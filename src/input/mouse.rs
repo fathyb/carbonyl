@@ -1,4 +1,6 @@
-use std::ops::{BitAnd, ControlFlow};
+use std::ops::BitAnd;
+
+use crate::control_flow;
 
 use super::{Event, ParseControlFlow};
 
@@ -17,16 +19,12 @@ impl Mouse {
 
     pub fn parse(&mut self, key: u8) -> ParseControlFlow {
         match key {
+            b'm' | b'M' => control_flow!(break self.get(key)),
             b';' => match self.read() {
-                None => ControlFlow::Break(None),
-                Some(()) => ControlFlow::Continue(None),
+                None => control_flow!(break),
+                Some(()) => control_flow!(continue),
             },
-            b'm' | b'M' => ControlFlow::Break(self.get(key)),
-            key => {
-                self.buf.push(key);
-
-                ControlFlow::Continue(None)
-            }
+            key => control_flow!(self.buf.push(key); continue),
         }
     }
 

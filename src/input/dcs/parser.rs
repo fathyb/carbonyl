@@ -24,22 +24,20 @@ impl DeviceControl {
     pub fn parse(&mut self, key: u8) -> ParseControlFlow {
         use Sequence::*;
 
-        match self.sequence {
+        self.sequence = match self.sequence {
             Code => match key {
-                b'0' | b'1' => control_flow!(self.sequence = Type(key); continue),
-                _ => control_flow!(break),
+                b'0' | b'1' => Type(key),
+                _ => control_flow!(break)?,
             },
             Type(code) => match key {
-                b'$' => {
-                    control_flow!(self.sequence = Status(StatusParser::new(code)); continue)
-                }
-                b'+' => {
-                    control_flow!(self.sequence = Resource(ResourceParser::new(code)); continue)
-                }
-                _ => control_flow!(break),
+                b'$' => Status(StatusParser::new(code)),
+                b'+' => Resource(ResourceParser::new(code)),
+                _ => control_flow!(break)?,
             },
-            Status(ref mut status) => status.parse(key),
-            Resource(ref mut resource) => resource.parse(key),
-        }
+            Status(ref mut status) => return status.parse(key),
+            Resource(ref mut resource) => return resource.parse(key),
+        };
+
+        control_flow!(continue)
     }
 }

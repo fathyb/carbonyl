@@ -16,7 +16,7 @@ impl Color {
             (16.0
                 + self
                     .cast::<f32>()
-                    .mul_add(scale, -55.0 * scale)
+                    .mul_add(scale, scale * -55.0)
                     .max(0.0)
                     .round()
                     .dot((36.0, 6.0, 1.0))) as u8

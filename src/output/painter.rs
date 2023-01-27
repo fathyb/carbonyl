@@ -118,7 +118,7 @@ impl Painter {
                 if self.background_code != Some(code) {
                     self.background_code = Some(code);
 
-                    write!(self.buffer, "\x1b[48;5;{}m", code)?
+                    write!(self.buffer, "\x1b[48;5;{code}m")?
                 }
             }
         }
@@ -138,7 +138,7 @@ impl Painter {
                 if self.foreground_code != Some(code) {
                     self.foreground_code = Some(code);
 
-                    write!(self.buffer, "\x1b[38;5;{}m", code)?
+                    write!(self.buffer, "\x1b[38;5;{code}m")?
                 }
             }
         }

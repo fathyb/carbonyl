@@ -8,17 +8,18 @@
 
 extern "C" {
 
-void* carbonyl_renderer_create();
-void carbonyl_renderer_clear_text(void* renderer);
-void carbonyl_input_listen(void* renderer, void* delegate);
+struct carbonyl_renderer* carbonyl_renderer_create();
+void carbonyl_renderer_set_title(struct carbonyl_renderer* renderer, const char* title);
+void carbonyl_renderer_clear_text(struct carbonyl_renderer* renderer);
+void carbonyl_input_listen(struct carbonyl_renderer* renderer, const struct carbonyl_bridge_browser_delegate* delegate);
 void carbonyl_renderer_draw_text(
-    void* renderer,
-    const char* utf8,
+    struct carbonyl_renderer* renderer,
+    const char* title,
     const struct carbonyl_bridge_rect* rect,
     const struct carbonyl_bridge_color* color
 );
 void carbonyl_renderer_draw_background(
-    void* renderer,
+    struct carbonyl_renderer* renderer,
     const unsigned char* pixels,
     size_t pixels_size,
     const struct carbonyl_bridge_rect* rect
@@ -32,19 +33,23 @@ namespace {
     static std::unique_ptr<Renderer> globalInstance;
 }
 
-Renderer::Renderer(void* ptr): ptr_(ptr) {}
+Renderer::Renderer(struct carbonyl_renderer* ptr): ptr_(ptr) {}
 
 Renderer* Renderer::Main() {
     if (!globalInstance) {
-        globalInstance = std::make_unique<Renderer>(
-            carbonyl_renderer_create()
+        globalInstance = std::unique_ptr<Renderer>(
+            new Renderer(carbonyl_renderer_create())
         );
     }
 
     return globalInstance.get();
 }
-void Renderer::Listen(void* delegate) {
+void Renderer::Listen(const struct carbonyl_bridge_browser_delegate* delegate) {
     carbonyl_input_listen(ptr_, delegate);
+}
+
+void Renderer::SetTitle(const std::string& title) {
+    carbonyl_renderer_set_title(ptr_, title.c_str());
 }
 
 void Renderer::ClearText() {

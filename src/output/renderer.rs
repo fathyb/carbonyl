@@ -1,4 +1,7 @@
-use std::{io, rc::Rc};
+use std::{
+    io::{self, Write},
+    rc::Rc,
+};
 
 use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::UnicodeWidthStr;
@@ -136,6 +139,16 @@ impl Renderer {
         for (_, cell) in self.cells.iter_mut() {
             cell.grapheme = None
         }
+    }
+
+    pub fn set_title(&self, title: &str) -> io::Result<()> {
+        let mut stdout = io::stdout();
+
+        write!(stdout, "\x1b]0;{title}\x07")?;
+        write!(stdout, "\x1b]1;{title}\x07")?;
+        write!(stdout, "\x1b]2;{title}\x07")?;
+
+        stdout.flush()
     }
 
     /// Render some text into the terminal output

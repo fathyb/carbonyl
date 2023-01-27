@@ -9,7 +9,7 @@ macro_rules! control_flow {
         std::ops::ControlFlow::Break(None)
     }};
     (break $expr:expr) => {
-        std::ops::ControlFlow::Break(Some($expr))
+        std::ops::ControlFlow::Break($expr.into())
     };
 
     (continue) => {
@@ -21,6 +21,6 @@ macro_rules! control_flow {
         std::ops::ControlFlow::Continue(None)
     }};
     (continue $expr:expr) => {
-        std::ops::ControlFlow::Continue(Some($expr))
+        std::ops::ControlFlow::Continue($expr.into())
     };
 }

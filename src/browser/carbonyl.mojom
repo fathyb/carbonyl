@@ -1,14 +1,22 @@
+// Our C++ bindings will be in the carbonyl::mojom namespace
 module carbonyl.mojom;
 
+// Import existing bindings to common structures
 import "ui/gfx/geometry/mojom/geometry.mojom";
 import "skia/public/mojom/skcolor.mojom";
 
+// Define a structure to hold text to render
 struct TextData {
+    // An UTF-8 string with the contents
     string contents;
+    // Bounds, size only defined for clearing
     gfx.mojom.RectF bounds;
+    // Color of the text
     skia.mojom.SkColor color;
 };
 
+// The browser process runs this service
 interface CarbonylRenderService {
+    // The renderer process calls this method
     DrawText(array<TextData> data);
 };
