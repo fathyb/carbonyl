@@ -4,7 +4,7 @@ Carbonyl is a Chromium based browser built to run in a terminal. [Read the blog 
 
 It supports pretty much all Web APIs including WebGL, WebGPU, audio and video playback, animations, etc..
 
-It's snappy, starts in less than a second, runs at 60 FPS, and idles at 0% CPU usage. It does not require a window server (ie. works in a safe-mode console), and even runs through SSH.
+It's snappy, starts in less than a second, runs at 60 FPS, and idles at 0% CPU usage. It does not require a window server (i.e. works in a safe-mode console), and even runs through SSH.
 
 Carbonyl originally started as [`html2svg`](https://github.com/fathyb/html2svg) and is now the runtime behind it.
 
