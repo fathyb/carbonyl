@@ -1151,7 +1151,7 @@ index 35736145f5caf..f9b8bac5c18a5 100644
    sandbox::SandboxInterfaceInfo sandbox_info = {nullptr};
    content::InitializeSandboxInfo(&sandbox_info);
 diff --git a/headless/lib/browser/headless_browser_impl.cc b/headless/lib/browser/headless_browser_impl.cc
-index 1a1223108be6d..6c229edba58d6 100644
+index 1a1223108be6d..27a399a3932fc 100644
 --- a/headless/lib/browser/headless_browser_impl.cc
 +++ b/headless/lib/browser/headless_browser_impl.cc
 @@ -27,6 +27,21 @@
@@ -1193,7 +1193,7 @@ index 1a1223108be6d..6c229edba58d6 100644
  
  HeadlessBrowserContext::Builder
  HeadlessBrowserImpl::CreateBrowserContextBuilder() {
-@@ -91,6 +114,258 @@ void HeadlessBrowserImpl::set_browser_main_parts(
+@@ -91,6 +114,253 @@ void HeadlessBrowserImpl::set_browser_main_parts(
    browser_main_parts_ = browser_main_parts;
  }
  
@@ -1281,12 +1281,6 @@ index 1a1223108be6d..6c229edba58d6 100644
 +  
 +  // TODO(fathy): support IME
 +  switch (key) {
-+    case 0x09:
-+      event.windows_key_code = ui::KeyboardCode::VKEY_TAB;
-+      break;
-+    case 0x0d:
-+      event.windows_key_code = ui::KeyboardCode::VKEY_RETURN;
-+      break;
 +    case 0x25:
 +      event.windows_key_code = ui::KeyboardCode::VKEY_LEFT;
 +      break;
@@ -1304,6 +1298,7 @@ index 1a1223108be6d..6c229edba58d6 100644
 +      break;
 +    default:
 +      raw = false;
++
 +      event.text[0] = key;
 +  }
 +
@@ -1452,7 +1447,7 @@ index 1a1223108be6d..6c229edba58d6 100644
  void HeadlessBrowserImpl::RunOnStartCallback() {
    // We don't support the tethering domain on this agent host.
    agent_host_ = content::DevToolsAgentHost::CreateForBrowser(
-@@ -98,6 +373,71 @@ void HeadlessBrowserImpl::RunOnStartCallback() {
+@@ -98,6 +368,71 @@ void HeadlessBrowserImpl::RunOnStartCallback() {
  
    PlatformStart();
    std::move(on_start_callback_).Run(this);
