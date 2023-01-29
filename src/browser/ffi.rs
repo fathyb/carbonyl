@@ -62,6 +62,28 @@ pub struct BrowserDelegate {
     mouse_move: extern "C" fn(c_uint, c_uint),
 }
 
+struct Args {
+    debug: bool,
+    chromium: Vec<String>,
+}
+
+fn parse_args() -> Args {
+    let mut args = Args {
+        debug: false,
+        chromium: Vec::new(),
+    };
+
+    for arg in env::args().skip(1) {
+        if arg == "--debug" {
+            args.debug = true
+        } else {
+            args.chromium.push(arg)
+        }
+    }
+
+    args
+}
+
 fn main() -> io::Result<Option<i32>> {
     const CARBONYL_INSIDE_SHELL: &str = "CARBONYL_INSIDE_SHELL";
 
@@ -69,9 +91,10 @@ fn main() -> io::Result<Option<i32>> {
         return Ok(None);
     }
 
+    let args = parse_args();
     let mut terminal = input::Terminal::setup();
     let output = Command::new(env::current_exe()?)
-        .args(env::args().skip(1))
+        .args(args.chromium)
         .arg("--disable-threaded-scrolling")
         .arg("--disable-threaded-animation")
         .env(CARBONYL_INSIDE_SHELL, "1")
@@ -84,7 +107,7 @@ fn main() -> io::Result<Option<i32>> {
 
     let code = output.status.code().unwrap_or(127);
 
-    if code != 0 {
+    if code != 0 || args.debug {
         io::stderr().write_all(&output.stderr)?;
     }
 
