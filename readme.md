@@ -81,7 +81,7 @@ $ ./scripts/gn.sh args out/Default
 > $ ./scripts/gn.sh args out/amd64
 > ```
 
-When prompted, enter the following arguments (remove lines according to the comments):
+When prompted, enter the following arguments:
 
 ```gn
 import("//carbonyl/src/browser/args.gn")
@@ -115,7 +115,7 @@ $ ./scripts/docker.sh arm64 Default
 $ ./scripts/docker.sh amd64 Default
 ```
 
-If you'd like to build a cross-platform image, you should build the Docker images for each platform and then run:
+If you'd like to build a cross-platform image, you should build the Docker image for each platform and then run:
 
 ```
 $ ./scripts/docker.sh multi-platform
