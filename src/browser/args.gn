@@ -1,0 +1,17 @@
+enable_nacl=false
+headless_enable_commands=false
+headless_use_embedded_resources=true
+enable_pdf=false
+enable_printing=false
+enable_ppapi=false
+enable_plugins=false
+enable_browser_speech_service=false
+enable_component_updater=false
+enable_media_remoting=false
+enable_print_preview=false
+enable_rust_json=false
+enable_screen_ai_service=false
+enable_speech_service=false
+enable_system_notifications=false
+enable_tagged_pdf=false
+enable_webui_certificate_viewer=false

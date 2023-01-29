@@ -84,37 +84,20 @@ $ ./scripts/gn.sh args out/Default
 When prompted, enter the following arguments (remove lines according to the comments):
 
 ```gn
+import("//carbonyl/src/browser/args.gn")
+
 # uncomment this to build for arm64
 # target_cpu="arm64"
 
-# remove this if you don't have ccache
-cc_wrapper="env CCACHE_SLOPPINESS=time_macros ccache"
+# uncomment this to enable ccache
+# cc_wrapper="env CCACHE_SLOPPINESS=time_macros ccache"
 
-# remove this if you're not running on macOS
-use_lld=false
+# uncomment this if you're building for macOS
+# use_lld=false
 
-# remove these two lines if you'd like a debug build
-is_debug=false
-symbol_level=0
-
-# unused features
-enable_nacl=false
-headless_enable_commands=false
-headless_use_embedded_resources=true
-enable_pdf=false
-enable_printing=false
-enable_ppapi=false
-enable_plugins=false
-enable_browser_speech_service=false
-enable_component_updater=false
-enable_media_remoting=false
-enable_print_preview=false
-enable_rust_json=false
-enable_screen_ai_service=false
-enable_speech_service=false
-enable_system_notifications=false
-enable_tagged_pdf=false
-enable_webui_certificate_viewer=false
+# uncomment this for a release build
+# is_debug=false
+# symbol_level=0
 ```
 
 ### Build binaries
