@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
-set -eo pipefail
+export CARBONYL_ROOT=$(cd $(dirname -- "$0") && dirname -- $(pwd))
 
-mode="$1"
-shift
+source "$CARBONYL_ROOT/scripts/env.sh"
 
-cd electron/src
-CHROMIUM_BUILDTOOLS_PATH=`pwd`/buildtools \
-    gn gen "out/${mode}" --args="import(\"//electron/build/args/$mode.gn\") ${GN_ARGS}" "$@"
+(
+    cd "$CHROMIUM_SRC" &&
+    gn "$@"
+)

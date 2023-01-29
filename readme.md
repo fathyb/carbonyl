@@ -37,29 +37,109 @@ $ docker run -ti fathyb/carbonyl https://youtube.com
 
 ## Know issues
 
-- Fullscreen mode not supported yet
+-   Fullscreen mode not supported yet
 
 ## Development
 
+Few notes:
+
+-   You need to build Chromium
+-   Building Carbonyl is almost the same as building Chromium with extra steps to patch and bundle the Rust library. Scripts in the `scripts/` directory are simple wrappers around `gn`, `ninja`, etc..
+-   Building Chromium for arm64 on Linux requires an amd64 processor
+-   Carbonyl is only tested on Linux and macOS, other platforms likely require code changes to Chromium
+-   Chromium is huge and takes a long time to build, making your computer mostly unresponsive. An 8-core CPU such as an M1 Max or an i9 9900k with 10 Gbps fiber takes around ~1 hour to fetch and build.
+
 ### Fetch
 
+> Fetch Chromium's code.
+
 ```console
-$ cd chromium
-$ gclient sync
+$ ./scripts/gclient.sh sync
+```
+
+### Apply patches
+
+> Any changes made to Chromium will be reverted, make sure to save any changes you made.
+
+```console
+$ ./scripts/patches.sh apply
 ```
 
 ### Configure
 
-> You need to disable `lld` on macOS because of a linking bug related to Rust and `compact_unwind`
-
 ```console
-$ cd chromium/src
-$ gn gen out/Default
+$ ./scripts/gn.sh args out/Default
 ```
 
-### Build
+> `Default` is the target name, you can use multiple ones and pick any name you'd like, i.e.:
+>
+> ```console
+> $ ./scripts/gn.sh args out/release
+> $ ./scripts/gn.sh args out/debug
+> # or if you'd like to build a multi-platform image
+> $ ./scripts/gn.sh args out/arm64
+> $ ./scripts/gn.sh args out/amd64
+> ```
+
+When prompted, enter the following arguments (remove lines according to the comments):
+
+```gn
+# uncomment this to build for arm64
+# target_cpu="arm64"
+
+# remove this if you don't have ccache
+cc_wrapper="env CCACHE_SLOPPINESS=time_macros ccache"
+
+# remove this if you're not running on macOS
+use_lld=false
+
+# remove these two lines if you'd like a debug build
+is_debug=false
+symbol_level=0
+
+# unused features
+enable_nacl=false
+headless_enable_commands=false
+headless_use_embedded_resources=true
+enable_pdf=false
+enable_printing=false
+enable_ppapi=false
+enable_plugins=false
+enable_browser_speech_service=false
+enable_component_updater=false
+enable_media_remoting=false
+enable_print_preview=false
+enable_rust_json=false
+enable_screen_ai_service=false
+enable_speech_service=false
+enable_system_notifications=false
+enable_tagged_pdf=false
+enable_webui_certificate_viewer=false
+```
+
+### Build binaries
 
 ```console
-$ cd chromium/src
-$ ninja -C out/Default headless:headless_shell
+$ ./scripts/build.sh Default
+```
+
+### Build Docker image
+
+```console
+# Build arm64 Docker image using binaries from the Default target
+$ ./scripts/docker.sh arm64 Default
+# Build amd64 Docker image using binaries from the Default target
+$ ./scripts/docker.sh amd64 Default
+```
+
+If you'd like to build a cross-platform image, you should build the Docker images for each platform and then run:
+
+```
+$ ./scripts/docker.sh multi-platform
+```
+
+### Run
+
+```
+$ ./scripts/run.sh Default
 ```

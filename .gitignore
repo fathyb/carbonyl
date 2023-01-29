@@ -7,4 +7,5 @@ node_modules/
 /build
 /chromium/*
 !/chromium/.gclient
+!/chromium/depot_tools
 /Cargo.lock

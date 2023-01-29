@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 
-set -exo pipefail
+export CARBONYL_ROOT=$(cd $(dirname -- "$0") && dirname -- $(pwd))
 
-cd electron
+source "$CARBONYL_ROOT/scripts/env.sh"
 
-gclient sync --with_tags "$@"
+(
+    cd "$CHROMIUM_ROOT" &&
+    gclient "$@"
+)
