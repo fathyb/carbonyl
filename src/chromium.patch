@@ -584,10 +584,18 @@ index 74749758894a2..4eb891c32b474 100644
    // Clean up keyboard lock state when navigating.
    CancelKeyboardLock(keyboard_lock_widget_);
 diff --git a/content/renderer/BUILD.gn b/content/renderer/BUILD.gn
-index 2a2410d4a46c1..5f903d27ecd45 100644
+index 2a2410d4a46c1..6ad6ced4fd64e 100644
 --- a/content/renderer/BUILD.gn
 +++ b/content/renderer/BUILD.gn
-@@ -237,6 +237,7 @@ target(link_target_type, "renderer") {
+@@ -227,6 +227,7 @@ target(link_target_type, "renderer") {
+   deps = [
+     "//base",
+     "//base:i18n",
++    "//carbonyl/src/browser:mojom",
+     "//build:chromecast_buildflags",
+     "//build:chromeos_buildflags",
+     "//cc",
+@@ -237,6 +238,7 @@ target(link_target_type, "renderer") {
      "//components/discardable_memory/client",
      "//components/metrics",
      "//components/metrics:single_sample_metrics",
@@ -595,7 +603,7 @@ index 2a2410d4a46c1..5f903d27ecd45 100644
      "//components/url_formatter",
      "//components/variations:variations_mojom",
      "//components/variations/net",
-@@ -302,6 +303,7 @@ target(link_target_type, "renderer") {
+@@ -302,6 +304,7 @@ target(link_target_type, "renderer") {
      "//third_party/boringssl",
      "//third_party/icu",
      "//third_party/libyuv",
@@ -948,7 +956,7 @@ index 9e09c5342699e..2778389c22b56 100644
                                ->is_in_back_forward_cache);
      SCOPED_CRASH_KEY_BOOL(
 diff --git a/content/renderer/render_frame_impl.h b/content/renderer/render_frame_impl.h
-index 3b558293121ce..fae44b36b82b9 100644
+index 3b558293121ce..675ad6891ddb9 100644
 --- a/content/renderer/render_frame_impl.h
 +++ b/content/renderer/render_frame_impl.h
 @@ -15,6 +15,7 @@
@@ -971,7 +979,7 @@ index 3b558293121ce..fae44b36b82b9 100644
  #include "content/common/pepper_plugin.mojom.h"
  #endif
  
-+#include "carbonyl/src/mojom/carbonyl.mojom.h"
++#include "carbonyl/src/browser/carbonyl.mojom.h"
 +
  namespace blink {
  namespace scheduler {

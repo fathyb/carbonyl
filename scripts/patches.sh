@@ -10,8 +10,12 @@ chromium_upstream="111.0.5511.1"
 skia_upstream="486deb23bc2a4d3d09c66fef52c2ad64d8b4f761"
 
 if [[ "$1" == "apply" ]]; then
+    if [[ -d carbonyl ]]; then
+        git add -A carbonyl
+    fi
+
     echo "Stashing Chromium changes.."
-    git add -A carbonyl
+
     git stash
     git checkout "$chromium_upstream"
     echo "Applying Chromium patches.."
@@ -26,8 +30,11 @@ if [[ "$1" == "apply" ]]; then
 
     echo "Patches successfully applied"
 elif [[ "$1" == "save" ]]; then
+    if [[ -d carbonyl ]]; then
+        git add -A carbonyl
+    fi
+
     echo "Updating Chromium patch.."
-    git add -A carbonyl
     git diff "$chromium_upstream" > ../../src/chromium.patch
 
     echo "Updating Skia patch.."
