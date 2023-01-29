@@ -106,6 +106,14 @@ import("//carbonyl/src/browser/args.gn")
 $ ./scripts/build.sh Default
 ```
 
+This should produce the following outputs:
+
+-   `out/Default/headless_shell`
+-   `out/Default/icudtl.dat`
+-   `out/Default/libEGL.so`
+-   `out/Default/libGLESv2.so`
+-   `out/Default/v8_context_snapshot.bin`
+
 ### Build Docker image
 
 ```console
