@@ -17,6 +17,6 @@ RUN groupadd -r carbonyl && useradd -r -g carbonyl carbonyl && \
 USER carbonyl
 
 ARG TARGETARCH
-COPY build/browser/${TARGETARCH:-amd64} /carbonyl
+COPY . /carbonyl
 
 ENTRYPOINT ["/carbonyl/carbonyl", "--no-sandbox", "--disable-dev-shm-usage"]

@@ -115,14 +115,8 @@ $ ./scripts/docker.sh arm64 Default
 $ ./scripts/docker.sh amd64 Default
 ```
 
-If you'd like to build a cross-platform image, you should build the Docker image for each platform and then run:
-
-```
-$ ./scripts/docker.sh multi-platform
-```
-
 ### Run
 
 ```
-$ ./scripts/run.sh Default
+$ ./scripts/run.sh Default https://wikipedia.org
 ```
