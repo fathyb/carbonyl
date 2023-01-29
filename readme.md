@@ -47,7 +47,7 @@ Few notes:
 -   Building Carbonyl is almost the same as building Chromium with extra steps to patch and bundle the Rust library. Scripts in the `scripts/` directory are simple wrappers around `gn`, `ninja`, etc..
 -   Building Chromium for arm64 on Linux requires an amd64 processor
 -   Carbonyl is only tested on Linux and macOS, other platforms likely require code changes to Chromium
--   Chromium is huge and takes a long time to build, making your computer mostly unresponsive. An 8-core CPU such as an M1 Max or an i9 9900k with 10 Gbps fiber takes around ~1 hour to fetch and build.
+-   Chromium is huge and takes a long time to build, making your computer mostly unresponsive. An 8-core CPU such as an M1 Max or an i9 9900k with 10 Gbps fiber takes around ~1 hour to fetch and build. It requires around 100 GB of disk space.
 
 ### Fetch
 
