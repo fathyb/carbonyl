@@ -37,29 +37,94 @@ $ docker run -ti fathyb/carbonyl https://youtube.com
 
 ## Know issues
 
-- Fullscreen mode not supported yet
+-   Fullscreen mode not supported yet
 
 ## Development
 
+Few notes:
+
+-   You need to build Chromium
+-   Building Carbonyl is almost the same as building Chromium with extra steps to patch and bundle the Rust library. Scripts in the `scripts/` directory are simple wrappers around `gn`, `ninja`, etc..
+-   Building Chromium for arm64 on Linux requires an amd64 processor
+-   Carbonyl is only tested on Linux and macOS, other platforms likely require code changes to Chromium
+-   Chromium is huge and takes a long time to build, making your computer mostly unresponsive. An 8-core CPU such as an M1 Max or an i9 9900k with 10 Gbps fiber takes around ~1 hour to fetch and build. It requires around 100 GB of disk space.
+
 ### Fetch
 
+> Fetch Chromium's code.
+
 ```console
-$ cd chromium
-$ gclient sync
+$ ./scripts/gclient.sh sync
+```
+
+### Apply patches
+
+> Any changes made to Chromium will be reverted, make sure to save any changes you made.
+
+```console
+$ ./scripts/patches.sh apply
 ```
 
 ### Configure
 
-> You need to disable `lld` on macOS because of a linking bug related to Rust and `compact_unwind`
-
 ```console
-$ cd chromium/src
-$ gn gen out/Default
+$ ./scripts/gn.sh args out/Default
 ```
 
-### Build
+> `Default` is the target name, you can use multiple ones and pick any name you'd like, i.e.:
+>
+> ```console
+> $ ./scripts/gn.sh args out/release
+> $ ./scripts/gn.sh args out/debug
+> # or if you'd like to build a multi-platform image
+> $ ./scripts/gn.sh args out/arm64
+> $ ./scripts/gn.sh args out/amd64
+> ```
+
+When prompted, enter the following arguments:
+
+```gn
+import("//carbonyl/src/browser/args.gn")
+
+# uncomment this to build for arm64
+# target_cpu="arm64"
+
+# uncomment this to enable ccache
+# cc_wrapper="env CCACHE_SLOPPINESS=time_macros ccache"
+
+# uncomment this if you're building for macOS
+# use_lld=false
+
+# uncomment this for a release build
+# is_debug=false
+# symbol_level=0
+```
+
+### Build binaries
 
 ```console
-$ cd chromium/src
-$ ninja -C out/Default headless:headless_shell
+$ ./scripts/build.sh Default
+```
+
+This should produce the following outputs:
+
+-   `out/Default/headless_shell`: browser binary
+-   `out/Default/icudtl.dat`
+-   `out/Default/libEGL.so`
+-   `out/Default/libGLESv2.so`
+-   `out/Default/v8_context_snapshot.bin`
+
+### Build Docker image
+
+```console
+# Build arm64 Docker image using binaries from the Default target
+$ ./scripts/docker.sh arm64 Default
+# Build amd64 Docker image using binaries from the Default target
+$ ./scripts/docker.sh amd64 Default
+```
+
+### Run
+
+```
+$ ./scripts/run.sh Default https://wikipedia.org
 ```

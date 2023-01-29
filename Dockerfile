@@ -17,12 +17,6 @@ RUN groupadd -r carbonyl && useradd -r -g carbonyl carbonyl && \
 USER carbonyl
 
 ARG TARGETARCH
-COPY build/browser/${TARGETARCH:-amd64} /carbonyl
+COPY . /carbonyl
 
-ENTRYPOINT [
-    "/carbonyl/carbonyl",
-    # 
-    "--no-sandbox",
-    # Docker's /dev/shm is limited to 64 MB
-    "--disable-dev-shm-usage"
-]
+ENTRYPOINT ["/carbonyl/carbonyl", "--no-sandbox", "--disable-dev-shm-usage"]
