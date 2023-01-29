@@ -108,7 +108,7 @@ $ ./scripts/build.sh Default
 
 This should produce the following outputs:
 
--   `out/Default/headless_shell`
+-   `out/Default/headless_shell`: browser binary
 -   `out/Default/icudtl.dat`
 -   `out/Default/libEGL.so`
 -   `out/Default/libGLESv2.so`
