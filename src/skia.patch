@@ -26,6 +26,19 @@ index b497d690f7..5e4ee2b1ce 100644
  }
  
  void SkBitmapDevice::drawVertices(const SkVertices* vertices,
+diff --git a/src/core/SkClipStack.h b/src/core/SkClipStack.h
+index c325d2c619..d93b9cf37f 100644
+--- a/src/core/SkClipStack.h
++++ b/src/core/SkClipStack.h
+@@ -30,7 +30,7 @@ class GrProxyProvider;
+ // (i.e., the fSaveCount in force when it was added). Restores are thus
+ // implemented by removing clips from fDeque that have an fSaveCount larger
+ // then the freshly decremented count.
+-class SkClipStack {
++class SK_API SkClipStack {
+ public:
+     enum BoundsType {
+         // The bounding box contains all the pixels that can be written to
 diff --git a/src/core/SkClipStackDevice.h b/src/core/SkClipStackDevice.h
 index eff1f1a440..a8d6b4fe07 100644
 --- a/src/core/SkClipStackDevice.h
