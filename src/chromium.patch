@@ -485,6 +485,18 @@ index b09785bfc8143..a6cd4e2399b1b 100644
    gfx::Size pixel_size_;
    float scale_factor_ = 1;
  
+diff --git a/content/browser/BUILD.gn b/content/browser/BUILD.gn
+index aff547e8e5ed0..ca7a9ccf9ed20 100644
+--- a/content/browser/BUILD.gn
++++ b/content/browser/BUILD.gn
+@@ -69,6 +69,7 @@ source_set("browser") {
+     "//build:chromecast_buildflags",
+     "//build:chromeos_buildflags",
+     "//build/config/compiler:compiler_buildflags",
++    "//carbonyl/src/browser:carbonyl",
+     "//cc",
+     "//cc/animation",
+     "//cc/mojo_embedder",
 diff --git a/content/browser/browser_interface_binders.cc b/content/browser/browser_interface_binders.cc
 index 6e62b36a76799..e07dcb983698b 100644
 --- a/content/browser/browser_interface_binders.cc
@@ -584,17 +596,17 @@ index 74749758894a2..4eb891c32b474 100644
    // Clean up keyboard lock state when navigating.
    CancelKeyboardLock(keyboard_lock_widget_);
 diff --git a/content/renderer/BUILD.gn b/content/renderer/BUILD.gn
-index 2a2410d4a46c1..6ad6ced4fd64e 100644
+index 2a2410d4a46c1..e952121f40b92 100644
 --- a/content/renderer/BUILD.gn
 +++ b/content/renderer/BUILD.gn
-@@ -227,6 +227,7 @@ target(link_target_type, "renderer") {
-   deps = [
-     "//base",
+@@ -229,6 +229,7 @@ target(link_target_type, "renderer") {
      "//base:i18n",
-+    "//carbonyl/src/browser:mojom",
      "//build:chromecast_buildflags",
      "//build:chromeos_buildflags",
++    "//carbonyl/src/browser:carbonyl",
      "//cc",
+     "//cc/animation",
+     "//cc/mojo_embedder",
 @@ -237,6 +238,7 @@ target(link_target_type, "renderer") {
      "//components/discardable_memory/client",
      "//components/metrics",
@@ -1018,27 +1030,14 @@ index 35b1eda284846..a79c1aa1b6ae7 100644
    }
  
 diff --git a/headless/BUILD.gn b/headless/BUILD.gn
-index bfae1e3290de0..78da116c6787b 100644
+index bfae1e3290de0..7003948e30f6e 100644
 --- a/headless/BUILD.gn
 +++ b/headless/BUILD.gn
-@@ -323,6 +323,12 @@ static_library("backend_cdp_bindings") {
- # Code that is not needed in a renderer process.
- component("headless_non_renderer") {
-   sources = [
-+    "../carbonyl/src/browser/bridge.cc",
-+    "../carbonyl/src/browser/bridge.h",
-+    "../carbonyl/src/browser/host_display_client.cc",
-+    "../carbonyl/src/browser/host_display_client.h",
-+    "../carbonyl/src/browser/render_service_impl.cc",
-+    "../carbonyl/src/browser/render_service_impl.h",
-     "app/headless_shell_switches.cc",
-     "app/headless_shell_switches.h",
-     "lib/browser/directory_enumerator.cc",
-@@ -453,8 +459,11 @@ component("headless_non_renderer") {
+@@ -453,8 +453,11 @@ component("headless_non_renderer") {
      "//build:branding_buildflags",
      "//build:branding_buildflags",
      "//build:chromeos_buildflags",
-+    "//carbonyl/src/browser:mojom",
++    "//carbonyl/src/browser:carbonyl",
      "//components/cookie_config",
 +    "//components/content_capture/browser",
      "//components/crash/core/common:common",
@@ -1046,33 +1045,28 @@ index bfae1e3290de0..78da116c6787b 100644
      "//components/embedder_support",
      "//components/embedder_support:embedder_support",
      "//components/embedder_support/origin_trials",
-@@ -993,6 +1002,26 @@ static_library("headless_shell_lib") {
+@@ -993,13 +996,20 @@ static_library("headless_shell_lib") {
  }
  
  executable("headless_shell") {
-+  target = ""
-+
-+  if (target_cpu == "x64") {
-+    target += "x86_64-"
-+  } else if (target_cpu == "arm64") {
-+    target += "aarch64-"
++  if (is_mac && !use_lld) {
++    ldflags = [ "-Wl,-no_compact_unwind" ]
 +  }
-+
-+  if (is_linux) {
-+    target += "unknown-linux-gnu"
-+  } else if (is_mac) {
-+    target += "apple-darwin"
-+    
-+    if (!use_lld) {
-+      ldflags = [ "-Wl,-no_compact_unwind" ]
-+    }
-+  }
-+
-+  libs = ["//carbonyl/build/$target/release/libcarbonyl.a"]
 +
    configs -= [ "//build/config/compiler:thinlto_optimize_default" ]
    configs += [ "//build/config/compiler:thinlto_optimize_max" ]
  
+   sources = [ "app/headless_shell_main.cc" ]
+   defines = []
+ 
+-  deps = [ ":headless_shell_lib" ]
++  deps = [
++    ":headless_shell_lib",
++    "//carbonyl/src/browser:carbonyl",
++  ]
+ 
+   if (!headless_use_embedded_resources) {
+     data = [
 diff --git a/headless/app/headless_shell.cc b/headless/app/headless_shell.cc
 index e08385b9cf740..bfb05adf56cc2 100644
 --- a/headless/app/headless_shell.cc

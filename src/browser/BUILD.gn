@@ -1,3 +1,4 @@
+import("//build/config/compiler/compiler.gni")
 import("//mojo/public/tools/bindings/mojom.gni")
 
 mojom("mojom") {
@@ -7,4 +8,40 @@ mojom("mojom") {
     "//ui/gfx/geometry/mojom",
     "//skia/public/mojom",
   ]
+}
+
+component("carbonyl") {
+  sources = [
+    "bridge.cc",
+    "bridge.h",
+    "host_display_client.cc",
+    "host_display_client.h",
+    "render_service_impl.cc",
+    "render_service_impl.h",
+  ]
+
+  deps = [
+    ":mojom",
+    "//base",
+    "//components/viz/host",
+    "//services/viz/privileged/mojom/compositing",
+    "//ui/compositor",
+    "//ui/display",
+  ]
+
+  target = ""
+
+  if (target_cpu == "x64") {
+    target += "x86_64-"
+  } else if (target_cpu == "arm64") {
+    target += "aarch64-"
+  }
+
+  if (is_linux) {
+    target += "unknown-linux-gnu"
+  } else if (is_mac) {
+    target += "apple-darwin"
+  }
+
+  libs = ["//carbonyl/build/$target/release/libcarbonyl.a"]
 }

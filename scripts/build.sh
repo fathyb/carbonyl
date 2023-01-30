@@ -23,7 +23,6 @@ fi
 
 target="$cpu-$platform"
 
-cargo build --target "$target"
 cargo build --target "$target" --release
 
 cd "$CHROMIUM_SRC/out/$1"
