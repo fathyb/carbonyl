@@ -1030,7 +1030,7 @@ index 35b1eda284846..a79c1aa1b6ae7 100644
    }
  
 diff --git a/headless/BUILD.gn b/headless/BUILD.gn
-index bfae1e3290de0..44653add1bf2d 100644
+index bfae1e3290de0..7003948e30f6e 100644
 --- a/headless/BUILD.gn
 +++ b/headless/BUILD.gn
 @@ -453,8 +453,11 @@ component("headless_non_renderer") {
@@ -1045,33 +1045,28 @@ index bfae1e3290de0..44653add1bf2d 100644
      "//components/embedder_support",
      "//components/embedder_support:embedder_support",
      "//components/embedder_support/origin_trials",
-@@ -993,6 +996,26 @@ static_library("headless_shell_lib") {
+@@ -993,13 +996,20 @@ static_library("headless_shell_lib") {
  }
  
  executable("headless_shell") {
-+  target = ""
-+
-+  if (target_cpu == "x64") {
-+    target += "x86_64-"
-+  } else if (target_cpu == "arm64") {
-+    target += "aarch64-"
++  if (is_mac && !use_lld) {
++    ldflags = [ "-Wl,-no_compact_unwind" ]
 +  }
-+
-+  if (is_linux) {
-+    target += "unknown-linux-gnu"
-+  } else if (is_mac) {
-+    target += "apple-darwin"
-+    
-+    if (!use_lld) {
-+      ldflags = [ "-Wl,-no_compact_unwind" ]
-+    }
-+  }
-+
-+  libs = ["//carbonyl/build/$target/release/libcarbonyl.a"]
 +
    configs -= [ "//build/config/compiler:thinlto_optimize_default" ]
    configs += [ "//build/config/compiler:thinlto_optimize_max" ]
  
+   sources = [ "app/headless_shell_main.cc" ]
+   defines = []
+ 
+-  deps = [ ":headless_shell_lib" ]
++  deps = [
++    ":headless_shell_lib",
++    "//carbonyl/src/browser:carbonyl",
++  ]
+ 
+   if (!headless_use_embedded_resources) {
+     data = [
 diff --git a/headless/app/headless_shell.cc b/headless/app/headless_shell.cc
 index e08385b9cf740..bfb05adf56cc2 100644
 --- a/headless/app/headless_shell.cc
