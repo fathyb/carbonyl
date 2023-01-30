@@ -3,12 +3,10 @@
     <tr>
       <td>
         <p></p>
-        <pre>
-   O    O
-    \  /
-O —— Cr —— O
-    /  \
-   O    O</pre>
+        <pre>    O
+ ┌  ǁ  ┐
+─┼─ C ─┼─
+ └     ┘</pre>
       </td>
       <td><h1>Carbonyl</h1></td>
     </tr>
