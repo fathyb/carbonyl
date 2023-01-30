@@ -23,11 +23,8 @@ fi
 
 target="$cpu-$platform"
 
-if grep -q "is_debug\s*=\s*false" "$CHROMIUM_SRC/out/$1/args.gn"; then
-    cargo build --target "$target" --release
-else
-    cargo build --target "$target"
-fi
+cargo build --target "$target"
+cargo build --target "$target" --release
 
 cd "$CHROMIUM_SRC/out/$1"
 
