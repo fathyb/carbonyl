@@ -8,3 +8,21 @@ mojom("mojom") {
     "//skia/public/mojom",
   ]
 }
+
+component("carbonyl") {
+  sources = [
+    "bridge.cc",
+    "bridge.h",
+    "host_display_client.cc",
+    "host_display_client.h",
+    "render_service_impl.cc",
+    "render_service_impl.h",
+  ]
+
+  deps = [
+    ":mojom",
+    "//base",
+    "//ui/compositor",
+    "//ui/display",
+  ]
+}
