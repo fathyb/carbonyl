@@ -16,7 +16,6 @@ RUN groupadd -r carbonyl && useradd -r -g carbonyl carbonyl && \
 
 USER carbonyl
 
-ARG TARGETARCH
 COPY . /carbonyl
 
 ENTRYPOINT ["/carbonyl/carbonyl", "--no-sandbox", "--disable-dev-shm-usage"]
