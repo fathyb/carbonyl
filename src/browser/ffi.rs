@@ -126,6 +126,8 @@ pub extern "C-unwind" fn carbonyl_renderer_create() -> *mut Renderer {
     let mut renderer = Box::new(Renderer::new());
     let src = output::size().unwrap();
 
+    eprintln!("Terminal size: {:?}", src);
+
     renderer.set_size(Size::new(7, 14), src);
 
     Box::into_raw(renderer)
