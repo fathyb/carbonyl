@@ -84,10 +84,14 @@ impl Parser {
                 },
                 Sequence::Control => match key {
                     b'<' => Sequence::Mouse(Mouse::new()),
-                    b'A' => emit!(Event::KeyPress { key: 0x26 }),
-                    b'B' => emit!(Event::KeyPress { key: 0x28 }),
-                    b'C' => emit!(Event::KeyPress { key: 0x27 }),
-                    b'D' => emit!(Event::KeyPress { key: 0x25 }),
+                    // Up
+                    b'A' => emit!(Event::KeyPress { key: 0x11 }),
+                    // Down
+                    b'B' => emit!(Event::KeyPress { key: 0x12 }),
+                    // Right
+                    b'C' => emit!(Event::KeyPress { key: 0x13 }),
+                    // Left
+                    b'D' => emit!(Event::KeyPress { key: 0x14 }),
                     _ => Sequence::Char,
                 },
                 Sequence::Mouse(ref mut mouse) => parse!(mouse, key),
