@@ -85,7 +85,7 @@ Browsh is the OG "normal browser into a terminal" project. It starts Firefox in 
 #### Cons
 
 -   It runs slower and requires more resources than Carbonyl. 50x more CPU power is needed for the same content in average, that's because Carbonyl does not downscale or copy the window framebuffer, it natively renders to the terminal resolution.
--   It uses custom stylesheets to fix layout, which is less reliable than Carbonyl's changes to its HTML engine (Blink).
+-   It uses custom stylesheets to fix the layout, which is less reliable than Carbonyl's changes to its HTML engine (Blink).
 
 ## Development
 
