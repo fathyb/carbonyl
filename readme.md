@@ -54,6 +54,39 @@ $ docker run -ti fathyb/carbonyl https://youtube.com
 
 -   Fullscreen mode not supported yet
 
+## Comparisons
+
+### Lynx
+
+Lynx is the OG terminal web browser, and the oldest one still maintained.
+
+#### Pros
+
+-   When it understands a page, Lynx has the best layout, fully optimized for the terminal
+
+#### Cons
+
+> Some might sound like pluses, but Browsh and Carbonyl let you disable most of those if you'd like
+
+-   Does not support a lot of modern web standards
+-   Cannot run JavaScript/WebAssembly
+-   Cannot view or play medias (audio, video, DOOM)
+
+### Browsh
+
+Browsh is the OG "normal browser into a terminal" project. It starts Firefox in headless mode and connects to it through an automation protocol.
+
+#### Pro
+
+-   It's easier to update the underlying browser: just update Firefox
+-   This makes development easier: just install Firefox and compile the Go code in a few seconds
+-   As of today, Browsh supports extensions while Carbonyl doesn't, although it's on our roadmap
+
+#### Cons
+
+-   It runs slower and requires more resources than Carbonyl. 50x more CPU power is needed for the same content in average, that's because Carbonyl does not downscale or copy the window framebuffer, it natively renders to the terminal resolution.
+-   It uses custom stylesheets to fix the layout, which is less reliable than Carbonyl's changes to its HTML engine (Blink).
+
 ## Development
 
 Few notes:
