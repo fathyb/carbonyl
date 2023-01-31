@@ -166,9 +166,9 @@ This should produce the following outputs:
 
 ```console
 # Build arm64 Docker image using binaries from the Default target
-$ ./scripts/docker.sh arm64 Default
+$ ./scripts/docker-build.sh arm64 Default
 # Build amd64 Docker image using binaries from the Default target
-$ ./scripts/docker.sh amd64 Default
+$ ./scripts/docker-build.sh amd64 Default
 ```
 
 ### Run
