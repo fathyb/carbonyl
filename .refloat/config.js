@@ -28,7 +28,7 @@ export const jobs = [
                 './scripts/gn.sh',
                 'gen',
                 'out/Default',
-                `--args='import("//carbonyl/src/browser/args.gn") use_lld=false is_debug=false symbol_level=0 is_official_build=true'`,
+                `--args='import("//carbonyl/src/browser/args.gn") use_lld=false is_debug=false symbol_level=0'`,
             ].join(' '),
             './scripts/build.sh Default',
         ],
