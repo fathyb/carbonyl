@@ -1,6 +1,8 @@
-enable_nacl=false
 headless_enable_commands=false
 headless_use_embedded_resources=true
+
+# Disable unused features
+enable_nacl=false
 enable_pdf=false
 enable_ppapi=false
 enable_plugins=false
