@@ -14,7 +14,7 @@ pub fn size() -> io::Result<Size> {
                 let cols = parse_var("COLUMNS").unwrap_or(80);
                 let rows = parse_var("LINES").unwrap_or(24);
 
-                log::debug!(
+                log::warning!(
                     "TIOCGWINSZ returned an empty size ({}x{}), defaulting to {}x{}",
                     size.ws_col,
                     size.ws_row,
