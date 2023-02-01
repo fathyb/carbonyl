@@ -5,7 +5,7 @@ use std::mem::MaybeUninit;
 use std::os::fd::RawFd;
 use std::os::unix::prelude::AsRawFd;
 
-use crate::log;
+use crate::utils::log;
 
 pub struct Terminal {
     settings: Option<TerminalSettings>,

@@ -1,7 +1,7 @@
 use core::mem::MaybeUninit;
 use std::{io, str::FromStr};
 
-use crate::{gfx::Size, log};
+use crate::{gfx::Size, utils::log};
 
 pub fn size() -> io::Result<Size> {
     let mut ptr = MaybeUninit::<libc::winsize>::uninit();

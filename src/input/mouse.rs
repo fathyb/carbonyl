@@ -1,6 +1,6 @@
 use std::ops::BitAnd;
 
-use crate::{control_flow, log};
+use crate::{control_flow, utils::log};
 
 use super::{Event, ParseControlFlow};
 

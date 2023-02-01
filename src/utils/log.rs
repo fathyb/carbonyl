@@ -2,9 +2,11 @@ use std::path::Path;
 
 use chrono::prelude::*;
 
+use crate::utils::try_block;
+
 macro_rules! debug {
     ($($args:expr),+) => {
-        crate::log::write(
+        crate::utils::log::write(
             "DEBUG",
             file!(),
             line!(),
@@ -14,7 +16,7 @@ macro_rules! debug {
 }
 macro_rules! warning {
     ($($args:expr),+) => {
-        crate::log::write(
+        crate::utils::log::write(
             "WARNING",
             file!(),
             line!(),
@@ -24,7 +26,7 @@ macro_rules! warning {
 }
 macro_rules! error {
     ($($args:expr),+) => {
-        crate::log::write(
+        crate::utils::log::write(
             "ERROR",
             file!(),
             line!(),
@@ -49,12 +51,8 @@ pub fn write(level: &str, file: &str, line: u32, message: &str) {
         date.second(),
         date.nanosecond() / 1000,
         level,
-        file_name(file).unwrap_or("<unknown>"),
+        try_block!(Path::new(file).file_name()?.to_str()).unwrap_or("default"),
         line,
         message
     );
-}
-
-fn file_name(path: &str) -> Option<&str> {
-    Path::new(path).file_name()?.to_str()
 }

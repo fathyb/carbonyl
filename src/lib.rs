@@ -4,4 +4,4 @@ pub mod gfx;
 pub mod input;
 pub mod output;
 
-mod log;
+mod utils;

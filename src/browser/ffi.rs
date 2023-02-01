@@ -7,7 +7,7 @@ use libc::{c_char, c_int, c_uchar, c_uint, size_t};
 
 use crate::gfx::{Cast, Color, Point, Rect, Size};
 use crate::output::Renderer;
-use crate::{input, log, output};
+use crate::{input, output, utils::log};
 
 /// This file bridges the C++ code with Rust.
 /// "C-unwind" combined with .unwrap() is used to allow catching Rust panics
