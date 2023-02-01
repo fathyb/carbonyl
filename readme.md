@@ -90,11 +90,9 @@ Browsh is the OG "normal browser into a terminal" project. It starts Firefox in 
 ## Operating System Support
 As far as tested, the operating systems under are supported:
   
-  Linux (Debian, Ubuntu and Arch tested)
-  
-  MacOS 
-  
-  Windows 11 and WSL
+  -  Linux (Debian, Ubuntu and Arch tested)
+  -  MacOS 
+  -  Windows 11 and WSL
   
 ## Development
 
