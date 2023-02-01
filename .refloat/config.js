@@ -21,7 +21,7 @@ export const jobs = [
         using: env,
         agent: { tags: ['macos', 'arm64'] },
         steps: [
-            'env',
+            'ccache --set-config=max_size=256G',
             './scripts/gclient.sh sync',
             './scripts/patches.sh apply',
             [
