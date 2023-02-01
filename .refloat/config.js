@@ -1,7 +1,7 @@
 const env = {
     command: `
-        export GIT_CACHE_PATH=~"/.cache/git"
-        export CCACHE_DIR=~"/.cache/git"
+        export GIT_CACHE_PATH="$HOME/.cache/git"
+        export CCACHE_DIR="$HOME/.cache/git"
         export CCACHE_CPP2=yes
         export CCACHE_SLOPPINESS=time_macros
     `,
