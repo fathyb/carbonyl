@@ -4,11 +4,18 @@ export CARBONYL_ROOT=$(cd $(dirname -- "$0") && dirname -- $(pwd))
 
 source "$CARBONYL_ROOT/scripts/env.sh"
 
+target="$1"
+cpu="$2"
 platform="linux"
-cpu=$(uname -m)
+
+if [ -z "$cpu" ]; then
+    cpu="$(uname -m)"
+fi
 
 if [[ "$cpu" == "arm64" ]]; then
     cpu="aarch64"
+elif [[ "$cpu" == "amd64" ]]; then
+    cpu="x86_64"
 fi
 
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then

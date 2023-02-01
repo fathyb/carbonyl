@@ -19,4 +19,4 @@ docker manifest create "$tag:$version" \
     --amend "$tag:$version-arm64" \
     --amend "$tag:$version-amd64"
 
-docker manifest push "$tag:$version"
+docker manifest push "$tag:$version" --purge

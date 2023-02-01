@@ -1,7 +1,7 @@
 use core::mem::MaybeUninit;
 use std::{io, str::FromStr};
 
-use crate::gfx::Size;
+use crate::{gfx::Size, log};
 
 pub fn size() -> io::Result<Size> {
     let mut ptr = MaybeUninit::<libc::winsize>::uninit();
@@ -14,9 +14,12 @@ pub fn size() -> io::Result<Size> {
                 let cols = parse_var("COLUMNS").unwrap_or(80);
                 let rows = parse_var("LINES").unwrap_or(24);
 
-                eprintln!(
+                log::debug!(
                     "TIOCGWINSZ returned an empty size ({}x{}), defaulting to {}x{}",
-                    size.ws_col, size.ws_row, cols, rows
+                    size.ws_col,
+                    size.ws_row,
+                    cols,
+                    rows
                 );
 
                 size.ws_col = cols;

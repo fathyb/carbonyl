@@ -4,8 +4,8 @@ export CARBONYL_ROOT=$(cd $(dirname -- "$0") && dirname -- $(pwd))
 
 source "$CARBONYL_ROOT/scripts/env.sh"
 
-cpu="$1"
-target="$2"
+target="$1"
+cpu="$2"
 
 build_dir="$CARBONYL_ROOT/build/browser/$cpu"
 

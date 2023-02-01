@@ -7,7 +7,7 @@ use libc::{c_char, c_int, c_uchar, c_uint, size_t};
 
 use crate::gfx::{Cast, Color, Point, Rect, Size};
 use crate::output::Renderer;
-use crate::{input, output};
+use crate::{input, log, output};
 
 /// This file bridges the C++ code with Rust.
 /// "C-unwind" combined with .unwrap() is used to allow catching Rust panics
@@ -126,7 +126,7 @@ pub extern "C-unwind" fn carbonyl_renderer_create() -> *mut Renderer {
     let mut renderer = Box::new(Renderer::new());
     let src = output::size().unwrap();
 
-    eprintln!("Terminal size: {:?}", src);
+    log::debug!("Terminal size: {:?}", src);
 
     renderer.set_size(Size::new(7, 14), src);
 
@@ -199,6 +199,8 @@ pub extern "C-unwind" fn carbonyl_output_get_size(size: *mut CSize) {
     let dst = unsafe { &mut *size };
     let src = output::size().unwrap().cast::<c_uint>();
 
+    log::debug!("Terminal size: {:?}", src);
+
     dst.width = src.width * 7;
     dst.height = src.height * 14;
 }
@@ -245,7 +247,7 @@ pub extern "C-unwind" fn carbonyl_input_listen(
                 mouse_move(col as c_uint * char_width, row as c_uint * char_height)
             }
             Terminal(terminal) => match terminal {
-                TerminalEvent::Name(name) => eprintln!("Terminal name: {name}"),
+                TerminalEvent::Name(name) => log::debug!("Terminal name: {name}"),
                 TerminalEvent::TrueColorSupported => renderer.enable_true_color(),
             },
         }
