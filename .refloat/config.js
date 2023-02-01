@@ -21,6 +21,7 @@ export const jobs = [
         using: env,
         agent: { tags: ['macos', 'arm64'] },
         steps: [
+            'env',
             './scripts/gclient.sh sync',
             './scripts/patches.sh apply',
             [
