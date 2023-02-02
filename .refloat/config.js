@@ -11,6 +11,7 @@ const env = {
             'GIT_CACHE_PATH',
             'CCACHE_DIR',
             'CCACHE_CPP2',
+            'CCACHE_BASEDIR',
             'CCACHE_SLOPPINESS',
         ],
     },
