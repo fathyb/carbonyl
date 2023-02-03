@@ -3,7 +3,7 @@ const env = {
         export GIT_CACHE_PATH="$HOME/.cache/git"
         export CCACHE_DIR="$HOME/.cache/ccache"
         export CCACHE_CPP2=yes
-        export CCACHE_BASEDIR="$HOME/Library/Refloat"
+        export CCACHE_BASEDIR="/Volumes/Data/Refloat"
         export CCACHE_SLOPPINESS=file_macro,time_macros,include_file_mtime,include_file_ctime,file_stat_matches,pch_defines
     `,
     env: {
