@@ -10,7 +10,7 @@ export const jobs = [
             },
             {
                 export: {
-                    artifact: [`build/${target}/release/libcarbonyl.dylib`],
+                    artifact: `build/${target}/release/libcarbonyl.dylib`,
                 },
             },
         ],
