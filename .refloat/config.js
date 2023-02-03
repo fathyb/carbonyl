@@ -1,5 +1,5 @@
 export const jobs = [
-    ['aarch64-apple-darwin', 'x86_64-apple-darwin'].map((target) => ({
+    ...['aarch64-apple-darwin', 'x86_64-apple-darwin'].map((target) => ({
         name: `Build core (${target})`,
         steps: [
             {
