@@ -4,7 +4,7 @@ const env = {
         export CCACHE_DIR="$HOME/.cache/ccache"
         export CCACHE_CPP2=yes
         export CCACHE_BASEDIR="$HOME/Library/Refloat"
-        export CCACHE_SLOPPINESS=include_file_mtime,time_macros
+        export CCACHE_SLOPPINESS=file_macro,time_macros,include_file_mtime,include_file_ctime,file_stat_matches,pch_defines
     `,
     env: {
         export: [
