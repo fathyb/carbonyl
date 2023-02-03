@@ -4,33 +4,9 @@ export CARBONYL_ROOT=$(cd $(dirname -- "$0") && dirname -- "$(pwd)")
 
 source "$CARBONYL_ROOT/scripts/env.sh"
 
-target="$1"
-cpu="$2"
-platform="linux"
+triple=$("$CARBONYL_ROOT/scripts/platform-triple.sh" "$2")
 
-if [ -z "$cpu" ]; then
-    cpu="$(uname -m)"
-fi
-
-if [[ "$cpu" == "arm64" ]]; then
-    cpu="aarch64"
-elif [[ "$cpu" == "amd64" ]]; then
-    cpu="x86_64"
-fi
-
-if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-    platform="unknown-linux-gnu"
-elif [[ "$OSTYPE" == "darwin"* ]]; then
-    platform="apple-darwin"
-else
-    echo "Unsupported platform: $OSTYPE"
-
-    exit 2
-fi
-
-target="$cpu-$platform"
-
-cargo build --target "$target" --release
+cargo build --target "$triple" --release
 
 cd "$CHROMIUM_SRC/out/$1"
 
