@@ -34,8 +34,8 @@ $ docker run -ti fathyb/carbonyl https://youtube.com
 
 -   [macOS amd64](https://refloat.ci/artifact/fathyb/carbonyl/59/carbonyl.macos-amd64.zip)
 -   [macOS arm64](https://refloat.ci/artifact/fathyb/carbonyl/59/carbonyl.macos-arm64.zip)
--   [Linux amd64](https://refloat.ci/artifact/fathyb/carbonyl/59/carbonyl.macos-amd64.zip)
--   [Linux arm64](https://refloat.ci/artifact/fathyb/carbonyl/59/carbonyl.macos-arm64.zip)
+-   [Linux amd64](https://refloat.ci/artifact/fathyb/carbonyl/59/carbonyl.linux-amd64.zip)
+-   [Linux arm64](https://refloat.ci/artifact/fathyb/carbonyl/59/carbonyl.linux-arm64.zip)
 
 Carbonyl on Linux requires the same dependencies as Chromium.
 
