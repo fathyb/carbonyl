@@ -31,11 +31,17 @@ export const jobs = ['arm64', 'amd64']
             steps: [
                 {
                     name: 'Install Rust toolchain',
-                    command: `rustup target add ${triple}`,
+                    command:
+                        platform === 'linux'
+                            ? 'cargo install cross --git https://github.com/cross-rs/cross'
+                            : `rustup target add ${triple}`,
                 },
                 {
                     name: 'Build core library',
-                    command: `cargo build --target ${triple} --release`,
+                    command:
+                        platform === 'linux'
+                            ? `cross build --target ${triple} --release`
+                            : `cargo build --target ${triple} --release`,
                     env: { MACOSX_DEPLOYMENT_TARGET: '10.13' },
                 },
                 {
