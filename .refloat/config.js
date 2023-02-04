@@ -57,6 +57,7 @@ export const jobs = ['arm64', 'amd64']
             // TODO: setup shared build dir
             name: `Build (${platform}/${arch})`,
             docker: 'debian:11',
+            agent: { tags: ['docker'] },
             steps: [
                 {
                     import: {
