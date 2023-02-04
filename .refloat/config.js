@@ -20,6 +20,7 @@ export const jobs = ['arm64', 'amd64']
     .flatMap(({ platform, arch, triple, lib }) => [
         {
             name: `Build core (${platform}/${arch})`,
+            cache: platform === 'linux' ? ['/usr/local/cargo/registry'] : [],
             docker: platform === 'linux' ? 'rust:1.67' : undefined,
             agent: { tags: platform === 'linux' ? ['docker'] : [] },
             steps: [
