@@ -27,7 +27,5 @@ cp "$src/libGLESv2.$lib_ext" "$dest"
 cp "$src"/v8_context_snapshot*.bin "$dest"
 cp "build/$triple/release/libcarbonyl.$lib_ext" "$dest"
 
-strip "$dest/carbonyl"
-
 echo "Binaries copied to $dest"
 

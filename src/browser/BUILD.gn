@@ -43,6 +43,9 @@ component("carbonyl") {
     target += "apple-darwin"
   }
 
-  libs = ["carbonyl"]
-  lib_dirs = ["//carbonyl/build/$target/release"]
+  if (is_linux) {
+    libs = ["//carbonyl/build/$target/release/libcarbonyl.so"]
+  } else if (is_mac) {
+    libs = ["//carbonyl/build/$target/release/libcarbonyl.dylib"]
+  }
 }

@@ -19,14 +19,14 @@ if [[ "$1" == "apply" ]]; then
     git stash
     git checkout "$chromium_upstream"
     echo "Applying Chromium patches.."
-    git apply < ../../src/chromium.patch
+    git apply < "$CARBONYL_ROOT/src/chromium.patch"
 
     cd third_party/skia
     echo "Stashing Chromium changes.."
     git stash
     git checkout "$skia_upstream"
     echo "Applying Skia patches.."
-    git apply < ../../../../src/skia.patch
+    git apply < "$CARBONYL_ROOT/src/skia.patch"
 
     echo "Patches successfully applied"
 elif [[ "$1" == "save" ]]; then
@@ -35,11 +35,11 @@ elif [[ "$1" == "save" ]]; then
     fi
 
     echo "Updating Chromium patch.."
-    git diff "$chromium_upstream" > ../../src/chromium.patch
+    git diff "$chromium_upstream" > "$CARBONYL_ROOT/src/chromium.patch"
 
     echo "Updating Skia patch.."
     cd third_party/skia
-    git diff "$skia_upstream" > ../../../../src/skia.patch
+    git diff "$skia_upstream" > "$CARBONYL_ROOT/src/skia.patch"
 
     echo "Patches successfully updated"
 else
