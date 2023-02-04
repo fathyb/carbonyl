@@ -21,6 +21,7 @@ export const jobs = ['arm64', 'amd64']
         {
             name: `Build core (${platform}/${arch})`,
             docker: platform === 'linux' ? 'rust:1.67' : undefined,
+            agent: { tags: platform === 'linux' ? ['docker'] : [] },
             steps: [
                 {
                     name: 'Install Rust toolchain',
