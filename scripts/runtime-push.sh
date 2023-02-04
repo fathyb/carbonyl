@@ -10,11 +10,6 @@ echo "Computing Chromium patches hash.."
 hash=$(scripts/runtime-hash.sh)
 triple=$(scripts/platform-triple.sh "$1")
 
-echo "Archiving binaries.."
-
-cd build/pre-built
-tar cvzf "$triple.tgz" "$triple"
-
 echo "Pushing $triple.tgz to object storage.."
 
 AWS_PAGER="" \
@@ -24,4 +19,4 @@ AWS_SECRET_ACCESS_KEY="$CDN_SECRET_ACCESS_KEY" \
         --endpoint-url "https://7985f304d3a79d71fb63aeb17a31fe30.r2.cloudflarestorage.com" \
         --bucket "carbonyl-runtime" \
         --key "runtime/$hash/$triple.tgz" \
-        --body "$triple.tgz"
+        --body "build/pre-built/$triple.tgz"
