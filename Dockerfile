@@ -2,7 +2,7 @@ FROM rust:1.67 AS cross-compile
 
 RUN apt-get update && \
     apt-get install -y \
-        g++-aarch64-linux-gnu g++-x86-64-linux-gnu libc6-dev-arm64-cross libc6-dev-amd64-cross && \
+        zip g++-aarch64-linux-gnu g++-x86-64-linux-gnu libc6-dev-arm64-cross libc6-dev-amd64-cross && \
     rustup target add aarch64-unknown-linux-gnu x86_64-unknown-linux-gnu && \
     rustup toolchain install stable-aarch64-unknown-linux-gnu stable-x86_64-unknown-linux-gnu && \
     rm -rf /var/lib/apt/lists/*

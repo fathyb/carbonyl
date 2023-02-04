@@ -1,3 +1,7 @@
+const sharedLib = {
+    macos: 'dylib',
+    linux: 'so'
+}
 const platforms = {
     macos: 'apple-darwin',
     linux: 'unknown-linux-gnu',
@@ -13,7 +17,7 @@ export const jobs = ['arm64', 'amd64']
     )
     .map(({ platform, arch }) => {
         const triple = `${archs[arch]}-${platforms[platform]}`
-        const lib = `build/${triple}/release/libcarbonyl.dylib`
+        const lib = `build/${triple}/release/libcarbonyl.${sharedLib[platform]}`
 
         return { platform, arch, triple, lib }
     })
