@@ -43,5 +43,6 @@ component("carbonyl") {
     target += "apple-darwin"
   }
 
-  libs = ["//carbonyl/build/$target/release/libcarbonyl.dylib"]
+  libs = ["carbonyl"]
+  lib_dirs = ["//carbonyl/build/$target/release"]
 }
