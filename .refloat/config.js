@@ -20,6 +20,7 @@ export const jobs = ['arm64', 'amd64']
     .flatMap(({ platform, arch, triple, lib }) => [
         {
             name: `Build core (${platform}/${arch})`,
+            docker: platform === 'linux' ? 'rust:1.67' : undefined,
             steps: [
                 {
                     name: 'Install Rust toolchain',
