@@ -12,8 +12,8 @@ export const jobs = ['arm64', 'amd64']
     .map(({ arch, platform }) => ({
         arch,
         platform,
-        lib: `build/${triple(arch, os)}/release/libcarbonyl.dylib`,
-        triple: triple(arch, os),
+        lib: `build/${triple(arch, platform)}/release/libcarbonyl.dylib`,
+        triple: triple(arch, platform),
     }))
     .map(({ arch, platform, lib, triple }) => ({
         name: `Build for ${platform} on ${arch}`,
