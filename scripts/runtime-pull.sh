@@ -21,5 +21,9 @@ if ! curl --silent --fail --output "build/pre-built/$triple.tgz" "$url"; then
 
     exit 1
 else
-    echo "Pre-build binaries available"
+    echo "Pre-build binaries available, extracting.."
+
+    cd build/pre-built
+    rm -rf "$triple"
+    tar -xvzf "$triple.tgz"
 fi

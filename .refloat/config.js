@@ -6,91 +6,90 @@ const archs = {
     amd64: 'x86_64',
 }
 const triple = (arch, platform) => `${archs[arch]}-${platforms[platform]}`
-const lib = (triple) => `build/${triple}/release/libcarbonyl.dylib`
 
-export const jobs = [
-    ...[triple('arm64', 'macos'), triple('amd64', 'macos')].map((triple) => ({
-        name: `Build core (${triple})`,
+export const jobs = ['arm64', 'amd64']
+    .flatMap((arch) => [{ arch, platform: 'macos' }])
+    .map(({ arch, platform }) => ({
+        arch,
+        platform,
+        lib: `build/${triple(arch, os)}/release/libcarbonyl.dylib`,
+        triple: triple(arch, os),
+    }))
+    .map(({ arch, platform, lib, triple }) => ({
+        name: `Build for ${platform} on ${arch}`,
+        agent: { tags: [platform, arch] },
         steps: [
             {
-                name: 'Install toolchain',
+                name: 'Install Rust toolchain',
                 command: `rustup target add ${triple}`,
             },
             {
-                name: 'Build library',
+                name: 'Build core library',
                 command: `cargo build --target ${triple} --release`,
                 env: { MACOSX_DEPLOYMENT_TARGET: '10.13' },
             },
             {
-                name: 'Set library install name',
-                command: `install_name_tool -id @executable_path/libcarbonyl.dylib ${lib(
-                    triple,
-                )}`,
+                if: platform === 'macos',
+                name: 'Set core library install name',
+                command: `install_name_tool -id @executable_path/libcarbonyl.dylib ${lib}`,
             },
             {
-                export: {
-                    artifact: {
-                        name: `${triple}/libcarbonyl.dylib`,
-                        path: lib(triple),
-                    },
-                },
+                name: 'Build Chromium',
+                command: `
+                    if ! scripts/runtime-pull.sh; then
+                        export GIT_CACHE_PATH="$HOME/.cache/git"
+                        export CCACHE_DIR="$HOME/.cache/ccache"
+                        export CCACHE_CPP2=yes
+                        export CCACHE_BASEDIR="/Volumes/Data/Refloat"
+                        export CCACHE_SLOPPINESS=file_macro,time_macros,include_file_mtime,include_file_ctime,file_stat_matches,pch_defines
+    
+                        ccache --set-config=max_size=32G
+
+                        scripts/gclient.sh sync
+                        scripts/patches.sh apply
+                        scripts/gn.sh gen out/Default --args='import("//carbonyl/src/browser/args.gn") use_lld=false is_debug=false symbol_level=0 cc_wrapper="ccache"'
+                        scripts/build.sh Default
+                        scripts/copy-binaries.sh Default
+                    fi
+                `,
             },
-        ],
-    })),
+            {
+                parallel: [
+                    {
+                        name: 'Push pre-built binaries',
+                        env: {
+                            CDN_ACCESS_KEY_ID: { secret: true },
+                            CDN_SECRET_ACCESS_KEY: { secret: true },
+                        },
+                        command: `
+                            if [ -d chromium/src/out/Default ]; then
+                                scripts/runtime-push.sh
+                            fi
+                        `,
+                    },
+                    {
+                        serial: [
+                            {
+                                command: `
+                                    mkdir build/zip
+                                    cp -r build/pre-built/${triple} build/zip/${triple}
+                                    cp ${lib} build/zip/${triple}
 
-    ...['arm64', 'amd64']
-        .map((arch) => [arch, triple(arch, 'macos')])
-        .map(([arch, triple]) => ({
-            name: `Build Chromium (macOS/${arch})`,
-            agent: { tags: ['macos', arch] },
-            steps: [
-                {
-                    import: { artifact: `${triple}/libcarbonyl.dylib` },
-                },
-                {
-                    name: 'Build Chromium',
-                    command: `
-                        if ! scripts/runtime-pull.sh; then
-                            export GIT_CACHE_PATH="$HOME/.cache/git"
-                            export CCACHE_DIR="$HOME/.cache/ccache"
-                            export CCACHE_CPP2=yes
-                            export CCACHE_BASEDIR="/Volumes/Data/Refloat"
-                            export CCACHE_SLOPPINESS=file_macro,time_macros,include_file_mtime,include_file_ctime,file_stat_matches,pch_defines
-        
-                            ccache --set-config=max_size=32G
-
-                            scripts/gclient.sh sync
-                            scripts/patches.sh apply
-                            scripts/gn.sh gen out/Default --args='import("//carbonyl/src/browser/args.gn") use_lld=false is_debug=false symbol_level=0 cc_wrapper="ccache"'
-                            scripts/build.sh Default
-                            scripts/copy-binaries.sh Default
-                        fi
-                    `,
-                },
-                {
-                    parallel: [
-                        {
-                            export: {
-                                artifact: {
-                                    name: `${triple}/runtime.tgz`,
-                                    path: `build/pre-built/${triple}.tgz`,
+                                    cd build/zip/${triple}
+                                    zip -r package.zip .
+                                `,
+                            },
+                            {
+                                export: {
+                                    artifact: {
+                                        name: `carbonyl.${platform}-${arch}.zip`,
+                                        path: `build/zip/${triple}/package.zip`,
+                                    },
                                 },
                             },
-                        },
-                        {
-                            name: 'Push pre-built binaries',
-                            env: {
-                                CDN_ACCESS_KEY_ID: { secret: true },
-                                CDN_SECRET_ACCESS_KEY: { secret: true },
-                            },
-                            command: `
-                                if [ -d chromium/src/out/Default ]; then
-                                    scripts/runtime-push.sh
-                                fi
-                            `,
-                        },
-                    ],
-                },
-            ],
-        })),
-]
+                        ],
+                    },
+                ],
+            },
+        ],
+    }))

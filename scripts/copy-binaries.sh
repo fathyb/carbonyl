@@ -25,12 +25,9 @@ cp "$src/icudtl.dat" "$dest"
 cp "$src/libEGL.$lib_ext" "$dest"
 cp "$src/libGLESv2.$lib_ext" "$dest"
 cp "$src"/v8_context_snapshot*.bin "$dest"
+cp "build/$triple/release/libcarbonyl.$lib_ext" "$dest"
 
 strip "$dest/carbonyl"
 
-echo "Binaries copied to $dest, archiving.."
+echo "Binaries copied to $dest"
 
-cd build/pre-built
-tar cvzf "$triple.tgz" "$triple"
-
-echo "Binaries archived to $dest.tgz"
