@@ -23,25 +23,19 @@ export const jobs = ['arm64', 'amd64']
             docker:
                 platform === 'linux'
                     ? {
-                          image: 'rust:1.67',
+                          image: 'fathyb/rust-cross',
                           cache: ['/usr/local/cargo/registry'],
                       }
                     : undefined,
-            agent: { tags: platform === 'linux' ? ['docker'] : [] },
+            agent: { tags: platform === 'linux' ? ['docker'] : ['macos'] },
             steps: [
                 {
                     name: 'Install Rust toolchain',
-                    command:
-                        platform === 'linux'
-                            ? 'cargo install cross --git https://github.com/cross-rs/cross'
-                            : `rustup target add ${triple}`,
+                    command: `rustup target add ${triple}`,
                 },
                 {
                     name: 'Build core library',
-                    command:
-                        platform === 'linux'
-                            ? `cross build --target ${triple} --release`
-                            : `cargo build --target ${triple} --release`,
+                    command: `cargo build --target ${triple} --release`,
                     env: { MACOSX_DEPLOYMENT_TARGET: '10.13' },
                 },
                 {
