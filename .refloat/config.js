@@ -1,5 +1,17 @@
+function triple(arch, platform) {
+    const platforms = {
+        macos: 'apple-darwin',
+    }
+    const archs = {
+        arm64: 'aarch64',
+        amd64: 'x86_64',
+    }
+
+    return `${archs[arch]}-${platforms[platform]}`
+}
+
 export const jobs = [
-    ...['aarch64-apple-darwin', 'x86_64-apple-darwin'].map((target) => ({
+    ...[triple('arm64', 'macos'), triple('amd64', 'macos')].map((target) => ({
         name: `Build core (${target})`,
         steps: [
             {
@@ -7,6 +19,7 @@ export const jobs = [
             },
             {
                 command: `cargo build --target ${target} --release`,
+                env: { MACOSX_DEPLOYMENT_TARGET: '11.0' },
             },
             {
                 export: {
@@ -20,6 +33,14 @@ export const jobs = [
         name: `Build Chromium (macOS/${arch})`,
         agent: { tags: ['macos', arch] },
         steps: [
+            {
+                import: {
+                    artifact: `build/${triple(
+                        arch,
+                        'macos',
+                    )}/release/libcarbonyl.dylib`,
+                },
+            },
             {
                 name: 'Build Chromium',
                 command: `
