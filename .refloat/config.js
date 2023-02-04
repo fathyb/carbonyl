@@ -1,21 +1,23 @@
 const platforms = {
     macos: 'apple-darwin',
+    linux: 'unknown-linux-gnu',
 }
 const archs = {
     arm64: 'aarch64',
     amd64: 'x86_64',
 }
-const triple = (arch, platform) => `${archs[arch]}-${platforms[platform]}`
 
 export const jobs = ['arm64', 'amd64']
-    .flatMap((arch) => [{ arch, platform: 'macos' }])
-    .map(({ arch, platform }) => ({
-        arch,
-        platform,
-        lib: `build/${triple(arch, platform)}/release/libcarbonyl.dylib`,
-        triple: triple(arch, platform),
-    }))
-    .flatMap(({ arch, platform, lib, triple }) => [
+    .flatMap((arch) =>
+        ['macos', 'linux'].map((platform) => ({ platform, arch })),
+    )
+    .map(({ platform, arch }) => {
+        const triple = `${archs[arch]}-${platforms[platform]}`
+        const lib = `build/${triple}/release/libcarbonyl.dylib`
+
+        return { platform, arch, triple, lib }
+    })
+    .flatMap(({ platform, arch, triple, lib }) => [
         {
             name: `Build core (${platform}/${arch})`,
             steps: [
@@ -43,7 +45,7 @@ export const jobs = ['arm64', 'amd64']
         },
         {
             name: `Build (${platform}/${arch})`,
-            agent: { tags: [platform, arch] },
+            agent: { tags: [platform, platform === 'macos' ? arch : 'amd64'] },
             steps: [
                 {
                     import: {
@@ -88,13 +90,13 @@ export const jobs = ['arm64', 'amd64']
                             serial: [
                                 {
                                     command: `
-                                    mkdir build/zip
-                                    cp -r build/pre-built/${triple} build/zip/${triple}
-                                    cp ${lib} build/zip/${triple}
+                                        mkdir build/zip
+                                        cp -r build/pre-built/${triple} build/zip/${triple}
+                                        cp ${lib} build/zip/${triple}
 
-                                    cd build/zip/${triple}
-                                    zip -r package.zip .
-                                `,
+                                        cd build/zip/${triple}
+                                        zip -r package.zip .
+                                    `,
                                 },
                                 {
                                     export: {
