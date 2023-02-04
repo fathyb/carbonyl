@@ -45,7 +45,7 @@ export const jobs = [
             agent: { tags: ['macos', arch] },
             steps: [
                 {
-                    import: { artifact: lib(triple) },
+                    import: { artifact: `${triple}/libcarbonyl.dylib` },
                 },
                 {
                     name: 'Build Chromium',
