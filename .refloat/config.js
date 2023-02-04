@@ -33,9 +33,11 @@ export const jobs = ['arm64', 'amd64']
                     env: { MACOSX_DEPLOYMENT_TARGET: '10.13' },
                 },
                 {
-                    if: platform === 'macos',
                     name: 'Set core library install name',
-                    command: `install_name_tool -id @executable_path/libcarbonyl.dylib ${lib}`,
+                    command:
+                        platform === 'macos'
+                            ? `install_name_tool -id @executable_path/libcarbonyl.dylib ${lib}`
+                            : 'echo not necessary',
                 },
                 {
                     export: {
