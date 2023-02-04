@@ -30,6 +30,15 @@ Carbonyl originally started as [`html2svg`](https://github.com/fathyb/html2svg) 
 $ docker run -ti fathyb/carbonyl https://youtube.com
 ```
 
+### Download
+
+-   [macOS amd64](https://refloat.ci/artifact/fathyb/carbonyl/59/carbonyl.macos-amd64.zip)
+-   [macOS arm64](https://refloat.ci/artifact/fathyb/carbonyl/59/carbonyl.macos-arm64.zip)
+-   [Linux amd64](https://refloat.ci/artifact/fathyb/carbonyl/59/carbonyl.macos-amd64.zip)
+-   [Linux arm64](https://refloat.ci/artifact/fathyb/carbonyl/59/carbonyl.macos-arm64.zip)
+
+Carbonyl on Linux requires the same dependencies as Chromium.
+
 ## Demo
 
 <table>
@@ -58,7 +67,7 @@ $ docker run -ti fathyb/carbonyl https://youtube.com
 
 ### Lynx
 
-Lynx is the OG terminal web browser, and the oldest one still maintained.
+Lynx is the original terminal web browser, and the oldest one still maintained.
 
 #### Pros
 
@@ -74,7 +83,7 @@ Lynx is the OG terminal web browser, and the oldest one still maintained.
 
 ### Browsh
 
-Browsh is the OG "normal browser into a terminal" project. It starts Firefox in headless mode and connects to it through an automation protocol.
+Browsh is the original "normal browser into a terminal" project. It starts Firefox in headless mode and connects to it through an automation protocol.
 
 #### Pro
 
@@ -88,12 +97,13 @@ Browsh is the OG "normal browser into a terminal" project. It starts Firefox in 
 -   It uses custom stylesheets to fix the layout, which is less reliable than Carbonyl's changes to its HTML engine (Blink).
 
 ## Operating System Support
+
 As far as tested, the operating systems under are supported:
-  
-  -  Linux (Debian, Ubuntu and Arch tested)
-  -  MacOS 
-  -  Windows 11 and WSL
-  
+
+-   Linux (Debian, Ubuntu and Arch tested)
+-   MacOS
+-   Windows 11 and WSL
+
 ## Development
 
 Few notes:
