@@ -1,30 +1,34 @@
-function triple(arch, platform) {
-    const platforms = {
-        macos: 'apple-darwin',
-    }
-    const archs = {
-        arm64: 'aarch64',
-        amd64: 'x86_64',
-    }
-
-    return `${archs[arch]}-${platforms[platform]}`
+const platforms = {
+    macos: 'apple-darwin',
 }
+const archs = {
+    arm64: 'aarch64',
+    amd64: 'x86_64',
+}
+const triple = (arch, platform) => `${archs[arch]}-${platforms[platform]}`
+const lib = (triple) => `build/${triple}/release/libcarbonyl.dylib`
 
 export const jobs = [
     ...[triple('arm64', 'macos'), triple('amd64', 'macos')].map((target) => ({
         name: `Build core (${target})`,
         steps: [
             {
+                name: 'Install toolchain',
                 command: `rustup target add ${target}`,
             },
             {
+                name: 'Build library',
                 command: `cargo build --target ${target} --release`,
-                env: { MACOSX_DEPLOYMENT_TARGET: '11.0' },
+                env: { MACOSX_DEPLOYMENT_TARGET: '10.13' },
             },
             {
-                export: {
-                    artifact: `build/${target}/release/libcarbonyl.dylib`,
-                },
+                name: 'Set library install name',
+                command: `install_name_tool -id @executable_path/libcarbonyl.dylib ${lib(
+                    target,
+                )}`,
+            },
+            {
+                export: { artifact: lib(target) },
             },
         ],
     })),
@@ -34,12 +38,7 @@ export const jobs = [
         agent: { tags: ['macos', arch] },
         steps: [
             {
-                import: {
-                    artifact: `build/${triple(
-                        arch,
-                        'macos',
-                    )}/release/libcarbonyl.dylib`,
-                },
+                import: { artifact: lib(triple(arch, 'macos')) },
             },
             {
                 name: 'Build Chromium',
@@ -62,16 +61,28 @@ export const jobs = [
                 `,
             },
             {
-                name: 'Push pre-built binaries',
-                env: {
-                    CDN_ACCESS_KEY_ID: { secret: true },
-                    CDN_SECRET_ACCESS_KEY: { secret: true },
-                },
-                command: `
-                    if -d chromium/src/out/Default; then
-                        scripts/runtime-push.sh
-                    fi
-                `,
+                parallel: [
+                    {
+                        export: {
+                            artifact: `build/pre-build/${triple(
+                                arch,
+                                'macos',
+                            )}.tgz`,
+                        },
+                    },
+                    {
+                        name: 'Push pre-built binaries',
+                        env: {
+                            CDN_ACCESS_KEY_ID: { secret: true },
+                            CDN_SECRET_ACCESS_KEY: { secret: true },
+                        },
+                        command: `
+                            if [ -d chromium/src/out/Default ]; then
+                                scripts/runtime-push.sh
+                            fi
+                        `,
+                    },
+                ],
             },
         ],
     })),

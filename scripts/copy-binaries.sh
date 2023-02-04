@@ -28,4 +28,9 @@ cp "$src"/v8_context_snapshot*.bin "$dest"
 
 strip "$dest/carbonyl"
 
-echo "Binaries copied to $dest"
+echo "Binaries copied to $dest, archiving.."
+
+cd build/pre-built
+tar cvzf "$triple.tgz" "$triple"
+
+echo "Binaries archived to $dest.tgz"

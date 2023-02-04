@@ -9,10 +9,6 @@ use crate::gfx::{Cast, Color, Point, Rect, Size};
 use crate::output::Renderer;
 use crate::{input, output, utils::log};
 
-/// This file bridges the C++ code with Rust.
-/// "C-unwind" combined with .unwrap() is used to allow catching Rust panics
-/// using C++ exception handling.
-
 #[repr(C)]
 pub struct CSize {
     width: c_uint,
@@ -115,14 +111,14 @@ fn main() -> io::Result<Option<i32>> {
 }
 
 #[no_mangle]
-pub extern "C-unwind" fn carbonyl_shell_main() {
+pub extern "C" fn carbonyl_shell_main() {
     if let Some(code) = main().unwrap() {
         std::process::exit(code)
     }
 }
 
 #[no_mangle]
-pub extern "C-unwind" fn carbonyl_renderer_create() -> *mut Renderer {
+pub extern "C" fn carbonyl_renderer_create() -> *mut Renderer {
     let mut renderer = Box::new(Renderer::new());
     let src = output::size().unwrap();
 
@@ -134,24 +130,21 @@ pub extern "C-unwind" fn carbonyl_renderer_create() -> *mut Renderer {
 }
 
 #[no_mangle]
-pub extern "C-unwind" fn carbonyl_renderer_clear_text(renderer: *mut Renderer) {
+pub extern "C" fn carbonyl_renderer_clear_text(renderer: *mut Renderer) {
     let renderer = unsafe { &mut *renderer };
 
     renderer.clear_text()
 }
 
 #[no_mangle]
-pub extern "C-unwind" fn carbonyl_renderer_set_title(
-    renderer: *mut Renderer,
-    title: *const c_char,
-) {
+pub extern "C" fn carbonyl_renderer_set_title(renderer: *mut Renderer, title: *const c_char) {
     let (renderer, title) = unsafe { (&mut *renderer, CStr::from_ptr(title)) };
 
     renderer.set_title(title.to_str().unwrap()).unwrap()
 }
 
 #[no_mangle]
-pub extern "C-unwind" fn carbonyl_renderer_draw_text(
+pub extern "C" fn carbonyl_renderer_draw_text(
     renderer: *mut Renderer,
     text: *const c_char,
     rect: *const CRect,
@@ -169,7 +162,7 @@ pub extern "C-unwind" fn carbonyl_renderer_draw_text(
 }
 
 #[no_mangle]
-pub extern "C-unwind" fn carbonyl_renderer_draw_background(
+pub extern "C" fn carbonyl_renderer_draw_background(
     renderer: *mut Renderer,
     pixels: *mut c_uchar,
     pixels_size: size_t,
@@ -195,7 +188,7 @@ pub extern "C-unwind" fn carbonyl_renderer_draw_background(
 }
 
 #[no_mangle]
-pub extern "C-unwind" fn carbonyl_output_get_size(size: *mut CSize) {
+pub extern "C" fn carbonyl_output_get_size(size: *mut CSize) {
     let dst = unsafe { &mut *size };
     let src = output::size().unwrap().cast::<c_uint>();
 
@@ -210,10 +203,7 @@ pub extern "C-unwind" fn carbonyl_output_get_size(size: *mut CSize) {
 /// This will block so the calling code should start and own a dedicated thread.
 /// It will panic if there is any error.
 #[no_mangle]
-pub extern "C-unwind" fn carbonyl_input_listen(
-    renderer: *mut Renderer,
-    delegate: *mut BrowserDelegate,
-) {
+pub extern "C" fn carbonyl_input_listen(renderer: *mut Renderer, delegate: *mut BrowserDelegate) {
     let char_width = 7;
     let char_height = 14;
     let (
