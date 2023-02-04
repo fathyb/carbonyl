@@ -65,10 +65,11 @@ export const jobs = ['arm64', 'amd64']
                     },
                 },
                 {
-                    name: 'Fetch runtime',
-                    command: 'scripts/runtime-pull.sh',
+                    name: 'Fetch binaries',
+                    command: `scripts/runtime-pull.sh ${triple}`,
                 },
                 {
+                    name: 'Zip binaries',
                     command: `
                         mkdir build/zip
                         cp -r build/pre-built/${triple} build/zip/${triple}

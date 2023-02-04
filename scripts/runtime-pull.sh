@@ -10,7 +10,7 @@ echo "Computing Chromium patches sha.."
 
 sha=$(scripts/runtime-hash.sh)
 
-triple=$(scripts/platform-triple.sh "$2")
+triple="$1"
 url="https://carbonyl.fathy.fr/runtime/$sha/$triple.tgz"
 
 echo "Downloading pre-built binaries from $url"
