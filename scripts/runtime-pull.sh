@@ -12,7 +12,7 @@ sha=$(scripts/runtime-hash.sh)
 triple=$(scripts/platform-triple.sh "$2")
 url="https://carbonyl.fathy.fr/runtime/$sha/$triple.tgz"
 
-echo "Downloading pre-build binaries from $url"
+echo "Downloading pre-built binaries from $url"
 
 mkdir -p build/pre-built
 

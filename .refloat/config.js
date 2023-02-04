@@ -64,7 +64,7 @@ export const jobs = [
                 parallel: [
                     {
                         export: {
-                            artifact: `build/pre-build/${triple(
+                            artifact: `build/pre-built/${triple(
                                 arch,
                                 'macos',
                             )}.tgz`,
