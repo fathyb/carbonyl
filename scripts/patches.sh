@@ -6,7 +6,7 @@ source "$CARBONYL_ROOT/scripts/env.sh"
 
 cd "$CHROMIUM_SRC"
 
-chromium_upstream="111.0.5511.1"
+chromium_upstream="92da8189788b1b373cbd3348f73d695dfdc521b6"
 skia_upstream="486deb23bc2a4d3d09c66fef52c2ad64d8b4f761"
 
 if [[ "$1" == "apply" ]]; then
