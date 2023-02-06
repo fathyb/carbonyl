@@ -83,8 +83,8 @@ impl_cast_trait!();
 macro_rules! impl_vector_overload {
     ($struct:ident $x:ident $y:ident) => (
         impl<T: Copy> $struct<T> {
-            pub const fn new($x: T, $y: T) -> $struct<T> {
-                $struct { $x, $y }
+            pub const fn new($x: T, $y: T) -> Self {
+                Self { $x, $y }
             }
 
             pub const fn splat(value: T) -> Self {
@@ -117,7 +117,7 @@ macro_rules! impl_vector_overload {
         }
 
         impl<T: Copy> std::iter::FromIterator<T> for $struct<T> {
-            fn from_iter<I>(iter: I) -> $struct<T>
+            fn from_iter<I>(iter: I) -> Self
             where
                 I: IntoIterator<Item = T>
             {
@@ -153,7 +153,7 @@ macro_rules! impl_vector_overload {
     );
     ($struct:ident $x:ident $y:ident $z:ident) => (
         impl<T: Copy> $struct<T> {
-            pub const fn new($x: T, $y: T, $z: T) -> $struct<T> {
+            pub const fn new($x: T, $y: T, $z: T) -> Self {
                 $struct { $x, $y, $z }
             }
 
@@ -192,7 +192,7 @@ macro_rules! impl_vector_overload {
         }
 
         impl<T: Copy> std::iter::FromIterator<T> for $struct<T> {
-            fn from_iter<I>(iter: I) -> $struct<T>
+            fn from_iter<I>(iter: I) -> Self
             where
                 I: IntoIterator<Item = T>
             {

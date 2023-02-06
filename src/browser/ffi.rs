@@ -51,6 +51,9 @@ where
 #[repr(C)]
 pub struct BrowserDelegate {
     shutdown: extern "C" fn(),
+    refresh: extern "C" fn(),
+    go_back: extern "C" fn(),
+    go_forward: extern "C" fn(),
     scroll: extern "C" fn(c_int),
     key_press: extern "C" fn(c_char),
     mouse_up: extern "C" fn(c_uint, c_uint),
@@ -122,7 +125,7 @@ pub extern "C" fn carbonyl_renderer_create() -> *mut Renderer {
     let mut renderer = Box::new(Renderer::new());
     let src = output::size().unwrap();
 
-    log::debug!("Terminal size: {:?}", src);
+    log::debug!("creating renderer, terminal size: {:?}", src);
 
     renderer.set_size(Size::new(7, 14), src);
 
@@ -134,6 +137,13 @@ pub extern "C" fn carbonyl_renderer_clear_text(renderer: *mut Renderer) {
     let renderer = unsafe { &mut *renderer };
 
     renderer.clear_text()
+}
+
+#[no_mangle]
+pub extern "C" fn carbonyl_renderer_set_url(renderer: *mut Renderer, url: *const c_char) {
+    let (renderer, url) = unsafe { (&mut *renderer, CStr::from_ptr(url)) };
+
+    renderer.set_url(url.to_str().unwrap())
 }
 
 #[no_mangle]
@@ -192,7 +202,7 @@ pub extern "C" fn carbonyl_output_get_size(size: *mut CSize) {
     let dst = unsafe { &mut *size };
     let src = output::size().unwrap().cast::<c_uint>();
 
-    log::debug!("Terminal size: {:?}", src);
+    log::debug!("terminal size: {:?}", src);
 
     dst.width = src.width * 7;
     dst.height = src.height * 14;
@@ -210,6 +220,9 @@ pub extern "C" fn carbonyl_input_listen(renderer: *mut Renderer, delegate: *mut 
         renderer,
         BrowserDelegate {
             shutdown,
+            refresh,
+            go_back,
+            go_forward,
             scroll,
             key_press,
             mouse_up,
@@ -230,6 +243,12 @@ pub extern "C" fn carbonyl_input_listen(renderer: *mut Renderer, delegate: *mut 
             MouseUp { col, row } => {
                 mouse_up(col as c_uint * char_width, row as c_uint * char_height)
             }
+            MouseDown { col, row: 0 } => match col {
+                0..=2 => go_back(),
+                3..=5 => go_forward(),
+                6..=8 => refresh(),
+                _ => (),
+            },
             MouseDown { col, row } => {
                 mouse_down(col as c_uint * char_width, row as c_uint * char_height)
             }
