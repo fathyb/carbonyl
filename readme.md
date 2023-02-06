@@ -59,7 +59,7 @@ Carbonyl on Linux requires the same dependencies as Chromium.
   </tbody>
 </table>
 
-## Know issues
+## Known issues
 
 -   Fullscreen mode not supported yet
 
