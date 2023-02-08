@@ -8,8 +8,8 @@ use unicode_width::UnicodeWidthStr;
 
 use crate::{
     gfx::{Color, Point, Rect, Size},
+    input::Key,
     ui::navigation::{Navigation, NavigationAction},
-    utils::log,
 };
 
 use super::{Cell, Grapheme, Painter};
@@ -48,7 +48,7 @@ impl Renderer {
         self.painter.set_true_color(true)
     }
 
-    pub fn keypress(&mut self, key: u8) -> io::Result<NavigationAction> {
+    pub fn keypress(&mut self, key: &Key) -> io::Result<NavigationAction> {
         let action = self.nav.keypress(key);
 
         self.render()?;

@@ -283,9 +283,9 @@ pub extern "C" fn carbonyl_input_listen(renderer: *mut Renderer, delegate: *mut 
             match event.clone() {
                 Exit => (),
                 Scroll { delta } => scroll(delta as c_int * char_height as c_int),
-                KeyPress { key } => {
+                KeyPress { ref key } => {
                     if dispatch(renderer.keypress(key)?) {
-                        key_press(key as c_char)
+                        key_press(key.char as c_char)
                     }
                 }
                 MouseUp { col, row } => {

@@ -2,6 +2,7 @@ use unicode_width::UnicodeWidthStr;
 
 use crate::{
     gfx::{Color, Point, Size},
+    input::Key,
     utils::log,
 };
 
@@ -44,38 +45,47 @@ impl Navigation {
         Some((11 + self.cursor? as i32, 0).into())
     }
 
-    pub fn keypress(&mut self, key: u8) -> NavigationAction {
-        if let (Some(url), Some(cursor)) = (&mut self.url, self.cursor) {
-            // TODO: Unicode
-            match key {
-                // Return
-                0x0d => return NavigationAction::GoTo(url.clone()),
-                // Up
-                0x11 => self.cursor = Some(0),
-                // Down
-                0x12 => self.cursor = Some(url.width()),
-                // Right
-                0x13 => self.cursor = Some((cursor + 1).min(url.width())),
-                // Left
-                0x14 => self.cursor = Some(if cursor > 0 { cursor - 1 } else { 0 }),
-                // Backspace
-                0x7f => {
-                    if cursor > 0 {
-                        url.remove(cursor - 1);
+    pub fn keypress(&mut self, key: &Key) -> NavigationAction {
+        match self.cursor {
+            None => match (key.alt, key.char) {
+                (true, 0x14) => NavigationAction::GoBack(),
+                (true, 0x13) => NavigationAction::GoForward(),
+                _ => NavigationAction::Forward,
+            },
+            Some(cursor) => {
+                if let Some(url) = &mut self.url {
+                    // TODO: Unicode
+                    match key.char {
+                        // Return
+                        0x0d => return NavigationAction::GoTo(url.clone()),
+                        // Up
+                        0x11 => self.cursor = Some(0),
+                        // Down
+                        0x12 => self.cursor = Some(url.width()),
+                        // Right
+                        0x13 => self.cursor = Some((cursor + 1).min(url.width())),
+                        // Left
+                        0x14 => self.cursor = Some(if cursor > 0 { cursor - 1 } else { 0 }),
+                        // Backspace
+                        0x7f => {
+                            if cursor > 0 {
+                                url.remove(cursor - 1);
 
-                        self.cursor = Some(cursor - 1);
+                                self.cursor = Some(cursor - 1);
+                            }
+                        }
+                        key => {
+                            url.insert(cursor, key as char);
+
+                            self.cursor = Some((cursor + 1).min(url.width()))
+                        }
                     }
-                }
-                key => {
-                    url.insert(cursor, key as char);
 
-                    self.cursor = Some((cursor + 1).min(url.width()))
+                    NavigationAction::Ignore
+                } else {
+                    NavigationAction::Forward
                 }
             }
-
-            NavigationAction::Ignore
-        } else {
-            NavigationAction::Forward
         }
     }
 
