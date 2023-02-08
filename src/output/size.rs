@@ -31,13 +31,9 @@ pub fn size() -> io::Result<Size> {
     }
 
     Ok(Size::new(
-        size.ws_col,
+        if size.ws_col > 2 { size.ws_col } else { 1 },
         // Keep some space for the UI
-        if size.ws_row > 0 {
-            size.ws_row - 1
-        } else {
-            size.ws_row
-        },
+        if size.ws_row > 2 { size.ws_row - 1 } else { 1 },
     )
     .cast())
 }

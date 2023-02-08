@@ -97,6 +97,7 @@ impl Renderer {
         let mut y = 0;
         let bound = terminal.width - 1;
 
+        self.cells.clear();
         self.cells.resize_with(size, || {
             let cell = (Cell::new(x, y), Cell::new(x, y));
 

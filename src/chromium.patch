@@ -1067,7 +1067,7 @@ index bfae1e3290de0..ef0fedd6a473d 100644
    if (!headless_use_embedded_resources) {
      data = [
 diff --git a/headless/app/headless_shell.cc b/headless/app/headless_shell.cc
-index e08385b9cf740..bfb05adf56cc2 100644
+index e08385b9cf740..5b51c22ae1da3 100644
 --- a/headless/app/headless_shell.cc
 +++ b/headless/app/headless_shell.cc
 @@ -4,6 +4,8 @@
@@ -1079,20 +1079,16 @@ index e08385b9cf740..bfb05adf56cc2 100644
  #include <memory>
  
  #include "base/base_switches.h"
-@@ -90,6 +92,12 @@ void HeadlessShell::OnBrowserStart(HeadlessBrowser* browser) {
+@@ -90,6 +92,8 @@ void HeadlessShell::OnBrowserStart(HeadlessBrowser* browser) {
    HeadlessBrowserContext::Builder context_builder =
        browser_->CreateBrowserContextBuilder();
  
-+  carbonyl_bridge_size size;
-+
-+  carbonyl_output_get_size(&size);
-+
-+  context_builder.SetWindowSize(gfx::Size(size.width, size.height));
++  context_builder.SetWindowSize(carbonyl::Renderer::Main()->GetSize());
 +
    // Retrieve the locale set by InitApplicationLocale() in
    // headless_content_main_delegate.cc in a way that is free of side-effects.
    context_builder.SetAcceptLanguage(base::i18n::GetConfiguredLocale());
-@@ -113,39 +121,14 @@ void HeadlessShell::OnBrowserStart(HeadlessBrowser* browser) {
+@@ -113,39 +117,14 @@ void HeadlessShell::OnBrowserStart(HeadlessBrowser* browser) {
  
    GURL target_url = ConvertArgumentToURL(args.front());
  
@@ -1182,18 +1178,19 @@ index 0028e98dce329..6fb802d4a1214 100644
  
  HeadlessWebContents*
 diff --git a/headless/lib/browser/headless_browser_impl.cc b/headless/lib/browser/headless_browser_impl.cc
-index 1a1223108be6d..f4fcfcc20c7c2 100644
+index 1a1223108be6d..fd45d215479ab 100644
 --- a/headless/lib/browser/headless_browser_impl.cc
 +++ b/headless/lib/browser/headless_browser_impl.cc
-@@ -7,6 +7,7 @@
+@@ -7,6 +7,8 @@
  #include <string>
  #include <utility>
  #include <vector>
 +#include <iostream>
++#include <signal.h>
  
  #include "base/callback_helpers.h"
  #include "base/command_line.h"
-@@ -27,6 +28,23 @@
+@@ -27,6 +29,23 @@
  #include "services/network/public/cpp/network_switches.h"
  #include "ui/events/devices/device_data_manager.h"
  
@@ -1217,7 +1214,7 @@ index 1a1223108be6d..f4fcfcc20c7c2 100644
  namespace headless {
  
  HeadlessBrowserImpl::HeadlessBrowserImpl(
-@@ -38,7 +56,15 @@ HeadlessBrowserImpl::HeadlessBrowserImpl(
+@@ -38,7 +57,15 @@ HeadlessBrowserImpl::HeadlessBrowserImpl(
        default_browser_context_(nullptr),
        agent_host_(nullptr) {}
  
@@ -1234,19 +1231,34 @@ index 1a1223108be6d..f4fcfcc20c7c2 100644
  
  HeadlessBrowserContext::Builder
  HeadlessBrowserImpl::CreateBrowserContextBuilder() {
-@@ -91,6 +117,306 @@ void HeadlessBrowserImpl::set_browser_main_parts(
+@@ -91,6 +118,307 @@ void HeadlessBrowserImpl::set_browser_main_parts(
    browser_main_parts_ = browser_main_parts;
  }
  
-+void HeadlessBrowserImpl::OnShutdownInput() {
-+  if (!carbonyl::browser) return;
++void HeadlessBrowserImpl::Resize() {
++  auto size = carbonyl::Renderer::GetSize();
++  auto rect = gfx::Rect(0, 0, size.width(), size.height());
 +
-+  carbonyl::browser->Shutdown();
++  for (auto* ctx: GetAllBrowserContexts()) {
++    for (auto* contents: ctx->GetAllWebContents()) {
++      auto* impl = HeadlessWebContentsImpl::From(contents);
++
++      if (!impl) {
++        continue;
++      }
++
++      PlatformSetWebContentsBounds(impl, rect);
++    }
++  }
++
++  carbonyl::Renderer::Main()->Resize();
++}
++
++void HeadlessBrowserImpl::OnShutdownInput() {
++  Shutdown();
 +}
 +void HeadlessBrowserImpl::OnRefreshInput() {
-+  if (!carbonyl::browser) return;
-+
-+  for (auto* ctx: carbonyl::browser->GetAllBrowserContexts()) {
++  for (auto* ctx: GetAllBrowserContexts()) {
 +    for (auto* contents: ctx->GetAllWebContents()) {
 +      auto* impl = HeadlessWebContentsImpl::From(contents);
 +
@@ -1266,7 +1278,7 @@ index 1a1223108be6d..f4fcfcc20c7c2 100644
 +    return;
 +  }
 +
-+  auto ctxs = carbonyl::browser->GetAllBrowserContexts();
++  auto ctxs = GetAllBrowserContexts();
 +  
 +  if (ctxs.empty()) {
 +    return;
@@ -1289,9 +1301,7 @@ index 1a1223108be6d..f4fcfcc20c7c2 100644
 +}
 +
 +void HeadlessBrowserImpl::OnGoBackInput() {
-+  if (!carbonyl::browser) return;
-+
-+  for (auto* ctx: carbonyl::browser->GetAllBrowserContexts()) {
++  for (auto* ctx: GetAllBrowserContexts()) {
 +    for (auto* contents: ctx->GetAllWebContents()) {
 +      auto* impl = HeadlessWebContentsImpl::From(contents);
 +
@@ -1308,9 +1318,7 @@ index 1a1223108be6d..f4fcfcc20c7c2 100644
 +  }
 +}
 +void HeadlessBrowserImpl::OnGoForwardInput() {
-+  if (!carbonyl::browser) return;
-+
-+  for (auto* ctx: carbonyl::browser->GetAllBrowserContexts()) {
++  for (auto* ctx: GetAllBrowserContexts()) {
 +    for (auto* contents: ctx->GetAllWebContents()) {
 +      auto* impl = HeadlessWebContentsImpl::From(contents);
 +
@@ -1328,8 +1336,6 @@ index 1a1223108be6d..f4fcfcc20c7c2 100644
 +}
 +
 +void HeadlessBrowserImpl::OnScrollInput(int delta) {
-+  if (!carbonyl::browser) return;
-+
 +  blink::WebMouseWheelEvent event;
 +
 +  event.SetType(blink::WebInputEvent::Type::kMouseWheel);
@@ -1341,7 +1347,7 @@ index 1a1223108be6d..f4fcfcc20c7c2 100644
 +  event.phase = blink::WebMouseWheelEvent::kPhaseBegan;
 +  event.dispatch_type = blink::WebInputEvent::DispatchType::kBlocking;
 +
-+  for (auto* ctx: carbonyl::browser->GetAllBrowserContexts()) {
++  for (auto* ctx: GetAllBrowserContexts()) {
 +    for (auto* contents: ctx->GetAllWebContents()) {
 +      auto* impl = HeadlessWebContentsImpl::From(contents);
 +
@@ -1365,7 +1371,7 @@ index 1a1223108be6d..f4fcfcc20c7c2 100644
 +  event.dispatch_type = blink::WebInputEvent::DispatchType::kEventNonBlocking;
 +  event.has_synthetic_phase = true;
 +
-+  for (auto* ctx: carbonyl::browser->GetAllBrowserContexts()) {
++  for (auto* ctx: GetAllBrowserContexts()) {
 +    for (auto* contents: ctx->GetAllWebContents()) {
 +      auto* impl = HeadlessWebContentsImpl::From(contents);
 +
@@ -1385,8 +1391,6 @@ index 1a1223108be6d..f4fcfcc20c7c2 100644
 +}
 +
 +void HeadlessBrowserImpl::OnKeyPressInput(char key) {
-+  if (!carbonyl::browser) return;
-+
 +  bool raw = true;
 +  content::NativeWebKeyboardEvent event(
 +      blink::WebKeyboardEvent::Type::kRawKeyDown,
@@ -1416,7 +1420,7 @@ index 1a1223108be6d..f4fcfcc20c7c2 100644
 +      event.text[0] = key;
 +  }
 +
-+  for (auto* ctx: carbonyl::browser->GetAllBrowserContexts()) {
++  for (auto* ctx: GetAllBrowserContexts()) {
 +    for (auto* contents: ctx->GetAllWebContents()) {
 +      auto* impl = HeadlessWebContentsImpl::From(contents);
 +
@@ -1444,9 +1448,7 @@ index 1a1223108be6d..f4fcfcc20c7c2 100644
 +}
 +
 +void HeadlessBrowserImpl::OnMouseUpInput(unsigned int x, unsigned int y) {
-+  if (!carbonyl::browser) return;
-+
-+  for (auto* ctx: carbonyl::browser->GetAllBrowserContexts()) {
++  for (auto* ctx: GetAllBrowserContexts()) {
 +    for (auto* contents: ctx->GetAllWebContents()) {
 +      auto* impl = HeadlessWebContentsImpl::From(contents);
 +
@@ -1475,9 +1477,7 @@ index 1a1223108be6d..f4fcfcc20c7c2 100644
 +}
 +
 +void HeadlessBrowserImpl::OnMouseDownInput(unsigned int x, unsigned int y) {
-+  if (!carbonyl::browser) return;
-+
-+  for (auto* ctx: carbonyl::browser->GetAllBrowserContexts()) {
++  for (auto* ctx: GetAllBrowserContexts()) {
 +    for (auto* contents: ctx->GetAllWebContents()) {
 +      auto* impl = HeadlessWebContentsImpl::From(contents);
 +
@@ -1506,9 +1506,7 @@ index 1a1223108be6d..f4fcfcc20c7c2 100644
 +}
 +
 +void HeadlessBrowserImpl::OnMouseMoveInput(unsigned int x, unsigned int y) {
-+  if (!carbonyl::browser) return;
-+
-+  for (auto* ctx: carbonyl::browser->GetAllBrowserContexts()) {
++  for (auto* ctx: GetAllBrowserContexts()) {
 +    for (auto* contents: ctx->GetAllWebContents()) {
 +      auto* impl = HeadlessWebContentsImpl::From(contents);
 +
@@ -1541,53 +1539,81 @@ index 1a1223108be6d..f4fcfcc20c7c2 100644
  void HeadlessBrowserImpl::RunOnStartCallback() {
    // We don't support the tethering domain on this agent host.
    agent_host_ = content::DevToolsAgentHost::CreateForBrowser(
-@@ -98,6 +424,54 @@ void HeadlessBrowserImpl::RunOnStartCallback() {
+@@ -98,6 +426,82 @@ void HeadlessBrowserImpl::RunOnStartCallback() {
  
    PlatformStart();
    std::move(on_start_callback_).Run(this);
++
++  signal(SIGWINCH, [](int signal) {
++    if (carbonyl::browser) {
++      carbonyl::browser->Resize();
++    }
++  });
 +
 +  input_thread_ = std::thread([=]() {
 +    carbonyl::browser = this;
 +
 +    carbonyl_bridge_browser_delegate delegate = {
 +      .shutdown = []() {
-+        carbonyl::browser->OnShutdownInput();
++        if (carbonyl::browser) {
++          carbonyl::browser->OnShutdownInput();
++        }
 +      },
 +      .refresh = []() {
-+        carbonyl::browser->OnRefreshInput();
++        if (carbonyl::browser) {
++          carbonyl::browser->OnRefreshInput();
++        }
 +      },
 +      .go_to = [](const char* url) {
-+        carbonyl::browser->OnGoToInput(url);
++        if (carbonyl::browser) {
++          carbonyl::browser->OnGoToInput(url);
++        }
 +      },
 +      .go_back = []() {
-+        carbonyl::browser->OnGoBackInput();
++        if (carbonyl::browser) {
++          carbonyl::browser->OnGoBackInput();
++        }
 +      },
 +      .go_forward = []() {
-+        carbonyl::browser->OnGoForwardInput();
++        if (carbonyl::browser) {
++          carbonyl::browser->OnGoForwardInput();
++        }
 +      },
 +      .scroll = [](int delta) {
-+        carbonyl::browser->OnScrollInput(delta);
++        if (carbonyl::browser) {
++          carbonyl::browser->OnScrollInput(delta);
++        }
 +      },
 +      .key_press = [](char key) {
-+        carbonyl::browser->OnKeyPressInput(key);
++        if (carbonyl::browser) {
++          carbonyl::browser->OnKeyPressInput(key);
++        }
 +      },
 +      .mouse_up = [](unsigned int x, unsigned int y) {
-+        carbonyl::browser->OnMouseUpInput(x, y);
++        if (carbonyl::browser) {
++          carbonyl::browser->OnMouseUpInput(x, y);
++        }
 +      },
 +      .mouse_down = [](unsigned int x, unsigned int y) {
-+        carbonyl::browser->OnMouseDownInput(x, y);
++        if (carbonyl::browser) {
++          carbonyl::browser->OnMouseDownInput(x, y);
++        }
 +      },
 +      .mouse_move = [](unsigned int x, unsigned int y) {
-+        carbonyl::browser->OnMouseMoveInput(x, y);
++        if (carbonyl::browser) {
++          carbonyl::browser->OnMouseMoveInput(x, y);
++        }
 +      },
 +      .post_task = [](void (*fn)(void*), void* data) {
-+        carbonyl::browser->BrowserMainThread()->PostTask(
-+          FROM_HERE,
-+          base::BindOnce(
-+            fn,
-+            data
-+          )
-+        );
++        if (carbonyl::browser) {
++          carbonyl::browser->BrowserMainThread()->PostTask(
++            FROM_HERE,
++            base::BindOnce(
++              fn,
++              data
++            )
++          );
++        }
 +      }
 +    };
 +
@@ -1597,7 +1623,7 @@ index 1a1223108be6d..f4fcfcc20c7c2 100644
  
  HeadlessBrowserContext* HeadlessBrowserImpl::CreateBrowserContext(
 diff --git a/headless/lib/browser/headless_browser_impl.h b/headless/lib/browser/headless_browser_impl.h
-index a2d531ab32ff5..c52e8a0fb69c1 100644
+index a2d531ab32ff5..963808352c0c4 100644
 --- a/headless/lib/browser/headless_browser_impl.h
 +++ b/headless/lib/browser/headless_browser_impl.h
 @@ -11,6 +11,7 @@
@@ -1608,20 +1634,21 @@ index a2d531ab32ff5..c52e8a0fb69c1 100644
  
  #include "base/memory/weak_ptr.h"
  #include "base/task/single_thread_task_runner.h"
-@@ -121,9 +122,23 @@ class HEADLESS_EXPORT HeadlessBrowserImpl : public HeadlessBrowser,
+@@ -121,9 +122,24 @@ class HEADLESS_EXPORT HeadlessBrowserImpl : public HeadlessBrowser,
    policy::PolicyService* GetPolicyService();
  #endif
  
-+  static void OnShutdownInput();
-+  static void OnRefreshInput();
-+  static void OnGoToInput(const char* url);
-+  static void OnGoBackInput();
-+  static void OnGoForwardInput();
-+  static void OnScrollInput(int delta);
-+  static void OnKeyPressInput(char key);
-+  static void OnMouseUpInput(unsigned int x, unsigned int y);
-+  static void OnMouseDownInput(unsigned int x, unsigned int y);
-+  static void OnMouseMoveInput(unsigned int x, unsigned int y);
++  void Resize();
++  void OnShutdownInput();
++  void OnRefreshInput();
++  void OnGoToInput(const char* url);
++  void OnGoBackInput();
++  void OnGoForwardInput();
++  void OnScrollInput(int delta);
++  void OnKeyPressInput(char key);
++  void OnMouseUpInput(unsigned int x, unsigned int y);
++  void OnMouseDownInput(unsigned int x, unsigned int y);
++  void OnMouseMoveInput(unsigned int x, unsigned int y);
 +
    bool did_shutdown() const { return did_shutdown_; }
  

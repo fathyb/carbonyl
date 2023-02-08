@@ -137,6 +137,16 @@ pub extern "C" fn carbonyl_renderer_create() -> *mut Renderer {
 }
 
 #[no_mangle]
+pub extern "C" fn carbonyl_renderer_resize(renderer: *mut Renderer) {
+    let renderer = unsafe { &mut *renderer };
+    let src = output::size().unwrap();
+
+    log::debug!("resizing renderer, terminal size: {:?}", src);
+
+    renderer.set_size(Size::new(7, 14), src);
+}
+
+#[no_mangle]
 pub extern "C" fn carbonyl_renderer_clear_text(renderer: *mut Renderer) {
     let renderer = unsafe { &mut *renderer };
 
