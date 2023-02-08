@@ -41,7 +41,6 @@ struct carbonyl_bridge_browser_delegate {
 };
 
 void carbonyl_shell_main();
-void carbonyl_output_get_size(struct carbonyl_bridge_size* size);
 
 } /* end extern "C" */
 
@@ -50,7 +49,9 @@ namespace carbonyl {
 class Renderer {
 public:
     static Renderer* Main();
+    static gfx::Size GetSize();
 
+    void Resize();
     void Listen(const struct carbonyl_bridge_browser_delegate* delegate);
     void PushNav(const std::string& url, bool can_go_back, bool can_go_forward);
     void SetTitle(const std::string& title);
