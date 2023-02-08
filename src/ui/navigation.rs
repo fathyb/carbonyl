@@ -182,7 +182,11 @@ impl Navigation {
     }
 
     pub fn render(&self, size: Size) -> Vec<(Point, NavigationElement)> {
-        let space = size.width as usize - 13;
+        let space = if size.width >= 13 {
+            size.width as usize - 13
+        } else {
+            0
+        };
         let url: String = self.display_url().chars().take(space).collect();
         let width = url.width();
         let padded = format!(" {}{} ", url, " ".repeat(space - width));
