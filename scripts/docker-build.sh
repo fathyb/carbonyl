@@ -8,12 +8,14 @@ target="$1"
 cpu="$2"
 
 build_dir="$CARBONYL_ROOT/build/browser/$cpu"
+triple=$(scripts/platform-triple.sh "$cpu")
 
 rm -rf "$build_dir"
 mkdir -p "$build_dir"
 cd "$build_dir"
 
 cp "$CARBONYL_ROOT/Dockerfile" .
+cp "$CARBONYL_ROOT/build/$triple/release/libcarbonyl.so" .
 cp "$CHROMIUM_SRC/out/$target/headless_shell" carbonyl
 cp "$CHROMIUM_SRC/out/$target/icudtl.dat" .
 cp "$CHROMIUM_SRC/out/$target/libEGL.so" .
