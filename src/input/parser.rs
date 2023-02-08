@@ -18,13 +18,13 @@ enum Sequence {
     DeviceControl(DeviceControl),
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum TerminalEvent {
     Name(String),
     TrueColorSupported,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum Event {
     KeyPress { key: u8 },
     MouseUp { row: usize, col: usize },

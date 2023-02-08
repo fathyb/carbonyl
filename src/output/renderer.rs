@@ -8,7 +8,8 @@ use unicode_width::UnicodeWidthStr;
 
 use crate::{
     gfx::{Color, Point, Rect, Size},
-    ui::navigation::Navigation,
+    ui::navigation::{Navigation, NavigationAction},
+    utils::log,
 };
 
 use super::{Cell, Grapheme, Painter};
@@ -47,8 +48,37 @@ impl Renderer {
         self.painter.set_true_color(true)
     }
 
-    pub fn set_url(&mut self, url: &str) {
-        self.nav.set_url(url)
+    pub fn keypress(&mut self, key: u8) -> io::Result<NavigationAction> {
+        let action = self.nav.keypress(key);
+
+        self.render()?;
+
+        Ok(action)
+    }
+    pub fn mouse_up(&mut self, origin: Point) -> io::Result<NavigationAction> {
+        let action = self.nav.mouse_up(origin);
+
+        self.render()?;
+
+        Ok(action)
+    }
+    pub fn mouse_down(&mut self, origin: Point) -> io::Result<NavigationAction> {
+        let action = self.nav.mouse_down(origin);
+
+        self.render()?;
+
+        Ok(action)
+    }
+    pub fn mouse_move(&mut self, origin: Point) -> io::Result<NavigationAction> {
+        let action = self.nav.mouse_move(origin);
+
+        self.render()?;
+
+        Ok(action)
+    }
+
+    pub fn push_nav(&mut self, url: &str, can_go_back: bool, can_go_forward: bool) {
+        self.nav.push(url, can_go_back, can_go_forward)
     }
 
     pub fn get_size(&self) -> Size {
@@ -83,10 +113,16 @@ impl Renderer {
 
     pub fn render(&mut self) -> io::Result<()> {
         let size = self.dimensions.terminal;
-        let nav = self.nav.render(size);
 
-        self.fill_rect(Rect::new(0, 0, size.width, 1), Color::splat(255));
-        self.draw_text(&nav, Point::splat(0), Size::splat(0), Color::splat(0));
+        for (origin, element) in self.nav.render(size) {
+            self.fill_rect(
+                Rect::new(origin.x, origin.y, element.text.width() as u32, 1),
+                element.background,
+            );
+            self.draw_text(&element.text, origin, Size::splat(0), element.foreground);
+        }
+
+        self.painter.begin()?;
 
         for (previous, current) in self.cells.iter_mut() {
             if current == previous {
@@ -100,7 +136,7 @@ impl Renderer {
             self.painter.paint(current)?;
         }
 
-        self.painter.flush()?;
+        self.painter.end(self.nav.cursor())?;
 
         Ok(())
     }
@@ -208,7 +244,7 @@ impl Renderer {
 
         if size.width > 2 && size.height > 2 {
             let x = origin.x.max(0).min(viewport.width as i32);
-            let top = origin.y.max(0).min(viewport.height as i32 * 2);
+            let top = (origin.y + 1).max(0);
             let bottom = top + size.height as i32;
 
             for y in top..bottom {
@@ -222,7 +258,7 @@ impl Renderer {
             }
         } else {
             // Compute the buffer index based on the position
-            let index = origin.x + (origin.y + 1) / 2 * (self.dimensions.terminal.width as i32);
+            let index = origin.x + (origin.y + 1) / 2 * (viewport.width as i32);
             let mut iter = self.cells[len.min(index as usize)..].iter_mut();
 
             // Get every Unicode grapheme in the input string

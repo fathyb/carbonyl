@@ -48,10 +48,25 @@ impl Painter {
         self.true_color = true_color
     }
 
-    pub fn flush(&mut self) -> io::Result<()> {
+    pub fn begin(&mut self) -> io::Result<()> {
+        write!(self.buffer, "\x1b[?25l\x1b[?12l")
+    }
+
+    pub fn end(&mut self, cursor: Option<Point>) -> io::Result<()> {
+        self.cursor = None;
         self.output.write(self.buffer.as_slice())?;
-        self.output.flush()?;
         self.buffer.clear();
+
+        if let Some(cursor) = cursor {
+            write!(
+                self.output,
+                "\x1b[{};{}H\x1b[?25h\x1b[?12h",
+                cursor.y + 1,
+                cursor.x + 1
+            )?;
+        }
+
+        self.output.flush()?;
 
         Ok(())
     }
