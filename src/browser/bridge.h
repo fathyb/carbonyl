@@ -50,7 +50,7 @@ public:
     void SetTitle(const std::string& title);
     void ClearText();
     void DrawText(const std::string& text, const gfx::RectF& bounds, uint32_t color);
-    void DrawBackgrond(const unsigned char* pixels, size_t pixels_size, const gfx::Rect& bounds);
+    void DrawBackground(const unsigned char* pixels, size_t pixels_size, const gfx::Rect& bounds);
 
 private:
     Renderer(struct carbonyl_renderer* ptr);

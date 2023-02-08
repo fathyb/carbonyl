@@ -79,7 +79,7 @@ Lynx is the original terminal web browser, and the oldest one still maintained.
 
 -   Does not support a lot of modern web standards
 -   Cannot run JavaScript/WebAssembly
--   Cannot view or play medias (audio, video, DOOM)
+-   Cannot view or play media (audio, video, DOOM)
 
 ### Browsh
 
