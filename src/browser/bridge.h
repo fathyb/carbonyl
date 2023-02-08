@@ -28,11 +28,16 @@ struct carbonyl_bridge_color {
 };
 struct carbonyl_bridge_browser_delegate {
     void (*shutdown) ();
+    void (*refresh) ();
+    void (*go_to) (const char* url);
+    void (*go_back) ();
+    void (*go_forward) ();
     void (*scroll) (int);
     void (*key_press) (char);
     void (*mouse_up) (unsigned int, unsigned int);
     void (*mouse_down) (unsigned int, unsigned int);
     void (*mouse_move) (unsigned int, unsigned int);
+    void (*post_task) (void (*)(void*), void*);
 };
 
 void carbonyl_shell_main();
@@ -47,6 +52,7 @@ public:
     static Renderer* Main();
 
     void Listen(const struct carbonyl_bridge_browser_delegate* delegate);
+    void PushNav(const std::string& url, bool can_go_back, bool can_go_forward);
     void SetTitle(const std::string& title);
     void ClearText();
     void DrawText(const std::string& text, const gfx::RectF& bounds, uint32_t color);

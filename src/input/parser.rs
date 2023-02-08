@@ -15,18 +15,31 @@ enum Sequence {
     Escape,
     Control,
     Mouse(Mouse),
+    Keyboard(Keyboard),
     DeviceControl(DeviceControl),
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum TerminalEvent {
     Name(String),
     TrueColorSupported,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
+pub struct Key {
+    pub char: u8,
+    pub alt: bool,
+}
+
+impl From<u8> for Key {
+    fn from(char: u8) -> Self {
+        Self { char, alt: false }
+    }
+}
+
+#[derive(Clone, Debug)]
 pub enum Event {
-    KeyPress { key: u8 },
+    KeyPress { key: Key },
     MouseUp { row: usize, col: usize },
     MouseDown { row: usize, col: usize },
     MouseMove { row: usize, col: usize },
@@ -47,11 +60,17 @@ impl Parser {
 
         macro_rules! emit {
             ($event:expr) => {{
-                self.events.push($event);
+                if let Some(event) = $event.into() {
+                    self.events.push(event);
+                }
+
                 Sequence::Char
             }};
             ($event:expr; continue) => {{
-                self.events.push($event);
+                if let Some(event) = $event.into() {
+                    self.events.push(event);
+                }
+
                 continue;
             }};
         }
@@ -71,30 +90,24 @@ impl Parser {
                 Sequence::Char => match key {
                     0x1b => Sequence::Escape,
                     0x03 => emit!(Event::Exit),
-                    key => emit!(Event::KeyPress { key }),
+                    key => emit!(Event::KeyPress { key: key.into() }),
                 },
                 Sequence::Escape => match key {
                     b'[' => Sequence::Control,
                     b'P' => Sequence::DeviceControl(DeviceControl::new()),
-                    0x1b => emit!(Event::KeyPress { key: 0x1b }; continue),
+                    0x1b => emit!(Event::KeyPress { key: 0x1b.into() }; continue),
                     key => {
-                        emit!(Event::KeyPress { key: 0x1b });
-                        emit!(Event::KeyPress { key })
+                        emit!(Event::KeyPress { key: 0x1b.into() });
+                        emit!(Event::KeyPress { key: key.into() })
                     }
                 },
                 Sequence::Control => match key {
                     b'<' => Sequence::Mouse(Mouse::new()),
-                    // Up
-                    b'A' => emit!(Event::KeyPress { key: 0x11 }),
-                    // Down
-                    b'B' => emit!(Event::KeyPress { key: 0x12 }),
-                    // Right
-                    b'C' => emit!(Event::KeyPress { key: 0x13 }),
-                    // Left
-                    b'D' => emit!(Event::KeyPress { key: 0x14 }),
-                    _ => Sequence::Char,
+                    b'1' => Sequence::Keyboard(Keyboard::new()),
+                    key => emit!(Keyboard::key(key, false)),
                 },
                 Sequence::Mouse(ref mut mouse) => parse!(mouse, key),
+                Sequence::Keyboard(ref mut keyboard) => parse!(keyboard, key),
                 Sequence::DeviceControl(ref mut dcs) => parse!(dcs, key),
             }
         }

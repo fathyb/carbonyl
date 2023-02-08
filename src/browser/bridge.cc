@@ -9,6 +9,7 @@
 extern "C" {
 
 struct carbonyl_renderer* carbonyl_renderer_create();
+void carbonyl_renderer_push_nav(struct carbonyl_renderer* renderer, const char* url, bool can_go_back, bool can_go_forward);
 void carbonyl_renderer_set_title(struct carbonyl_renderer* renderer, const char* title);
 void carbonyl_renderer_clear_text(struct carbonyl_renderer* renderer);
 void carbonyl_input_listen(struct carbonyl_renderer* renderer, const struct carbonyl_bridge_browser_delegate* delegate);
@@ -48,7 +49,19 @@ void Renderer::Listen(const struct carbonyl_bridge_browser_delegate* delegate) {
     carbonyl_input_listen(ptr_, delegate);
 }
 
+void Renderer::PushNav(const std::string& url, bool can_go_back, bool can_go_forward) {
+    if (!url.size()) {
+        return;
+    }
+
+    carbonyl_renderer_push_nav(ptr_, url.c_str(), can_go_back, can_go_forward);
+}
+
 void Renderer::SetTitle(const std::string& title) {
+    if (!title.size()) {
+        return;
+    }
+
     carbonyl_renderer_set_title(ptr_, title.c_str());
 }
 
