@@ -25,7 +25,7 @@ checksum = "0d261e256854913907f67ed06efbc3338dfe6179796deefc1ff763fc1aee5535"
 
 [[package]]
 name = "carbonyl"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "chrono",
  "libc",
