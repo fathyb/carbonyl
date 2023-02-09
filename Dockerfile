@@ -19,7 +19,10 @@ ENV CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=x86_64-linux-gnu-gcc
 
 FROM debian:bullseye-slim
 
-RUN groupadd -r carbonyl && useradd -r -g carbonyl carbonyl && \
+RUN groupadd -r carbonyl && \
+    useradd -r -g carbonyl carbonyl && \
+    mkdir -p /carbonyl/data && \
+    chown -R carbonyl:carbonyl /carbonyl && \
     apt-get update && \
     apt-get install -y \
         libasound2 libatk-bridge2.0-0 libatk1.0-0 libatomic1 libatspi2.0-0 \
@@ -34,7 +37,8 @@ RUN groupadd -r carbonyl && useradd -r -g carbonyl carbonyl && \
     rm -rf /var/lib/apt/lists/*
 
 USER carbonyl
+VOLUME /carbonyl/data
 
 COPY . /carbonyl
 
-ENTRYPOINT ["/carbonyl/carbonyl", "--no-sandbox", "--disable-dev-shm-usage"]
+ENTRYPOINT ["/carbonyl/carbonyl", "--no-sandbox", "--disable-dev-shm-usage", "--user-data-dir=/carbonyl/data"]
