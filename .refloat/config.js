@@ -88,7 +88,7 @@ export const jobs = ['arm64', 'amd64']
                     export: {
                         artifact: {
                             name: `carbonyl.${platform}-${arch}.zip`,
-                            path: `build/zip/${triple}/package.zip`,
+                            path: 'build/zip/package.zip',
                         },
                     },
                 }
