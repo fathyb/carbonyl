@@ -11,25 +11,11 @@ build_dir="$CARBONYL_ROOT/build/browser/$cpu"
 triple=$(scripts/platform-triple.sh "$cpu")
 
 rm -rf "$build_dir"
-mkdir -p "$build_dir"
-cd "$build_dir"
-
-cp "$CARBONYL_ROOT/Dockerfile" .
-cp "$CARBONYL_ROOT/build/$triple/release/libcarbonyl.so" .
-cp "$CHROMIUM_SRC/out/$target/headless_shell" carbonyl
-cp "$CHROMIUM_SRC/out/$target/icudtl.dat" .
-cp "$CHROMIUM_SRC/out/$target/libEGL.so" .
-cp "$CHROMIUM_SRC/out/$target/libGLESv2.so" .
-cp "$CHROMIUM_SRC/out/$target/v8_context_snapshot.bin" .
-
-if [[ "$cpu" == "arm64" ]]; then
-    aarch64-linux-gnu-strip carbonyl *.so
-else
-    strip carbonyl *.so
-fi
+cp -r "$CARBONYL_ROOT/build/pre-built/$triple" "$build_dir"
+cp "$CARBONYL_ROOT/Dockerfile" "$build_dir"
 
 tag="fathyb/carbonyl:$cpu"
 
-docker buildx build . --load --platform "linux/$cpu" --tag "$tag"
+docker buildx build "$build_dir" --load --platform "linux/$cpu" --tag "$tag"
 
 echo "Image tag: $tag"
