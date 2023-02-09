@@ -1,0 +1,47 @@
+From 1820cd34967c756d2459f4a2894492662edbf58b Mon Sep 17 00:00:00 2001
+From: Fathy Boundjadj <hey@fathy.fr>
+Date: Thu, 9 Feb 2023 03:32:14 +0100
+Subject: [PATCH 8/9] Fix text layout
+
+---
+ .../core/css/resolver/style_resolver.cc         | 17 ++++++++++++++++-
+ 1 file changed, 16 insertions(+), 1 deletion(-)
+
+diff --git a/third_party/blink/renderer/core/css/resolver/style_resolver.cc b/third_party/blink/renderer/core/css/resolver/style_resolver.cc
+index 6207b72d17cb9..79cb8c85b697f 100644
+--- a/third_party/blink/renderer/core/css/resolver/style_resolver.cc
++++ b/third_party/blink/renderer/core/css/resolver/style_resolver.cc
+@@ -281,7 +281,9 @@ String ComputeBaseComputedStyleDiff(const ComputedStyle* base_computed_style,
+     return g_null_atom;
+   }
+ 
+-  return String("Field diff: ") + builder.ReleaseString();
++  // TODO(fathy): Carbonyl should properly set the computed style
++  // return String("Field diff: ") + builder.ReleaseString();
++  return g_null_atom;
+ }
+ #endif  // DCHECK_IS_ON()
+ 
+@@ -1039,6 +1041,19 @@ scoped_refptr<ComputedStyle> StyleResolver::ResolveStyle(
+     UseCounter::Count(GetDocument(), WebFeature::kHasGlyphRelativeUnits);
+   }
+ 
++  auto font = state.StyleBuilder().GetFontDescription();
++  FontFamily family;
++
++  family.SetFamily("monospace", FontFamily::Type::kGenericFamily);
++  font.SetFamily(family);
++  font.SetStretch(ExtraExpandedWidthValue());
++  font.SetKerning(FontDescription::kNoneKerning);
++  font.SetComputedSize(11.75 / 7.0);
++  font.SetGenericFamily(FontDescription::kMonospaceFamily);
++  font.SetIsAbsoluteSize(true);
++  state.StyleBuilder().SetFontDescription(font);
++  state.StyleBuilder().SetLineHeight(Length::Fixed(14.0 / 7.0));
++
+   state.LoadPendingResources();
+ 
+   // Now return the style.
+-- 
+2.38.1
+

@@ -18,6 +18,8 @@ component("carbonyl") {
     "host_display_client.h",
     "render_service_impl.cc",
     "render_service_impl.h",
+    "software_output_device_proxy.cc",
+    "software_output_device_proxy.h",
   ]
 
   deps = [

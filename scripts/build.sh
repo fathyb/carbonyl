@@ -7,7 +7,11 @@ source scripts/env.sh
 
 triple=$(scripts/platform-triple.sh "$2")
 
-MACOSX_DEPLOYMENT_TARGET=10.13 cargo build --target "$triple" --release
+if [ -z "$MACOSX_DEPLOYMENT_TARGET" ]; then
+    export MACOSX_DEPLOYMENT_TARGET=10.13
+fi
+
+cargo build --target "$triple" --release
 
 if [ -f "build/$triple/release/libcarbonyl.dylib" ]; then
     install_name_tool \
