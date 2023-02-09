@@ -27,18 +27,22 @@ cp "$src/libGLESv2.$lib_ext" "$dest"
 cp "$src"/v8_context_snapshot*.bin "$dest"
 cp "build/$triple/release/libcarbonyl.$lib_ext" "$dest"
 
+files=carbonyl
+
 if [ "$lib_ext" == "so" ]; then
     cp "$src/libvk_swiftshader.so" "$dest"
     cp "$src/libvulkan.so.1" "$dest"
     cp "$src/vk_swiftshader_icd.json" "$dest"
+
+    files+=*.so *.so.1
 fi
 
 cd "$dest"
 
 if [[ "$cpu" == "arm64" ]] && command -v aarch64-linux-gnu-strip; then
-    aarch64-linux-gnu-strip carbonyl *.so *.so.1
+    aarch64-linux-gnu-strip $files
 else
-    strip carbonyl *.so *.so.1
+    strip $files
 fi
 
 echo "Binaries copied to $dest"
