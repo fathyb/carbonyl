@@ -1,0 +1,127 @@
+From 5693445bf736c51d3255c10115767ba8886d68da Mon Sep 17 00:00:00 2001
+From: Fathy Boundjadj <hey@fathy.fr>
+Date: Thu, 9 Feb 2023 03:29:34 +0100
+Subject: [PATCH 6/9] Setup display DPI
+
+---
+ .../lib/browser/headless_browser_impl_aura.cc |  9 +---
+ headless/lib/browser/headless_screen.cc       |  2 +-
+ ui/display/display.cc                         | 50 +++++++++----------
+ 3 files changed, 28 insertions(+), 33 deletions(-)
+
+diff --git a/headless/lib/browser/headless_browser_impl_aura.cc b/headless/lib/browser/headless_browser_impl_aura.cc
+index 81261215c702f..b8eb5fc429a2a 100644
+--- a/headless/lib/browser/headless_browser_impl_aura.cc
++++ b/headless/lib/browser/headless_browser_impl_aura.cc
+@@ -57,13 +57,8 @@ void HeadlessBrowserImpl::PlatformSetWebContentsBounds(
+     const gfx::Rect& bounds) {
+   // Browser's window bounds should contain all web contents, so that we're sure
+   // that we will actually produce visible damage when taking a screenshot.
+-  gfx::Rect old_host_bounds =
+-      web_contents->window_tree_host()->GetBoundsInPixels();
+-  gfx::Rect new_host_bounds(
+-      0, 0, std::max(old_host_bounds.width(), bounds.x() + bounds.width()),
+-      std::max(old_host_bounds.height(), bounds.y() + bounds.height()));
+-  web_contents->window_tree_host()->SetBoundsInPixels(new_host_bounds);
+-  web_contents->window_tree_host()->window()->SetBounds(new_host_bounds);
++  web_contents->window_tree_host()->SetBoundsInPixels(ScaleToEnclosedRect(bounds, 1.0 / 7.0));
++  web_contents->window_tree_host()->window()->SetBounds(bounds);
+ 
+   gfx::NativeView native_view = web_contents->web_contents()->GetNativeView();
+   native_view->SetBounds(bounds);
+diff --git a/headless/lib/browser/headless_screen.cc b/headless/lib/browser/headless_screen.cc
+index 28f1a65f6dce5..e595735be187b 100644
+--- a/headless/lib/browser/headless_screen.cc
++++ b/headless/lib/browser/headless_screen.cc
+@@ -49,7 +49,7 @@ display::Display HeadlessScreen::GetDisplayNearestWindow(
+ HeadlessScreen::HeadlessScreen(const gfx::Rect& screen_bounds) {
+   static int64_t synthesized_display_id = 2000;
+   display::Display display(synthesized_display_id++);
+-  display.SetScaleAndBounds(1.0f, screen_bounds);
++  display.SetScaleAndBounds(1.0f / 7.0, ScaleToEnclosedRect(screen_bounds, 1.0 / 7.0));
+   ProcessDisplayChanged(display, true /* is_primary */);
+ }
+ 
+diff --git a/ui/display/display.cc b/ui/display/display.cc
+index 466ef1fd1fe6e..cb503dc5cda0f 100644
+--- a/ui/display/display.cc
++++ b/ui/display/display.cc
+@@ -39,22 +39,22 @@ float g_forced_device_scale_factor = -1.0;
+ constexpr float kDisplaySizeAllowanceEpsilon = 0.01f;
+ 
+ bool HasForceDeviceScaleFactorImpl() {
+-  return base::CommandLine::ForCurrentProcess()->HasSwitch(
+-      switches::kForceDeviceScaleFactor);
++  // return base::CommandLine::ForCurrentProcess()->HasSwitch(switches::kForceDeviceScaleFactor);
++  return true;
+ }
+ 
+ float GetForcedDeviceScaleFactorImpl() {
+-  double scale_in_double = 1.0;
+-  if (HasForceDeviceScaleFactorImpl()) {
+-    std::string value =
+-        base::CommandLine::ForCurrentProcess()->GetSwitchValueASCII(
+-            switches::kForceDeviceScaleFactor);
+-    if (!base::StringToDouble(value, &scale_in_double)) {
+-      LOG(ERROR) << "Failed to parse the default device scale factor:" << value;
+-      scale_in_double = 1.0;
+-    }
+-  }
+-  return static_cast<float>(scale_in_double);
++  // double scale_in_double = 1.0;
++  // if (HasForceDeviceScaleFactorImpl()) {
++  //   std::string value =
++  //       base::CommandLine::ForCurrentProcess()->GetSwitchValueASCII(
++  //           switches::kForceDeviceScaleFactor);
++  //   if (!base::StringToDouble(value, &scale_in_double)) {
++  //     LOG(ERROR) << "Failed to parse the default device scale factor:" << value;
++  //     scale_in_double = 1.0;
++  //   }
++  // }
++  return 1.0 / 7.0;
+ }
+ 
+ const char* ToRotationString(display::Display::Rotation rotation) {
+@@ -97,11 +97,11 @@ void Display::ResetForceDeviceScaleFactorForTesting() {
+ // static
+ void Display::SetForceDeviceScaleFactor(double dsf) {
+   // Reset any previously set values and unset the flag.
+-  g_has_forced_device_scale_factor = -1;
+-  g_forced_device_scale_factor = -1.0;
++  // g_has_forced_device_scale_factor = -1;
++  // g_forced_device_scale_factor = -1.0;
+ 
+-  base::CommandLine::ForCurrentProcess()->AppendSwitchASCII(
+-      switches::kForceDeviceScaleFactor, base::StringPrintf("%.2f", dsf));
++  // base::CommandLine::ForCurrentProcess()->AppendSwitchASCII(
++  //     switches::kForceDeviceScaleFactor, base::StringPrintf("%.2f", dsf));
+ }
+ 
+ // static
+@@ -273,15 +273,15 @@ void Display::SetScaleAndBounds(float device_scale_factor,
+ }
+ 
+ void Display::SetScale(float device_scale_factor) {
+-  if (!HasForceDeviceScaleFactor()) {
+-#if BUILDFLAG(IS_APPLE)
+-    // Unless an explicit scale factor was provided for testing, ensure the
+-    // scale is integral.
+-    device_scale_factor = static_cast<int>(device_scale_factor);
+-#endif
++//   if (!HasForceDeviceScaleFactor()) {
++// #if BUILDFLAG(IS_APPLE)
++//     // Unless an explicit scale factor was provided for testing, ensure the
++//     // scale is integral.
++//     device_scale_factor = static_cast<int>(device_scale_factor);
++// #endif
+     device_scale_factor_ = device_scale_factor;
+-  }
+-  device_scale_factor_ = std::max(0.5f, device_scale_factor_);
++  // }
++  // device_scale_factor_ = std::max(0.5f, device_scale_factor_);
+ }
+ 
+ void Display::SetSize(const gfx::Size& size_in_pixel) {
+-- 
+2.38.1
+

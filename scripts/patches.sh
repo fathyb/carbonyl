@@ -19,14 +19,22 @@ if [[ "$1" == "apply" ]]; then
     git stash
     git checkout "$chromium_upstream"
     echo "Applying Chromium patches.."
-    git apply < "$CARBONYL_ROOT/src/chromium.patch"
+    for patch in "$CARBONYL_ROOT/chromium/patches/chromium"/*.patch; do
+        git am --committer-date-is-author-date "$patch"
+    done
+
+    "$CARBONYL_ROOT/scripts/restore-mtime.sh" "$chromium_upstream"
 
     cd third_party/skia
     echo "Stashing Chromium changes.."
     git stash
     git checkout "$skia_upstream"
     echo "Applying Skia patches.."
-    git apply < "$CARBONYL_ROOT/src/skia.patch"
+    for patch in "$CARBONYL_ROOT/chromium/patches/skia"/*.patch; do
+        git am --committer-date-is-author-date "$patch"
+    done
+
+    "$CARBONYL_ROOT/scripts/restore-mtime.sh" "$skia_upstream"
 
     echo "Patches successfully applied"
 elif [[ "$1" == "save" ]]; then
@@ -34,12 +42,12 @@ elif [[ "$1" == "save" ]]; then
         git add -A carbonyl
     fi
 
-    echo "Updating Chromium patch.."
-    git diff "$chromium_upstream" > "$CARBONYL_ROOT/src/chromium.patch"
+    echo "Updating Chromium patches.."
+    git format-patch --output-directory "$CARBONYL_ROOT/chromium/patches/chromium" "$chromium_upstream"
 
-    echo "Updating Skia patch.."
+    echo "Updating Skia patches.."
     cd third_party/skia
-    git diff "$skia_upstream" > "$CARBONYL_ROOT/src/skia.patch"
+    git format-patch --output-directory "$CARBONYL_ROOT/chromium/patches/skia" "$skia_upstream"
 
     echo "Patches successfully updated"
 else

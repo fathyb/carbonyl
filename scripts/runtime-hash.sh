@@ -5,7 +5,7 @@ export CARBONYL_ROOT=$(cd $(dirname -- "$0") && dirname -- $(pwd))
 cd "$CARBONYL_ROOT"
 source "scripts/env.sh"
 
-for file in chromium/.gclient src/*.patch src/browser/*.{cc,h,gn,mojom}; do
+for file in chromium/.gclient chromium/patches/*/*.patch src/browser/*.{cc,h,gn,mojom}; do
     file_sha=$(cat "$file" | openssl sha256)
     result=$(echo -n "$sha/${file_sha: -64}" | openssl sha256)
     sha+="${file_sha: -64} ${file}"$'\n'

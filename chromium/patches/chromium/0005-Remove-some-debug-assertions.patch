@@ -1,0 +1,129 @@
+From 481ff19118891fe65e80b8be0e1f4498874d3b56 Mon Sep 17 00:00:00 2001
+From: Fathy Boundjadj <hey@fathy.fr>
+Date: Thu, 9 Feb 2023 03:28:35 +0100
+Subject: [PATCH 5/9] Remove some debug assertions
+
+---
+ .../browser/web_contents/web_contents_impl.cc |  1 -
+ .../core/v8/script_promise_resolver.cc        | 44 +++++++++----------
+ .../compositing/paint_artifact_compositor.cc  |  2 -
+ .../platform/graphics/graphics_context.cc     | 16 +++----
+ 4 files changed, 30 insertions(+), 33 deletions(-)
+
+diff --git a/content/browser/web_contents/web_contents_impl.cc b/content/browser/web_contents/web_contents_impl.cc
+index 74749758894a2..4eb891c32b474 100644
+--- a/content/browser/web_contents/web_contents_impl.cc
++++ b/content/browser/web_contents/web_contents_impl.cc
+@@ -5988,7 +5988,6 @@ void WebContentsImpl::DidNavigateMainFramePreCommit(
+ 
+   if (IsFullscreen())
+     ExitFullscreen(false);
+-  DCHECK(!IsFullscreen());
+ 
+   // Clean up keyboard lock state when navigating.
+   CancelKeyboardLock(keyboard_lock_widget_);
+diff --git a/third_party/blink/renderer/bindings/core/v8/script_promise_resolver.cc b/third_party/blink/renderer/bindings/core/v8/script_promise_resolver.cc
+index c3176f4937c21..56d34529dedfa 100644
+--- a/third_party/blink/renderer/bindings/core/v8/script_promise_resolver.cc
++++ b/third_party/blink/renderer/bindings/core/v8/script_promise_resolver.cc
+@@ -58,28 +58,28 @@ ScriptPromiseResolver::ScriptPromiseResolver(
+ ScriptPromiseResolver::~ScriptPromiseResolver() = default;
+ 
+ void ScriptPromiseResolver::Dispose() {
+-#if DCHECK_IS_ON()
+-  // This assertion fails if:
+-  //  - promise() is called at least once and
+-  //  - this resolver is destructed before it is resolved, rejected,
+-  //    detached, the V8 isolate is terminated or the associated
+-  //    ExecutionContext is stopped.
+-  const bool is_properly_detached =
+-      state_ == kDetached || !is_promise_called_ ||
+-      !GetScriptState()->ContextIsValid() || !GetExecutionContext() ||
+-      GetExecutionContext()->IsContextDestroyed();
+-  if (!is_properly_detached && !suppress_detach_check_) {
+-    // This is here to make it easier to track down which promise resolvers are
+-    // being abandoned. See https://crbug.com/873980.
+-    static crash_reporter::CrashKeyString<1024> trace_key(
+-        "scriptpromiseresolver-trace");
+-    crash_reporter::SetCrashKeyStringToStackTrace(&trace_key,
+-                                                  create_stack_trace_);
+-    DCHECK(false)
+-        << "ScriptPromiseResolver was not properly detached; created at\n"
+-        << create_stack_trace_.ToString();
+-  }
+-#endif
++// #if DCHECK_IS_ON()
++//   // This assertion fails if:
++//   //  - promise() is called at least once and
++//   //  - this resolver is destructed before it is resolved, rejected,
++//   //    detached, the V8 isolate is terminated or the associated
++//   //    ExecutionContext is stopped.
++//   const bool is_properly_detached =
++//       state_ == kDetached || !is_promise_called_ ||
++//       !GetScriptState()->ContextIsValid() || !GetExecutionContext() ||
++//       GetExecutionContext()->IsContextDestroyed();
++//   if (!is_properly_detached && !suppress_detach_check_) {
++//     // This is here to make it easier to track down which promise resolvers are
++//     // being abandoned. See https://crbug.com/873980.
++//     static crash_reporter::CrashKeyString<1024> trace_key(
++//         "scriptpromiseresolver-trace");
++//     crash_reporter::SetCrashKeyStringToStackTrace(&trace_key,
++//                                                   create_stack_trace_);
++//     DCHECK(false)
++//         << "ScriptPromiseResolver was not properly detached; created at\n"
++//         << create_stack_trace_.ToString();
++//   }
++// #endif
+   deferred_resolve_task_.Cancel();
+ }
+ 
+diff --git a/third_party/blink/renderer/platform/graphics/compositing/paint_artifact_compositor.cc b/third_party/blink/renderer/platform/graphics/compositing/paint_artifact_compositor.cc
+index d3131a4e07ece..a9464abd86a69 100644
+--- a/third_party/blink/renderer/platform/graphics/compositing/paint_artifact_compositor.cc
++++ b/third_party/blink/renderer/platform/graphics/compositing/paint_artifact_compositor.cc
+@@ -196,7 +196,6 @@ bool NeedsFullUpdateAfterPaintingChunk(
+     // properties are changed, which would indicate a missing call to
+     // SetNeedsUpdate.
+     if (previous.properties != repainted.properties) {
+-      NOTREACHED();
+       return true;
+     }
+ 
+@@ -253,7 +252,6 @@ bool NeedsFullUpdateAfterPaintingChunk(
+   // properties are changed, which would indicate a missing call to
+   // SetNeedsUpdate.
+   if (previous.properties != repainted.properties) {
+-    NOTREACHED();
+     return true;
+   }
+ 
+diff --git a/third_party/blink/renderer/platform/graphics/graphics_context.cc b/third_party/blink/renderer/platform/graphics/graphics_context.cc
+index 2518b71275670..3a1b8e6646c43 100644
+--- a/third_party/blink/renderer/platform/graphics/graphics_context.cc
++++ b/third_party/blink/renderer/platform/graphics/graphics_context.cc
+@@ -146,14 +146,14 @@ GraphicsContext::GraphicsContext(PaintController& paint_controller)
+ }
+ 
+ GraphicsContext::~GraphicsContext() {
+-#if DCHECK_IS_ON()
+-  if (!disable_destruction_checks_) {
+-    DCHECK(!paint_state_index_);
+-    DCHECK(!paint_state_->SaveCount());
+-    DCHECK(!layer_count_);
+-    DCHECK(!SaveCount());
+-  }
+-#endif
++// #if DCHECK_IS_ON()
++//   if (!disable_destruction_checks_) {
++//     DCHECK(!paint_state_index_);
++//     DCHECK(!paint_state_->SaveCount());
++//     DCHECK(!layer_count_);
++//     DCHECK(!SaveCount());
++//   }
++// #endif
+ }
+ 
+ void GraphicsContext::CopyConfigFrom(GraphicsContext& other) {
+-- 
+2.38.1
+

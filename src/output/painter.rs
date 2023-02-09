@@ -53,20 +53,19 @@ impl Painter {
     }
 
     pub fn end(&mut self, cursor: Option<Point>) -> io::Result<()> {
-        self.cursor = None;
-        self.output.write(self.buffer.as_slice())?;
-        self.buffer.clear();
-
         if let Some(cursor) = cursor {
             write!(
-                self.output,
+                self.buffer,
                 "\x1b[{};{}H\x1b[?25h\x1b[?12h",
                 cursor.y + 1,
                 cursor.x + 1
             )?;
         }
 
+        self.output.write(self.buffer.as_slice())?;
         self.output.flush()?;
+        self.buffer.clear();
+        self.cursor = None;
 
         Ok(())
     }
