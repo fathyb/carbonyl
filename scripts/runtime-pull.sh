@@ -11,20 +11,23 @@ echo "Computing Chromium patches sha.."
 sha=$(scripts/runtime-hash.sh)
 
 triple="$1"
-url="https://carbonyl.fathy.fr/runtime/$sha/$triple.tgz"
 
-echo "Downloading pre-built binaries from $url"
+if [ ! -f "build/pre-built/$triple.tgz" ]; then
+    url="https://carbonyl.fathy.fr/runtime/$sha/$triple.tgz"
 
-mkdir -p build/pre-built
+    echo "Downloading pre-built binaries from $url"
 
-if ! curl --silent --fail --output "build/pre-built/$triple.tgz" "$url"; then
-    echo "Pre-built binaries not available"
+    mkdir -p build/pre-built
 
-    exit 1
-else
-    echo "Pre-build binaries available, extracting.."
+    if ! curl --silent --fail --output "build/pre-built/$triple.tgz" "$url"; then
+        echo "Pre-built binaries not available"
 
-    cd build/pre-built
-    rm -rf "$triple"
-    tar -xvzf "$triple.tgz"
+        exit 1
+    fi
 fi
+
+echo "Pre-build binaries available, extracting.."
+
+cd build/pre-built
+rm -rf "$triple"
+tar -xvzf "$triple.tgz"
