@@ -1,4 +1,4 @@
-From bf7f9ec6096b645b98acf99faa1347716a15705e Mon Sep 17 00:00:00 2001
+From 0697c3ab8f52592b0a0d4241e2938b8e622a01f6 Mon Sep 17 00:00:00 2001
 From: Fathy Boundjadj <hey@fathy.fr>
 Date: Thu, 9 Feb 2023 03:32:30 +0100
 Subject: [PATCH 9/9] Bridge browser into Carbonyl library
@@ -8,9 +8,9 @@ Subject: [PATCH 9/9] Bridge browser into Carbonyl library
  headless/app/headless_shell_main.cc           |   5 +
  headless/lib/browser/headless_browser_impl.cc | 406 +++++++++++++++++-
  headless/lib/browser/headless_browser_impl.h  |  16 +
- .../lib/browser/headless_web_contents_impl.cc |  30 ++
+ .../lib/browser/headless_web_contents_impl.cc |  28 ++
  .../lib/browser/headless_web_contents_impl.h  |   2 +
- 6 files changed, 464 insertions(+), 28 deletions(-)
+ 6 files changed, 462 insertions(+), 28 deletions(-)
 
 diff --git a/headless/app/headless_shell.cc b/headless/app/headless_shell.cc
 index e08385b9cf740..5b51c22ae1da3 100644
@@ -576,7 +576,7 @@ index a2d531ab32ff5..963808352c0c4 100644
    std::unique_ptr<display::ScopedNativeScreen> screen_;
  #endif
 diff --git a/headless/lib/browser/headless_web_contents_impl.cc b/headless/lib/browser/headless_web_contents_impl.cc
-index 010ff2c94287e..b2541832bf17a 100644
+index 010ff2c94287e..fad8c3fdd2bfe 100644
 --- a/headless/lib/browser/headless_web_contents_impl.cc
 +++ b/headless/lib/browser/headless_web_contents_impl.cc
 @@ -8,6 +8,7 @@
@@ -587,13 +587,11 @@ index 010ff2c94287e..b2541832bf17a 100644
  
  #include "base/bind.h"
  #include "base/command_line.h"
-@@ -21,10 +22,15 @@
+@@ -21,10 +22,13 @@
  #include "base/values.h"
  #include "build/build_config.h"
  #include "build/chromeos_buildflags.h"
 +#include "carbonyl/src/browser/bridge.h"
-+#include "components/content_capture/browser/content_capture_consumer.h"
-+#include "components/content_capture/browser/onscreen_content_provider.h"
  #include "content/public/browser/browser_thread.h"
  #include "content/public/browser/child_process_termination_info.h"
  #include "content/public/browser/devtools_agent_host.h"
@@ -603,7 +601,7 @@ index 010ff2c94287e..b2541832bf17a 100644
  #include "content/public/browser/navigation_handle.h"
  #include "content/public/browser/render_frame_host.h"
  #include "content/public/browser/render_process_host.h"
-@@ -390,6 +396,30 @@ void HeadlessWebContentsImpl::RenderViewReady() {
+@@ -390,6 +394,30 @@ void HeadlessWebContentsImpl::RenderViewReady() {
    devtools_target_ready_notification_sent_ = true;
  }
  
