@@ -26,7 +26,7 @@ if [[ "$1" == "apply" ]]; then
     "$CARBONYL_ROOT/scripts/restore-mtime.sh" "$chromium_upstream"
 
     cd third_party/skia
-    echo "Stashing Chromium changes.."
+    echo "Stashing Skia changes.."
     git stash
     git checkout "$skia_upstream"
     echo "Applying Skia patches.."
