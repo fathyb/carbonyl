@@ -1,5 +1,6 @@
-import { version } from '../package.json'
+import pkg from '../package.json'
 
+const { version } = JSON.parse(pkg)
 const sharedLib = {
     macos: 'dylib',
     linux: 'so'
