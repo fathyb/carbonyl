@@ -1,3 +1,4 @@
+const version = '0.0.1'
 const sharedLib = {
     macos: 'dylib',
     linux: 'so'
@@ -76,11 +77,11 @@ export const jobs = ['arm64', 'amd64']
                     name: 'Zip binaries',
                     command: `
                         mkdir build/zip
-                        cp -r build/pre-built/${triple} build/zip/${triple}
-                        cp ${lib} build/zip/${triple}
+                        cp -r build/pre-built/${triple} build/zip/carbonyl-${version}
+                        cp ${lib} build/zip/carbonyl-${version}
 
-                        cd build/zip/${triple}
-                        zip -r package.zip .
+                        cd build/zip
+                        zip -r package.zip carbonyl-${version}
                     `,
                 },
                 {
