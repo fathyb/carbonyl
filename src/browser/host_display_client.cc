@@ -34,7 +34,7 @@ void LayeredWindowUpdater::OnAllocatedSharedMemory(
 
 void LayeredWindowUpdater::Draw(const gfx::Rect& damage_rect,
                                 DrawCallback draw_callback) {
-  Renderer::Main()->DrawBackgrond(
+  Renderer::Main()->DrawBackground(
     shm_mapping_.GetMemoryAs<uint8_t>(),
     shm_mapping_.size(),
     damage_rect

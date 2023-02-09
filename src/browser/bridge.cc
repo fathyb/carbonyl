@@ -100,7 +100,7 @@ void Renderer::DrawText(const std::string& text, const gfx::RectF& bounds, uint3
     carbonyl_renderer_draw_text(ptr_, text.c_str(), &rect, &color);
 }
 
-void Renderer::DrawBackgrond(const unsigned char* pixels, size_t pixels_size, const gfx::Rect& bounds) {
+void Renderer::DrawBackground(const unsigned char* pixels, size_t pixels_size, const gfx::Rect& bounds) {
     struct carbonyl_bridge_rect rect;
 
     rect.origin.x = bounds.x();

@@ -38,7 +38,7 @@ impl Mouse {
             (_, None, _) => self.col = num,
             (_, _, None) => self.row = num,
             _ => {
-                log::warning!("Misformed mouse sequence");
+                log::warning!("Malformed mouse sequence");
 
                 return None;
             }
