@@ -30,7 +30,7 @@ Carbonyl originally started as [`html2svg`](https://github.com/fathyb/html2svg) 
 ### Docker
 
 ```shell
-$ docker run -ti fathyb/carbonyl https://youtube.com
+$ docker run --rm -ti fathyb/carbonyl https://youtube.com
 ```
 
 ### npm
