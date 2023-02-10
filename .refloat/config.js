@@ -56,42 +56,58 @@ export const jobs = ["macos", "linux"].flatMap(platform => {
                     `
                 },
                 {
-                    parallel: ['arm64', 'amd64'].map(arch => ({
-                        serial: [
-                            {
-                                name: `Build Chromium (${arch})`,
-                                command: `
-                                    if [ ! -f skip-build-${arch} ]; then
-                                        scripts/build.sh ${arch} ${arch}
-                                        scripts/copy-binaries.sh ${arch} ${arch}
-                                    fi
-                                `
-                            },
+                    parallel: ['arm64', 'amd64'].map(arch => {
+                        const target = platform === 'linux' && arch === 'amd64'
+                            ? 'Default'
+                            : arch
 
-                            {
-                                parallel: [
-                                    {
-                                        name: `Push binaries to CDN (${arch})`,
-                                        command: `
+                        return {
+                            serial: [
+                                {
+                                    name: `Build Chromium (${arch})`,
+                                    command: `
+                                    if [ ! -f skip-build-${arch} ]; then
+                                        scripts/build.sh ${target} ${arch}
+                                        scripts/copy-binaries.sh ${target} ${arch}
+                                    fi
+                                `,
+                                    env: {
+                                        AR_AARCH64_UNKNOWN_LINUX_GNU: "aarch64-linux-gnu-ar",
+                                        CC_AARCH64_UNKNOWN_LINUX_GNU: "aarch64-linux-gnu-gcc",
+                                        CXX_AARCH64_UNKNOWN_LINUX_GNU: "aarch64-linux-gnu-g++",
+                                        CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: "aarch64-linux-gnu-gcc",
+                                        AR_X86_64_UNKNOWN_LINUX_GNU: "x86_64-linux-gnu-ar",
+                                        CC_X86_64_UNKNOWN_LINUX_GNU: "x86_64-linux-gnu-gcc",
+                                        CXX_X86_64_UNKNOWN_LINUX_GNU: "x86_64-linux-gnu-g++",
+                                        CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER: "x86_64-linux-gnu-gcc",
+                                    }
+                                },
+
+                                {
+                                    parallel: [
+                                        {
+                                            name: `Push binaries to CDN (${arch})`,
+                                            command: `
                                             if [ ! -f skip-build-${arch} ]; then
                                                 scripts/runtime-push.sh ${arch}
                                             fi
                                         `,
-                                        env: {
-                                            CDN_ACCESS_KEY_ID: { secret: true },
-                                            CDN_SECRET_ACCESS_KEY: { secret: true }
+                                            env: {
+                                                CDN_ACCESS_KEY_ID: { secret: true },
+                                                CDN_SECRET_ACCESS_KEY: { secret: true }
+                                            }
+                                        },
+                                        {
+                                            export: {
+                                                workspace: `runtime-${triple(platform, arch)}`,
+                                                path: `build/pre-built/${triple(platform, arch)}`
+                                            }
                                         }
-                                    },
-                                    {
-                                        export: {
-                                            workspace: `runtime-${triple(platform, arch)}`,
-                                            path: `build/pre-built/${triple(platform, arch)}`
-                                        }
-                                    }
-                                ]
-                            }
-                        ]
-                    }))
+                                    ]
+                                }
+                            ]
+                        }
+                    })
                 }
             ],
         },
