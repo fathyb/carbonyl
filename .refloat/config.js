@@ -73,6 +73,7 @@ export const jobs = ["macos", "linux"].flatMap(platform => {
                                                 cd "$CHROMIUM_ROOT/src/out/${target}"
                                                 ninja headless:headless_shell -j4
                                             )
+
                                             scripts/copy-binaries.sh ${target} ${arch}
                                         fi
                                     `,

@@ -16,9 +16,7 @@ if [[ "$1" == "apply" ]]; then
 
     echo "Applying Chromium patches.."
     git checkout "$chromium_upstream"
-    for patch in "$CARBONYL_ROOT/chromium/patches/chromium"/*.patch; do
-        git am --committer-date-is-author-date "$patch"
-    done
+    git am --committer-date-is-author-date "$CARBONYL_ROOT/chromium/patches/chromium"/*
     "$CARBONYL_ROOT/scripts/restore-mtime.sh" "$chromium_upstream"
 
     echo "Stashing Skia changes.."
@@ -28,9 +26,7 @@ if [[ "$1" == "apply" ]]; then
 
     echo "Applying Skia patches.."
     git checkout "$skia_upstream"
-    for patch in "$CARBONYL_ROOT/chromium/patches/skia"/*.patch; do
-        git am --committer-date-is-author-date "$patch"
-    done
+    git am --committer-date-is-author-date "$CARBONYL_ROOT/chromium/patches/skia"/*
     "$CARBONYL_ROOT/scripts/restore-mtime.sh" "$skia_upstream"
 
     echo "Patches successfully applied"
