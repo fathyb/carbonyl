@@ -110,7 +110,6 @@ export const jobs = ["arm64", "amd64"]
                     command: `
                         mkdir build/zip
                         cp -r build/pre-built/${triple} build/zip/carbonyl-${version}
-                        cp ${lib} build/zip/carbonyl-${version}
 
                         cd build/zip
                         zip -r package.zip carbonyl-${version}
