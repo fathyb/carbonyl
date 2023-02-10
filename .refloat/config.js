@@ -67,6 +67,8 @@ export const jobs = ["macos", "linux"].flatMap(platform => {
                                     name: `Build Chromium (${arch})`,
                                     command: `
                                         if [ ! -f skip-build-${arch} ]; then
+                                            export PATH="$CHROMIUM_ROOT/depot_tools:$PATH"
+
                                             ninja -C "$CHROMIUM_ROOT/src/out/${target}" headless:headless_shell -j4
                                             scripts/copy-binaries.sh ${target} ${arch}
                                         fi
