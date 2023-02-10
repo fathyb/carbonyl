@@ -1,3 +1,5 @@
+use std::env;
+
 use unicode_width::UnicodeWidthStr;
 
 use crate::{
@@ -46,8 +48,13 @@ impl Navigation {
     }
 
     pub fn keypress(&mut self, key: &Key) -> NavigationAction {
+        let modifier_key = match env::consts::OS {
+            "macos" => key.modifiers.meta,
+            _ => key.modifiers.alt,
+        };
+
         match self.cursor {
-            None => match (key.alt, key.char) {
+            None => match (modifier_key, key.char) {
                 (true, 0x14) => NavigationAction::GoBack(),
                 (true, 0x13) => NavigationAction::GoForward(),
                 _ => NavigationAction::Forward,

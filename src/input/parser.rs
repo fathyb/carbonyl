@@ -26,18 +26,6 @@ pub enum TerminalEvent {
 }
 
 #[derive(Clone, Debug)]
-pub struct Key {
-    pub char: u8,
-    pub alt: bool,
-}
-
-impl From<u8> for Key {
-    fn from(char: u8) -> Self {
-        Self { char, alt: false }
-    }
-}
-
-#[derive(Clone, Debug)]
 pub enum Event {
     KeyPress { key: Key },
     MouseUp { row: usize, col: usize },
@@ -104,7 +92,7 @@ impl Parser {
                 Sequence::Control => match key {
                     b'<' => Sequence::Mouse(Mouse::new()),
                     b'1' => Sequence::Keyboard(Keyboard::new()),
-                    key => emit!(Keyboard::key(key, false)),
+                    key => emit!(Keyboard::key(key, 0)),
                 },
                 Sequence::Mouse(ref mut mouse) => parse!(mouse, key),
                 Sequence::Keyboard(ref mut keyboard) => parse!(keyboard, key),
