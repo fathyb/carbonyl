@@ -78,7 +78,7 @@ async function buildMain() {
             path.join(root, 'index.sh'),
             [
                 '#!/usr/bin/env bash',
-                `"$(node -p "require('@fathyb/carbonyl')")" "$@"`
+                `"$(node -p "require('carbonyl')")" "$@"`
             ].join('\n'),
             { mode: '755' }
         )
