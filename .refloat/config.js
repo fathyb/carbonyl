@@ -74,7 +74,7 @@ export const jobs = ["arm64", "amd64"]
                             exit 2
                         fi
 
-                        if ! scripts/runtime-pull.sh ${arch}; then
+                        if scripts/runtime-pull.sh ${arch}; then
                             scripts/gclient.sh sync
                             scripts/patches.sh apply
 
