@@ -16,7 +16,7 @@ impl CommandLineProgram {
         let mut debug = false;
         let mut args = Vec::new();
 
-        for arg in env::args() {
+        for arg in env::args().skip(1) {
             match arg.as_str() {
                 "-d" | "--debug" => debug = true,
                 "-h" | "--help" => return CommandLineProgram::Help,
