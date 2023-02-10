@@ -35,10 +35,10 @@ export const jobs = ["macos", "linux"].flatMap(platform => {
                             exit 2
                         fi
 
-                        if scripts/runtime-pull.sh arm64; then
+                        if ! scripts/runtime-pull.sh arm64; then
                             touch skip-build-arm64
                         fi
-                        if scripts/runtime-pull.sh amd64; then
+                        if ! scripts/runtime-pull.sh amd64; then
                             touch skip-build-amd64
                         fi
 
@@ -66,11 +66,11 @@ export const jobs = ["macos", "linux"].flatMap(platform => {
                                 {
                                     name: `Build Chromium (${arch})`,
                                     command: `
-                                    if [ ! -f skip-build-${arch} ]; then
-                                        scripts/build.sh ${target} ${arch}
-                                        scripts/copy-binaries.sh ${target} ${arch}
-                                    fi
-                                `,
+                                        if [ ! -f skip-build-${arch} ]; then
+                                            ninja -C "$CHROMIUM_ROOT/src/out/${target}" headless:headless_shell -j4
+                                            scripts/copy-binaries.sh ${target} ${arch}
+                                        fi
+                                    `,
                                     env: {
                                         AR_AARCH64_UNKNOWN_LINUX_GNU: "aarch64-linux-gnu-ar",
                                         CC_AARCH64_UNKNOWN_LINUX_GNU: "aarch64-linux-gnu-gcc",
