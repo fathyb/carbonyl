@@ -68,20 +68,22 @@ export const jobs = ["arm64", "amd64"]
                 {
                     name: 'Build if needed',
                     command: `
-                        if [ -z "$CHROMIUM_SRC" ]; then
+                        if [ -z "$CHROMIUM_ROOT" ]; then
                             echo "Chromium build environment not setup"
 
                             exit 2
                         fi
 
                         if scripts/runtime-pull.sh ${arch}; then
+                            cp chromium/.gclient "$CHROMIUM_ROOT"
+
                             scripts/gclient.sh sync
                             scripts/patches.sh apply
 
-                            rm -rf "$CHROMIUM_SRC/carbonyl"
-                            mkdir "$CHROMIUM_SRC/carbonyl"
-                            ln -s "$(pwd)/src" "$CHROMIUM_SRC/carbonyl/src"
-                            ln -s "$(pwd)/build" "$CHROMIUM_SRC/carbonyl/build"
+                            rm -rf "$CHROMIUM_ROOT/src/carbonyl"
+                            mkdir "$CHROMIUM_ROOT/src/carbonyl"
+                            ln -s "$(pwd)/src" "$CHROMIUM_ROOT/src/carbonyl/src"
+                            ln -s "$(pwd)/build" "$CHROMIUM_ROOT/src/carbonyl/build"
 
                             scripts/build.sh ${arch}
                             scripts/copy-binaries.sh ${arch} ${arch}
