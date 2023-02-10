@@ -32,7 +32,7 @@ export const jobs = [
                 command: `
                     echo "//registry.npmjs.org/:_authToken=\${CARBONYL_NPM_PUBLISH_TOKEN}" > ~/.npmrc
 
-                    scripts/npm-publish.sh
+                    scripts/npm-publish.sh --tag next
                 `,
             },
         ],
