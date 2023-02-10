@@ -173,17 +173,15 @@ When prompted, enter the following arguments:
 import("//carbonyl/src/browser/args.gn")
 
 # uncomment this to build for arm64
-# target_cpu="arm64"
+# target_cpu = "arm64"
 
-# uncomment this to enable ccache
-# cc_wrapper="env CCACHE_SLOPPINESS=time_macros ccache"
+# comment this to disable ccache
+cc_wrapper = "env CCACHE_SLOPPINESS=time_macros ccache"
 
-# uncomment this if you're building for macOS
-# use_lld=false
-
-# uncomment this for a release build
-# is_debug=false
-# symbol_level=0
+# comment this for a debug build
+is_debug = false
+symbol_level = 0
+is_official_build = true
 ```
 
 #### Build binaries
