@@ -9,14 +9,20 @@ platform="$2"
 
 if [ -z "$platform" ]; then
     if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-        platform="unknown-linux-gnu"
+        platform="linux"
     elif [[ "$OSTYPE" == "darwin"* ]]; then
-        platform="apple-darwin"
+        platform="macos"
     else
         echo "Unsupported platform: $OSTYPE"
 
         exit 2
     fi
+fi
+
+if [ "$platform" == "linux" ]; then
+    platform="unknown-linux-gnu"
+elif  [ "$platform" == "macos" ]; then
+    platform="apple-darwin"
 fi
 
 if [ -z "$cpu" ]; then
