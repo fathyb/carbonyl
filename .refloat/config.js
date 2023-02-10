@@ -22,7 +22,7 @@ export const jobs = ["macos", "linux"].flatMap(platform => {
             agent: { tags: ["chromium-src", platform] },
             steps: [
                 {
-                    parallel: ['arm64', 'amd64'].map(arch => (
+                    serial: ['arm64', 'amd64'].map(arch => (
                         { import: { workspace: `core-${triple(platform, arch)}` } }
                     ))
                 },
