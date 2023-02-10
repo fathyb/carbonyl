@@ -33,38 +33,21 @@ impl Keyboard {
     }
     pub fn key(key: u8, modifiers: u8) -> Option<Event> {
         let modifiers = KeyModifiers::parse(modifiers);
-
-        match key {
+        let char = match key {
             // Up
-            b'A' => Some(Event::KeyPress {
-                key: Key {
-                    char: 0x11,
-                    modifiers,
-                },
-            }),
+            b'A' => 0x11,
             // Down
-            b'B' => Some(Event::KeyPress {
-                key: Key {
-                    char: 0x12,
-                    modifiers,
-                },
-            }),
+            b'B' => 0x12,
             // Right
-            b'C' => Some(Event::KeyPress {
-                key: Key {
-                    char: 0x13,
-                    modifiers,
-                },
-            }),
+            b'C' => 0x13,
             // Left
-            b'D' => Some(Event::KeyPress {
-                key: Key {
-                    char: 0x14,
-                    modifiers,
-                },
-            }),
-            _ => None,
-        }
+            b'D' => 0x14,
+            _ => return None,
+        };
+
+        Some(Event::KeyPress {
+            key: Key { char, modifiers },
+        })
     }
 
     pub fn parse(&mut self, key: u8) -> ParseControlFlow {

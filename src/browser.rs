@@ -1,3 +1,3 @@
-mod browser;
+mod bridge;
 
-pub use browser::*;
+pub use bridge::*;

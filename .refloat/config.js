@@ -1,82 +1,112 @@
-import pkg from '../package.json'
+import pkg from "../package.json";
 
-const { version } = JSON.parse(pkg)
+const { version } = JSON.parse(pkg);
 const sharedLib = {
-    macos: 'dylib',
-    linux: 'so'
-}
+    macos: "dylib",
+    linux: "so",
+};
 const platforms = {
-    macos: 'apple-darwin',
-    linux: 'unknown-linux-gnu',
-}
+    macos: "apple-darwin",
+    linux: "unknown-linux-gnu",
+};
 const archs = {
-    arm64: 'aarch64',
-    amd64: 'x86_64',
-}
+    arm64: "aarch64",
+    amd64: "x86_64",
+};
 
-export const jobs = ['arm64', 'amd64']
-    .flatMap((arch) =>
-        ['macos', 'linux'].map((platform) => ({ platform, arch })),
-    )
+export const jobs = ["arm64", "amd64"]
+    .flatMap((arch) => ["macos", "linux"].map((platform) => ({ platform, arch })))
     .map(({ platform, arch }) => {
-        const triple = `${archs[arch]}-${platforms[platform]}`
-        const lib = `build/${triple}/release/libcarbonyl.${sharedLib[platform]}`
+        const triple = `${archs[arch]}-${platforms[platform]}`;
+        const lib = `build/${triple}/release/libcarbonyl.${sharedLib[platform]}`;
 
-        return { platform, arch, triple, lib }
+        return { platform, arch, triple, lib };
     })
     .flatMap(({ platform, arch, triple, lib }) => [
         {
             name: `Build core (${platform}/${arch})`,
             docker:
-                platform === 'linux'
+                platform === "linux"
                     ? {
-                        image: 'fathyb/rust-cross',
-                        cache: ['/usr/local/cargo/registry'],
+                        image: "fathyb/rust-cross",
+                        cache: ["/usr/local/cargo/registry"],
                     }
                     : undefined,
-            agent: { tags: platform === 'linux' ? ['docker'] : ['macos'] },
+            agent: { tags: platform === "linux" ? ["docker"] : ["macos"] },
             steps: [
                 {
-                    name: 'Install Rust toolchain',
+                    name: "Install Rust toolchain",
                     command: `rustup target add ${triple}`,
                 },
                 {
-                    name: 'Build core library',
+                    name: "Build core library",
                     command: `cargo build --target ${triple} --release`,
-                    env: { MACOSX_DEPLOYMENT_TARGET: '10.13' },
+                    env: { MACOSX_DEPLOYMENT_TARGET: "10.13" },
                 },
                 {
-                    name: 'Set core library install name',
+                    name: "Set core library install name",
                     command:
-                        platform === 'macos'
+                        platform === "macos"
                             ? `install_name_tool -id @executable_path/libcarbonyl.dylib ${lib}`
-                            : 'echo not necessary',
+                            : "echo not necessary",
                 },
                 {
                     export: {
-                        workspace: triple,
-                        path: 'build/*/release/*.{dylib,so,dll}',
+                        workspace: `core-${triple}`,
+                        path: "build/*/release/*.{dylib,so,dll}",
                     },
                 },
             ],
         },
         {
-            // TODO: setup shared build dir
-            name: `Build (${platform}/${arch})`,
-            docker: 'fathyb/rust-cross',
-            agent: { tags: ['docker'] },
+            name: `Build runtime (${platform}/${arch})`,
+            agent: { tags: ["chromium-src", platform] },
             steps: [
                 {
-                    import: {
-                        workspace: triple,
-                    },
+                    import: { workspace: `core-${triple}` },
                 },
                 {
-                    name: 'Fetch binaries',
-                    command: `scripts/runtime-pull.sh ${triple}`,
+                    name: 'Build if needed',
+                    command: `
+                        if [ -z "$CHROMIUM_SRC" ]; then
+                            echo "Chromium build environment not setup"
+
+                            exit 2
+                        fi
+
+                        if ! scripts/runtime-pull.sh ${arch}; then
+                            scripts/gclient.sh sync
+                            scripts/patches.sh apply
+
+                            rm -rf "$CHROMIUM_SRC/carbonyl"
+                            mkdir "$CHROMIUM_SRC/carbonyl"
+                            ln -s "$(pwd)/src" "$CHROMIUM_SRC/carbonyl/src"
+                            ln -s "$(pwd)/build" "$CHROMIUM_SRC/carbonyl/build"
+
+                            scripts/build.sh ${arch}
+                            scripts/copy-binaries.sh ${arch} ${arch}
+                        fi
+                    `
                 },
                 {
-                    name: 'Zip binaries',
+                    export: {
+                        workspace: `runtime-${triple}`,
+                        path: `build/pre-built/${triple}`
+                    }
+                }
+            ],
+        },
+        {
+            // TODO: setup shared build dir
+            name: `Package (${platform}/${arch})`,
+            docker: "fathyb/rust-cross",
+            agent: { tags: ["docker"] },
+            steps: [
+                {
+                    import: { workspace: `runtime-${triple}` },
+                },
+                {
+                    name: "Zip binaries",
                     command: `
                         mkdir build/zip
                         cp -r build/pre-built/${triple} build/zip/carbonyl-${version}
@@ -90,10 +120,10 @@ export const jobs = ['arm64', 'amd64']
                     export: {
                         artifact: {
                             name: `carbonyl.${platform}-${arch}.zip`,
-                            path: 'build/zip/package.zip',
+                            path: "build/zip/package.zip",
                         },
                     },
-                }
+                },
             ],
         },
-    ])
+    ]);

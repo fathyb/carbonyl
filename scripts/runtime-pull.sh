@@ -8,9 +8,8 @@ source "scripts/env.sh"
 
 echo "Computing Chromium patches sha.."
 
-sha=$(scripts/runtime-hash.sh)
-
-triple="$1"
+sha="$(scripts/runtime-hash.sh)"
+triple="$(scripts/platform-triple.sh "$@")"
 
 if [ ! -f "build/pre-built/$triple.tgz" ]; then
     url="https://carbonyl.fathy.fr/runtime/$sha/$triple.tgz"
