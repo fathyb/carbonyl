@@ -35,10 +35,10 @@ export const jobs = ["macos", "linux"].flatMap(platform => {
                             exit 2
                         fi
 
-                        if ! scripts/runtime-pull.sh arm64; then
+                        if scripts/runtime-pull.sh arm64; then
                             touch skip-build-arm64
                         fi
-                        if ! scripts/runtime-pull.sh amd64; then
+                        if scripts/runtime-pull.sh amd64; then
                             touch skip-build-amd64
                         fi
 
@@ -152,7 +152,6 @@ export const jobs = ["macos", "linux"].flatMap(platform => {
                     ],
                 },
                 {
-                    // TODO: setup shared build dir
                     name: `Package (${platform}/${arch})`,
                     docker: "fathyb/rust-cross",
                     agent: { tags: ["docker"] },
