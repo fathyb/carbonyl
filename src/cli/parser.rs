@@ -18,8 +18,8 @@ impl CommandLineProgram {
 
         for arg in &args {
             match arg.as_str() {
-                "-h" | "--help" => return CommandLineProgram::Help,
                 "-d" | "--debug" => debug = true,
+                "-h" | "--help" => return CommandLineProgram::Help,
                 "-v" | "--version" => return CommandLineProgram::Version,
                 _ => continue,
             }
