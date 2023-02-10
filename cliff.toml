@@ -25,7 +25,7 @@ conventional_commits = true
 filter_unconventional = true
 split_commits = false
 commit_preprocessors = [
-    { pattern = "#([0-9]+)", replace = "[#${1}](https://github.com/orhun/git-cliff/issues/${1})" }
+    { pattern = "#([0-9]+)", replace = "[#${1}](https://github.com/fathyb/carbonyl/issues/${1})" }
 ]
 commit_parsers = [
     { message = "^feat", group = "<!-- 0 -->🚀 Features" },
