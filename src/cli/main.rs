@@ -4,7 +4,7 @@ pub fn main() -> Option<CommandLine> {
     match CommandLineProgram::parse() {
         CommandLineProgram::Main(cmd) => return Some(cmd),
         CommandLineProgram::Help => {
-            println!("{}", help())
+            println!("{}", include_str!("usage.txt"))
         }
         CommandLineProgram::Version => {
             println!("Carbonyl {}", env!("CARGO_PKG_VERSION"))
@@ -12,14 +12,4 @@ pub fn main() -> Option<CommandLine> {
     }
 
     None
-}
-
-pub fn help() -> &'static str {
-    "Usage: carbonyl [options] [url]
-
-Options:
-    -h, --help                 display this help message
-    -d, --debug                enable debug logs
-    -v, --version              output the version number
-"
 }

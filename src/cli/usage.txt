@@ -1,0 +1,12 @@
+   O    O      Carbonyl is a Chromium based browser for the terminal.
+    \  /       
+O —— Cr —— O   In addition to the following options,
+    /  \       Carbonyl also supports most Chromium options.
+   O    O      
+
+Usage: carbonyl [options] [url]
+
+Options:
+    -h, --help                 display this help message
+    -d, --debug                enable debug logs
+    -v, --version              output the version number
