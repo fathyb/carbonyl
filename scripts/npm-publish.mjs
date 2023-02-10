@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url'
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 const pkg = JSON.parse(await fs.readFile(path.resolve(dirname, '../package.json'), 'utf-8'))
-const version = `${pkg.version}-next.${process.env.VERSION_ID}`
+const version = process.env.RELEASE_MODE ? pkg.version : `${pkg.version}-next.${process.env.VERSION_ID}`
 const manifest = {
     version,
     license: 'BSD-3-Clause',
@@ -36,7 +36,7 @@ async function buildMain() {
                 {
                     name: 'carbonyl',
                     ...manifest,
-                    files: ['index.js', 'index.sh'],
+                    files: ['index.sh', 'index.sh.js', 'index.js'],
                     bin: { carbonyl: 'index.sh' },
                     optionalDependencies: {
                         '@fathyb/carbonyl-linux-amd64': version,
@@ -48,6 +48,18 @@ async function buildMain() {
                 null,
                 4
             )
+        ),
+        fs.writeFile(
+            path.join(root, 'index.sh'),
+            [
+                '#!/usr/bin/env bash',
+                `"$(node "$(realpath "$0")".js)" "$@"`
+            ].join('\n'),
+            { mode: '755' }
+        ),
+        fs.writeFile(
+            path.join(root, 'index.sh.js'),
+            `process.stdout.write(require('.'))`
         ),
         fs.writeFile(
             path.join(root, 'index.js'),
@@ -74,15 +86,6 @@ async function buildMain() {
                 }
             `
         ),
-        fs.writeFile(
-            path.join(root, 'index.sh'),
-            [
-                '#!/usr/bin/env bash',
-                `"$(node -p "require('carbonyl')")" "$@"`
-            ].join('\n'),
-            { mode: '755' }
-        )
-
     ])
 
     return root
