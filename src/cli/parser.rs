@@ -14,14 +14,14 @@ pub enum CommandLineProgram {
 impl CommandLineProgram {
     pub fn parse() -> CommandLineProgram {
         let mut debug = false;
-        let args: Vec<String> = env::args().collect();
+        let mut args = Vec::new();
 
-        for arg in &args {
+        for arg in env::args() {
             match arg.as_str() {
                 "-d" | "--debug" => debug = true,
                 "-h" | "--help" => return CommandLineProgram::Help,
                 "-v" | "--version" => return CommandLineProgram::Version,
-                _ => continue,
+                _ => args.push(arg),
             }
         }
 
