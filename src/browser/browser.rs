@@ -6,6 +6,7 @@ use std::{env, io};
 
 use libc::{c_char, c_int, c_uchar, c_uint, c_void, size_t};
 
+use crate::cli;
 use crate::gfx::{Cast, Color, Point, Rect, Size};
 use crate::output::Renderer;
 use crate::ui::navigation::NavigationAction;
@@ -65,28 +66,6 @@ pub struct BrowserDelegate {
     post_task: extern "C" fn(extern "C" fn(*mut c_void), *mut c_void),
 }
 
-struct Args {
-    debug: bool,
-    chromium: Vec<String>,
-}
-
-fn parse_args() -> Args {
-    let mut args = Args {
-        debug: false,
-        chromium: Vec::new(),
-    };
-
-    for arg in env::args().skip(1) {
-        if arg == "--debug" {
-            args.debug = true
-        } else {
-            args.chromium.push(arg)
-        }
-    }
-
-    args
-}
-
 fn main() -> io::Result<Option<i32>> {
     const CARBONYL_INSIDE_SHELL: &str = "CARBONYL_INSIDE_SHELL";
 
@@ -94,10 +73,14 @@ fn main() -> io::Result<Option<i32>> {
         return Ok(None);
     }
 
-    let args = parse_args();
+    let cmd = match cli::main() {
+        None => return Ok(Some(0)),
+        Some(cmd) => cmd,
+    };
+
     let mut terminal = input::Terminal::setup();
     let output = Command::new(env::current_exe()?)
-        .args(args.chromium)
+        .args(cmd.args)
         .arg("--disable-threaded-scrolling")
         .arg("--disable-threaded-animation")
         .env(CARBONYL_INSIDE_SHELL, "1")
@@ -110,7 +93,7 @@ fn main() -> io::Result<Option<i32>> {
 
     let code = output.status.code().unwrap_or(127);
 
-    if code != 0 || args.debug {
+    if code != 0 || cmd.debug {
         io::stderr().write_all(&output.stderr)?;
     }
 

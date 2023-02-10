@@ -1,3 +1,3 @@
-mod ffi;
+mod browser;
 
-pub use ffi::*;
+pub use browser::*;
