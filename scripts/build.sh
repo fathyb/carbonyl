@@ -7,7 +7,7 @@ source scripts/env.sh
 
 triple=$(scripts/platform-triple.sh "$2")
 
-if [ -z "$CARBONYL_SKIP_CARGO_BUILD" ];
+if [ -z "$CARBONYL_SKIP_CARGO_BUILD" ]; then
     if [ -z "$MACOSX_DEPLOYMENT_TARGET" ]; then
         export MACOSX_DEPLOYMENT_TARGET=10.13
     fi
