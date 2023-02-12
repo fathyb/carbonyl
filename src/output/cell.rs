@@ -14,22 +14,23 @@ pub struct Grapheme {
 /// Terminal cell with `height = width * 2`
 #[derive(PartialEq)]
 pub struct Cell {
-    /// Top pixel color value
-    pub top: Color,
-    /// Bottom pixel color value
-    pub bottom: Color,
     pub cursor: Point<u32>,
     /// Text grapheme if any
     pub grapheme: Option<Rc<Grapheme>>,
+    pub quadrant: (Color, Color, Color, Color),
 }
 
 impl Cell {
     pub fn new(x: u32, y: u32) -> Cell {
         Cell {
-            top: Color::black(),
-            bottom: Color::black(),
             cursor: Point::new(x, y),
             grapheme: None,
+            quadrant: (
+                Color::black(),
+                Color::black(),
+                Color::black(),
+                Color::black(),
+            ),
         }
     }
 }

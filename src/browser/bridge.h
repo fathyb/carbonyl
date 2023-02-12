@@ -2,30 +2,14 @@
 #define CARBONYL_SRC_BROWSER_BRIDGE_H_
 
 #include <cstdint>
+#include <functional>
 
+#include "base/functional/callback.h"
 #include "ui/gfx/geometry/rect_f.h"
 
 extern "C" {
 
-struct carbonyl_renderer;
-
-struct carbonyl_bridge_size {
-    unsigned int width;
-    unsigned int height;
-};
-struct carbonyl_bridge_point {
-    unsigned int x;
-    unsigned int y;
-};
-struct carbonyl_bridge_rect {
-    struct carbonyl_bridge_point origin;
-    struct carbonyl_bridge_size size;
-};
-struct carbonyl_bridge_color {
-    uint8_t r;
-    uint8_t g;
-    uint8_t b;
-};
+struct carbonyl_bridge;
 struct carbonyl_bridge_browser_delegate {
     void (*shutdown) ();
     void (*refresh) ();
@@ -40,29 +24,52 @@ struct carbonyl_bridge_browser_delegate {
     void (*post_task) (void (*)(void*), void*);
 };
 
-void carbonyl_shell_main();
-
 } /* end extern "C" */
 
 namespace carbonyl {
 
-class Renderer {
-public:
-    static Renderer* Main();
-    static gfx::Size GetSize();
+struct Text {
+    Text(
+        std::string text,
+        gfx::RectF rect,
+        uint32_t color
+    ):
+        text(text),
+        rect(rect),
+        color(color)
+    {}
 
-    void Resize();
+    std::string text;
+    gfx::RectF rect;
+    uint32_t color;
+};
+
+class Bridge {
+public:
+    static void Main();
+    static Bridge* GetCurrent();
+    static bool BitmapMode();
+
+    gfx::Size GetSize();
+    float GetDPI();
+
+    gfx::Size Resize();
+    void StartRenderer();
     void Listen(const struct carbonyl_bridge_browser_delegate* delegate);
     void PushNav(const std::string& url, bool can_go_back, bool can_go_forward);
     void SetTitle(const std::string& title);
-    void ClearText();
-    void DrawText(const std::string& text, const gfx::RectF& bounds, uint32_t color);
-    void DrawBackground(const unsigned char* pixels, size_t pixels_size, const gfx::Rect& bounds);
+    void DrawText(const std::vector<Text>& text);
+    void DrawBitmap(
+        const unsigned char* pixels,
+        const gfx::Size& size,
+        const gfx::Rect& damage,
+        base::OnceCallback<void()> callback
+    );
 
 private:
-    Renderer(struct carbonyl_renderer* ptr);
+    Bridge(struct carbonyl_bridge* ptr);
 
-    struct carbonyl_renderer* ptr_;
+    struct carbonyl_bridge* ptr_;
 };
 
 }

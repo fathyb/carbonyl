@@ -1,19 +1,28 @@
-From 5693445bf736c51d3255c10115767ba8886d68da Mon Sep 17 00:00:00 2001
+From cc9c37adb3ad2613a114bd37e1fde43f83951d88 Mon Sep 17 00:00:00 2001
 From: Fathy Boundjadj <hey@fathy.fr>
-Date: Thu, 9 Feb 2023 03:29:34 +0100
-Subject: [PATCH 6/9] Setup display DPI
+Date: Sun, 12 Feb 2023 01:00:43 +0100
+Subject: [PATCH 06/11] Setup display DPI
 
 ---
- .../lib/browser/headless_browser_impl_aura.cc |  9 +---
- headless/lib/browser/headless_screen.cc       |  2 +-
- ui/display/display.cc                         | 50 +++++++++----------
- 3 files changed, 28 insertions(+), 33 deletions(-)
+ .../lib/browser/headless_browser_impl_aura.cc | 11 ++--
+ headless/lib/browser/headless_screen.cc       |  5 +-
+ ui/display/display.cc                         | 52 ++++++++++---------
+ 3 files changed, 35 insertions(+), 33 deletions(-)
 
 diff --git a/headless/lib/browser/headless_browser_impl_aura.cc b/headless/lib/browser/headless_browser_impl_aura.cc
-index 81261215c702f..b8eb5fc429a2a 100644
+index 81261215c702f..508660db32151 100644
 --- a/headless/lib/browser/headless_browser_impl_aura.cc
 +++ b/headless/lib/browser/headless_browser_impl_aura.cc
-@@ -57,13 +57,8 @@ void HeadlessBrowserImpl::PlatformSetWebContentsBounds(
+@@ -19,6 +19,8 @@
+ #include "ui/events/devices/device_data_manager.h"
+ #include "ui/gfx/geometry/rect.h"
+ 
++#include "carbonyl/src/browser/bridge.h"
++
+ namespace headless {
+ 
+ void HeadlessBrowserImpl::PlatformInitialize() {
+@@ -57,13 +59,8 @@ void HeadlessBrowserImpl::PlatformSetWebContentsBounds(
      const gfx::Rect& bounds) {
    // Browser's window bounds should contain all web contents, so that we're sure
    // that we will actually produce visible damage when taking a screenshot.
@@ -24,29 +33,48 @@ index 81261215c702f..b8eb5fc429a2a 100644
 -      std::max(old_host_bounds.height(), bounds.y() + bounds.height()));
 -  web_contents->window_tree_host()->SetBoundsInPixels(new_host_bounds);
 -  web_contents->window_tree_host()->window()->SetBounds(new_host_bounds);
-+  web_contents->window_tree_host()->SetBoundsInPixels(ScaleToEnclosedRect(bounds, 1.0 / 7.0));
++  web_contents->window_tree_host()->SetBoundsInPixels(ScaleToEnclosedRect(bounds, carbonyl::Renderer::GetDPI()));
 +  web_contents->window_tree_host()->window()->SetBounds(bounds);
  
    gfx::NativeView native_view = web_contents->web_contents()->GetNativeView();
    native_view->SetBounds(bounds);
 diff --git a/headless/lib/browser/headless_screen.cc b/headless/lib/browser/headless_screen.cc
-index 28f1a65f6dce5..e595735be187b 100644
+index 28f1a65f6dce5..8bf00ef5e036a 100644
 --- a/headless/lib/browser/headless_screen.cc
 +++ b/headless/lib/browser/headless_screen.cc
-@@ -49,7 +49,7 @@ display::Display HeadlessScreen::GetDisplayNearestWindow(
+@@ -13,6 +13,8 @@
+ #include "ui/gfx/geometry/size_conversions.h"
+ #include "ui/gfx/native_widget_types.h"
+ 
++#include "carbonyl/src/browser/bridge.h"
++
+ namespace headless {
+ 
+ // static
+@@ -49,7 +51,8 @@ display::Display HeadlessScreen::GetDisplayNearestWindow(
  HeadlessScreen::HeadlessScreen(const gfx::Rect& screen_bounds) {
    static int64_t synthesized_display_id = 2000;
    display::Display display(synthesized_display_id++);
 -  display.SetScaleAndBounds(1.0f, screen_bounds);
-+  display.SetScaleAndBounds(1.0f / 7.0, ScaleToEnclosedRect(screen_bounds, 1.0 / 7.0));
++  float dpi = carbonyl::Renderer::GetDPI();
++  display.SetScaleAndBounds(dpi, ScaleToEnclosedRect(screen_bounds, dpi));
    ProcessDisplayChanged(display, true /* is_primary */);
  }
  
 diff --git a/ui/display/display.cc b/ui/display/display.cc
-index 466ef1fd1fe6e..cb503dc5cda0f 100644
+index 466ef1fd1fe6e..1d71f3b4c9857 100644
 --- a/ui/display/display.cc
 +++ b/ui/display/display.cc
-@@ -39,22 +39,22 @@ float g_forced_device_scale_factor = -1.0;
+@@ -21,6 +21,8 @@
+ #include "ui/gfx/geometry/transform.h"
+ #include "ui/gfx/icc_profile.h"
+ 
++#include "carbonyl/src/browser/bridge.h"
++
+ namespace display {
+ namespace {
+ 
+@@ -39,22 +41,22 @@ float g_forced_device_scale_factor = -1.0;
  constexpr float kDisplaySizeAllowanceEpsilon = 0.01f;
  
  bool HasForceDeviceScaleFactorImpl() {
@@ -78,11 +106,11 @@ index 466ef1fd1fe6e..cb503dc5cda0f 100644
 +  //     scale_in_double = 1.0;
 +  //   }
 +  // }
-+  return 1.0 / 7.0;
++  return carbonyl::Bridge::GetCurrent()->GetDPI();
  }
  
  const char* ToRotationString(display::Display::Rotation rotation) {
-@@ -97,11 +97,11 @@ void Display::ResetForceDeviceScaleFactorForTesting() {
+@@ -97,11 +99,11 @@ void Display::ResetForceDeviceScaleFactorForTesting() {
  // static
  void Display::SetForceDeviceScaleFactor(double dsf) {
    // Reset any previously set values and unset the flag.
@@ -98,7 +126,7 @@ index 466ef1fd1fe6e..cb503dc5cda0f 100644
  }
  
  // static
-@@ -273,15 +273,15 @@ void Display::SetScaleAndBounds(float device_scale_factor,
+@@ -273,15 +275,15 @@ void Display::SetScaleAndBounds(float device_scale_factor,
  }
  
  void Display::SetScale(float device_scale_factor) {

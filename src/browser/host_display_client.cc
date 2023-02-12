@@ -20,8 +20,12 @@
 namespace carbonyl {
 
 LayeredWindowUpdater::LayeredWindowUpdater(
-    mojo::PendingReceiver<viz::mojom::LayeredWindowUpdater> receiver)
-    : receiver_(this, std::move(receiver)) {}
+    mojo::PendingReceiver<viz::mojom::LayeredWindowUpdater> receiver
+)
+  :
+    receiver_(this, std::move(receiver)),
+    task_runner_(base::SingleThreadTaskRunner::GetCurrentDefault())
+  {}
 
 LayeredWindowUpdater::~LayeredWindowUpdater() = default;
 
@@ -30,17 +34,27 @@ void LayeredWindowUpdater::OnAllocatedSharedMemory(
     base::UnsafeSharedMemoryRegion region) {
   if (region.IsValid())
     shm_mapping_ = region.Map();
+
+  pixel_size_ = pixel_size;
 }
 
 void LayeredWindowUpdater::Draw(const gfx::Rect& damage_rect,
-                                DrawCallback draw_callback) {
-  Renderer::Main()->DrawBackground(
+                                DrawCallback callback) {
+  Bridge::GetCurrent()->DrawBitmap(
     shm_mapping_.GetMemoryAs<uint8_t>(),
-    shm_mapping_.size(),
-    damage_rect
+    pixel_size_,
+    damage_rect,
+    base::BindOnce(
+      [](
+        scoped_refptr<base::SingleThreadTaskRunner> task_runner,
+        DrawCallback callback
+      ) {
+        task_runner->PostTask(FROM_HERE, std::move(callback));
+      },
+      task_runner_,
+      std::move(callback)
+    )
   );
-
-  std::move(draw_callback).Run();
 }
 
 HostDisplayClient::HostDisplayClient()

@@ -1,7 +1,7 @@
-From 5557ea65c9769fd0f99bd1f8eb58b05634f9faa2 Mon Sep 17 00:00:00 2001
+From 4f9316128dc474b9b52d3023e1181432231106ec Mon Sep 17 00:00:00 2001
 From: Fathy Boundjadj <hey@fathy.fr>
 Date: Thu, 9 Feb 2023 03:31:17 +0100
-Subject: [PATCH 7/9] Disable text effects
+Subject: [PATCH 07/11] Disable text effects
 
 ---
  .../core/paint/ng/ng_text_painter_base.cc     | 30 ++++++++--------

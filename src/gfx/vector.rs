@@ -137,6 +137,12 @@ macro_rules! impl_vector_overload {
             }
         }
 
+        impl<T: Copy> From<$struct<T>> for (T, T) {
+            fn from(vector: $struct<T>) -> Self {
+                (vector.$x, vector.$y)
+            }
+        }
+
         impl<T: Copy> From<(T, T)> for $struct<T> {
             fn from((x, y): (T, T)) -> Self {
                 Self::new(x, y)
@@ -216,6 +222,12 @@ macro_rules! impl_vector_overload {
         impl<T: Copy> From<(T, T, T)> for $struct<T> {
             fn from((x, y, z): (T, T, T)) -> Self {
                 Self::new(x, y, z)
+            }
+        }
+
+        impl<T: Copy> From<$struct<T>> for (T, T, T) {
+            fn from(vector: $struct<T>) -> Self {
+                (vector.$x, vector.$y, vector.$z)
             }
         }
 
@@ -336,6 +348,14 @@ macro_rules! impl_vector_traits {
 
             pub fn round(&self) -> Self {
                 self.map(|v| v.round())
+            }
+
+            pub fn floor(&self) -> Self {
+                self.map(|v| v.floor())
+            }
+
+            pub fn ceil(&self) -> Self {
+                self.map(|v| v.ceil())
             }
 
             pub fn min<U>(&self, min: U) -> Self

@@ -10,24 +10,16 @@ use crate::{
     gfx::{Color, Point, Rect, Size},
     input::Key,
     ui::navigation::{Navigation, NavigationAction},
+    utils::log,
 };
 
 use super::{Cell, Grapheme, Painter};
 
-struct Dimensions {
-    /// Size of a terminal cell in pixels
-    cell: Size,
-    /// Size of the browser window in pixels
-    browser: Size,
-    /// Size of the terminal window in cells
-    terminal: Size,
-}
-
 pub struct Renderer {
     nav: Navigation,
     cells: Vec<(Cell, Cell)>,
-    dimensions: Dimensions,
     painter: Painter,
+    dimensions: Size,
 }
 
 impl Renderer {
@@ -36,11 +28,7 @@ impl Renderer {
             nav: Navigation::new(),
             cells: Vec::with_capacity(0),
             painter: Painter::new(),
-            dimensions: Dimensions {
-                cell: Size::new(7, 14),
-                browser: Size::new(0, 0),
-                terminal: Size::new(0, 0),
-            },
+            dimensions: Size::new(0, 0),
         }
     }
 
@@ -51,28 +39,20 @@ impl Renderer {
     pub fn keypress(&mut self, key: &Key) -> io::Result<NavigationAction> {
         let action = self.nav.keypress(key);
 
-        self.render()?;
-
         Ok(action)
     }
     pub fn mouse_up(&mut self, origin: Point) -> io::Result<NavigationAction> {
         let action = self.nav.mouse_up(origin);
-
-        self.render()?;
 
         Ok(action)
     }
     pub fn mouse_down(&mut self, origin: Point) -> io::Result<NavigationAction> {
         let action = self.nav.mouse_down(origin);
 
-        self.render()?;
-
         Ok(action)
     }
     pub fn mouse_move(&mut self, origin: Point) -> io::Result<NavigationAction> {
         let action = self.nav.mouse_move(origin);
-
-        self.render()?;
 
         Ok(action)
     }
@@ -82,16 +62,14 @@ impl Renderer {
     }
 
     pub fn get_size(&self) -> Size {
-        self.dimensions.terminal
+        self.dimensions
     }
 
-    pub fn set_size(&mut self, cell: Size, terminal: Size) {
+    pub fn set_size(&mut self, terminal: Size) {
         let size = (terminal.width + terminal.width * terminal.height) as usize;
 
         self.nav.set_size(terminal);
-        self.dimensions.cell = cell;
-        self.dimensions.terminal = terminal;
-        self.dimensions.browser = cell * terminal;
+        self.dimensions = terminal;
 
         let mut x = 0;
         let mut y = 0;
@@ -113,14 +91,19 @@ impl Renderer {
     }
 
     pub fn render(&mut self) -> io::Result<()> {
-        let size = self.dimensions.terminal;
+        let size = self.dimensions;
 
         for (origin, element) in self.nav.render(size) {
             self.fill_rect(
                 Rect::new(origin.x, origin.y, element.text.width() as u32, 1),
                 element.background,
             );
-            self.draw_text(&element.text, origin, Size::splat(0), element.foreground);
+            self.draw_text(
+                &element.text,
+                origin * (2, 1),
+                Size::splat(0),
+                element.foreground,
+            );
         }
 
         self.painter.begin()?;
@@ -130,8 +113,7 @@ impl Renderer {
                 continue;
             }
 
-            previous.top = current.top;
-            previous.bottom = current.bottom;
+            previous.quadrant = current.quadrant;
             previous.grapheme = current.grapheme.clone();
 
             self.painter.paint(current)?;
@@ -143,53 +125,52 @@ impl Renderer {
     }
 
     /// Draw the background from a pixel array encoded in RGBA8888
-    pub fn draw_background(&mut self, pixels: &mut [u8], rect: Rect) -> io::Result<()> {
-        let viewport = self.dimensions.terminal.cast::<usize>();
-        let pixels_row = viewport.width * 4;
+    pub fn draw_background(&mut self, pixels: &[u8], pixels_size: Size, rect: Rect) {
+        let viewport = self.dimensions.cast::<usize>();
 
-        if pixels.len() != pixels_row * viewport.height * 2 {
-            return Ok(());
+        if pixels.len() < viewport.width * viewport.height * 8 * 4 {
+            log::debug!(
+                "unexpected size, actual: {}, expected: {}",
+                pixels.len(),
+                viewport.width * viewport.height * 8 * 4
+            );
+            return;
         }
 
-        let pos = rect.origin.cast::<usize>() / (1, 2);
-        let size = rect.size.cast::<usize>() / (1, 2);
-        let pixels_left = pos.x * 4;
-        let pixels_width = size.width * 4;
+        let origin = rect.origin.cast::<f32>().max(0.0) / (2.0, 4.0);
+        let size = rect.size.cast::<f32>().max(0.0) / (2.0, 4.0);
+        let top = origin.y.floor() as usize;
+        let left = origin.x.floor() as usize;
+        let right = ((origin.x + size.width).ceil() as usize).min(viewport.width);
+        let bottom = ((origin.y + size.height).ceil() as usize).min(viewport.height);
+        let row_length = pixels_size.width as usize;
+        let pixel = |x, y| {
+            Color::new(
+                pixels[((x + y * row_length) * 4 + 2) as usize],
+                pixels[((x + y * row_length) * 4 + 1) as usize],
+                pixels[((x + y * row_length) * 4 + 0) as usize],
+            )
+        };
+        let pair = |x, y| pixel(x, y).avg_with(pixel(x, y + 1));
 
-        // Iterate over each row
-        for y in pos.y..pos.y + size.height {
-            // Terminal chars have an aspect ratio of 2:1.
-            // In order to display perfectly squared pixels, we
-            // render a unicode glyph taking the bottom half of the cell
-            // using a foreground representing the bottom pixel,
-            // and a background representing the top pixel.
-            // This means that the pixel input buffer should be twice the size
-            // of the terminal cell buffer (two pixels take one terminal cell).
-            let left = pixels_left + y * 2 * pixels_row;
-            let right = left + pixels_width;
-            // Get a slice pointing to the top pixel row
-            let mut top_row = pixels[left..right].iter();
-            // Get a slice pointing to the bottom pixel row
-            let mut bottom_row = pixels[left + pixels_row..right + pixels_row].iter();
-            let cells_left = y * viewport.width + pos.x + viewport.width;
-            let cells = self.cells[cells_left..].iter_mut();
+        for y in top..bottom {
+            let index = (y + 1) * viewport.width;
+            let start = index + left;
+            let end = index + right;
+            let mut x = left * 2;
+            let y = y * 4;
 
-            // Iterate over each column
-            for (_, cell) in cells {
-                match (
-                    Color::from_iter(&mut top_row),
-                    Color::from_iter(&mut bottom_row),
-                ) {
-                    (Some(top), Some(bottom)) => {
-                        cell.top = top;
-                        cell.bottom = bottom;
-                    }
-                    _ => break,
-                }
+            for (_, cell) in &mut self.cells[start..end] {
+                cell.quadrant = (
+                    pair(x + 0, y + 0),
+                    pair(x + 1, y + 0),
+                    pair(x + 1, y + 2),
+                    pair(x + 0, y + 2),
+                );
+
+                x += 2;
             }
         }
-
-        self.render()
     }
 
     pub fn clear_text(&mut self) {
@@ -210,9 +191,8 @@ impl Renderer {
 
     pub fn fill_rect(&mut self, rect: Rect, color: Color) {
         self.draw(rect, |cell| {
-            cell.top = color;
-            cell.bottom = color;
             cell.grapheme = None;
+            cell.quadrant = (color, color, color, color);
         })
     }
 
@@ -222,7 +202,7 @@ impl Renderer {
     {
         let origin = bounds.origin.cast::<usize>();
         let size = bounds.size.cast::<usize>();
-        let viewport_width = self.dimensions.terminal.width as usize;
+        let viewport_width = self.dimensions.width as usize;
         let top = origin.y;
         let bottom = top + size.height;
 
@@ -241,25 +221,28 @@ impl Renderer {
     pub fn draw_text(&mut self, string: &str, origin: Point, size: Size, color: Color) {
         // Get an iterator starting at the text origin
         let len = self.cells.len();
-        let viewport = &self.dimensions.terminal;
+        let viewport = &self.dimensions.cast::<usize>();
 
         if size.width > 2 && size.height > 2 {
-            let x = origin.x.max(0).min(viewport.width as i32);
-            let top = (origin.y + 1).max(0);
-            let bottom = top + size.height as i32;
+            let origin = (origin.cast::<f32>() / (2.0, 4.0) + (0.0, 1.0)).round();
+            let size = (size.cast::<f32>() / (2.0, 4.0)).round();
+            let left = (origin.x.max(0.0) as usize).min(viewport.width);
+            let right = ((origin.x + size.width).max(0.0) as usize).min(viewport.width);
+            let top = (origin.y.max(0.0) as usize).min(viewport.height);
+            let bottom = ((origin.y + size.height).max(0.0) as usize).min(viewport.height);
 
             for y in top..bottom {
-                let index = x + y / 2 * (viewport.width as i32);
-                let left = len.min(index as usize);
-                let right = len.min(left + size.width as usize);
+                let index = y * viewport.width;
+                let start = index + left;
+                let end = index + right;
 
-                for (_, cell) in self.cells[left..right].iter_mut() {
+                for (_, cell) in self.cells[start..end].iter_mut() {
                     cell.grapheme = None
                 }
             }
         } else {
             // Compute the buffer index based on the position
-            let index = origin.x + (origin.y + 1) / 2 * (viewport.width as i32);
+            let index = origin.x / 2 + (origin.y + 1) / 4 * (viewport.width as i32);
             let mut iter = self.cells[len.min(index as usize)..].iter_mut();
 
             // Get every Unicode grapheme in the input string

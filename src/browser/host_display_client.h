@@ -32,6 +32,10 @@ class LayeredWindowUpdater : public viz::mojom::LayeredWindowUpdater {
  private:
   mojo::Receiver<viz::mojom::LayeredWindowUpdater> receiver_;
   base::WritableSharedMemoryMapping shm_mapping_;
+  gfx::Size pixel_size_;
+  DrawCallback callback_;
+  scoped_refptr<base::SingleThreadTaskRunner> task_runner_;
+  base::WeakPtrFactory<LayeredWindowUpdater> weak_ptr_factory_ { this };
 };
 
 class HostDisplayClient : public viz::HostDisplayClient {

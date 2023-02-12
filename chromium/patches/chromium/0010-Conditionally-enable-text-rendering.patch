@@ -1,0 +1,140 @@
+From 987c9c05601339bfff2bab0ddcfc7a04208b6c93 Mon Sep 17 00:00:00 2001
+From: Fathy Boundjadj <hey@fathy.fr>
+Date: Sun, 12 Feb 2023 00:55:33 +0100
+Subject: [PATCH 10/11] Conditionally enable text rendering
+
+---
+ content/renderer/render_frame_impl.cc         |  3 ++-
+ .../core/css/resolver/style_resolver.cc       | 26 +++++++++++--------
+ third_party/blink/renderer/platform/BUILD.gn  |  1 +
+ .../blink/renderer/platform/fonts/font.cc     | 10 +++----
+ 4 files changed, 23 insertions(+), 17 deletions(-)
+
+diff --git a/content/renderer/render_frame_impl.cc b/content/renderer/render_frame_impl.cc
+index 97b61ffb954be..891efd6a9d796 100644
+--- a/content/renderer/render_frame_impl.cc
++++ b/content/renderer/render_frame_impl.cc
+@@ -259,6 +259,7 @@
+ // Carbonyl
+ #include <stdlib.h>
+ #include <iostream>
++#include "carbonyl/src/browser/bridge.h"
+ #include "cc/paint/paint_recorder.h"
+ #include "cc/paint/skia_paint_canvas.h"
+ #include "cc/raster/playback_image_provider.h"
+@@ -2221,7 +2222,7 @@ void RenderFrameImpl::Initialize(blink::WebFrame* parent) {
+ 
+   render_callback_ = std::make_shared<std::function<bool()>>(
+     [=]() -> bool {
+-      if (!IsMainFrame() || IsHidden()) {
++      if (!IsMainFrame() || IsHidden() || carbonyl::Bridge::BitmapMode()) {
+         return false;
+       }
+ 
+diff --git a/third_party/blink/renderer/core/css/resolver/style_resolver.cc b/third_party/blink/renderer/core/css/resolver/style_resolver.cc
+index 79cb8c85b697f..7129982acf4a6 100644
+--- a/third_party/blink/renderer/core/css/resolver/style_resolver.cc
++++ b/third_party/blink/renderer/core/css/resolver/style_resolver.cc
+@@ -116,6 +116,8 @@
+ #include "third_party/blink/renderer/platform/wtf/text/atomic_string_hash.h"
+ #include "third_party/blink/renderer/platform/wtf/text/string_builder.h"
+ 
++#include "carbonyl/src/browser/bridge.h"
++
+ namespace blink {
+ 
+ namespace {
+@@ -1041,18 +1043,20 @@ scoped_refptr<ComputedStyle> StyleResolver::ResolveStyle(
+     UseCounter::Count(GetDocument(), WebFeature::kHasGlyphRelativeUnits);
+   }
+ 
+-  auto font = state.StyleBuilder().GetFontDescription();
+-  FontFamily family;
++  if (!carbonyl::Bridge::BitmapMode()) {
++    auto font = state.StyleBuilder().GetFontDescription();
++    FontFamily family;
+ 
+-  family.SetFamily("monospace", FontFamily::Type::kGenericFamily);
+-  font.SetFamily(family);
+-  font.SetStretch(ExtraExpandedWidthValue());
+-  font.SetKerning(FontDescription::kNoneKerning);
+-  font.SetComputedSize(11.75 / 7.0);
+-  font.SetGenericFamily(FontDescription::kMonospaceFamily);
+-  font.SetIsAbsoluteSize(true);
+-  state.StyleBuilder().SetFontDescription(font);
+-  state.StyleBuilder().SetLineHeight(Length::Fixed(14.0 / 7.0));
++    family.SetFamily("monospace", FontFamily::Type::kGenericFamily);
++    font.SetFamily(family);
++    font.SetStretch(ExtraExpandedWidthValue());
++    font.SetKerning(FontDescription::kNoneKerning);
++    font.SetComputedSize(13.25 / 4.0);
++    font.SetGenericFamily(FontDescription::kMonospaceFamily);
++    font.SetIsAbsoluteSize(true);
++    state.StyleBuilder().SetFontDescription(font);
++    state.StyleBuilder().SetLineHeight(Length::Fixed(16.0 / 4.0));
++  }
+ 
+   state.LoadPendingResources();
+ 
+diff --git a/third_party/blink/renderer/platform/BUILD.gn b/third_party/blink/renderer/platform/BUILD.gn
+index e7b1c1a52e4c9..63fc13e44b5ae 100644
+--- a/third_party/blink/renderer/platform/BUILD.gn
++++ b/third_party/blink/renderer/platform/BUILD.gn
+@@ -1678,6 +1678,7 @@ component("platform") {
+     "//base/allocator:buildflags",
+     "//build:chromecast_buildflags",
+     "//build:chromeos_buildflags",
++    "//carbonyl/src/browser:carbonyl",
+     "//cc/ipc",
+     "//cc/mojo_embedder",
+     "//components/paint_preview/common",
+diff --git a/third_party/blink/renderer/platform/fonts/font.cc b/third_party/blink/renderer/platform/fonts/font.cc
+index dfdc79eacce3b..4625300729523 100644
+--- a/third_party/blink/renderer/platform/fonts/font.cc
++++ b/third_party/blink/renderer/platform/fonts/font.cc
+@@ -49,6 +49,8 @@
+ #include "third_party/skia/include/core/SkTextBlob.h"
+ #include "ui/gfx/geometry/rect_f.h"
+ 
++#include "carbonyl/src/browser/bridge.h"
++
+ namespace blink {
+ 
+ namespace {
+@@ -151,14 +153,12 @@ bool Font::operator==(const Font& other) const {
+ 
+ namespace {
+ 
+-static const bool carbonyl_b64_text = true;
+-
+ void DrawBlobs(cc::PaintCanvas* canvas,
+                const cc::PaintFlags& flags,
+                const ShapeResultBloberizer::BlobBuffer& blobs,
+                const gfx::PointF& point,
+                cc::NodeId node_id = cc::kInvalidNodeId) {  
+-  if (carbonyl_b64_text) {
++  if (!carbonyl::Bridge::BitmapMode()) {
+     return;
+   }
+ 
+@@ -237,7 +237,7 @@ void Font::DrawText(cc::PaintCanvas* canvas,
+   if (ShouldSkipDrawing())
+     return;
+ 
+-  if (carbonyl_b64_text) {
++  if (!carbonyl::Bridge::BitmapMode()) {
+     auto string = StringView(
+       run_info.run.ToStringView(),
+       run_info.from,
+@@ -285,7 +285,7 @@ void Font::DrawText(cc::PaintCanvas* canvas,
+   if (ShouldSkipDrawing())
+     return;
+ 
+-  if (carbonyl_b64_text) {
++  if (!carbonyl::Bridge::BitmapMode()) {
+     auto string = StringView(
+       text_info.text,
+       text_info.from,
+-- 
+2.38.1
+
