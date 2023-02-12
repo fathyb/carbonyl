@@ -1,14 +1,15 @@
-From b3eb30e840840f3eb60f1a375f4c93fc08587511 Mon Sep 17 00:00:00 2001
+From 75c4cb78b084094a2c1859b048627b3a60fc0334 Mon Sep 17 00:00:00 2001
 From: Fathy Boundjadj <hey@fathy.fr>
-Date: Sun, 12 Feb 2023 00:56:13 +0100
+Date: Sun, 12 Feb 2023 01:20:43 +0100
 Subject: [PATCH 11/11] Rename carbonyl::Renderer to carbonyl::Bridge
 
 ---
  headless/app/headless_shell.cc                     | 5 ++++-
  headless/app/headless_shell_main.cc                | 2 +-
  headless/lib/browser/headless_browser_impl.cc      | 8 ++++----
+ headless/lib/browser/headless_browser_impl_aura.cc | 2 +-
  headless/lib/browser/headless_web_contents_impl.cc | 4 ++--
- 4 files changed, 11 insertions(+), 8 deletions(-)
+ 5 files changed, 12 insertions(+), 9 deletions(-)
 
 diff --git a/headless/app/headless_shell.cc b/headless/app/headless_shell.cc
 index 5b51c22ae1da3..b6a52857e8f90 100644
@@ -86,6 +87,19 @@ index fd45d215479ab..1df3ffe72c93d 100644
    });
  }
  
+diff --git a/headless/lib/browser/headless_browser_impl_aura.cc b/headless/lib/browser/headless_browser_impl_aura.cc
+index 508660db32151..91be528753cdd 100644
+--- a/headless/lib/browser/headless_browser_impl_aura.cc
++++ b/headless/lib/browser/headless_browser_impl_aura.cc
+@@ -59,7 +59,7 @@ void HeadlessBrowserImpl::PlatformSetWebContentsBounds(
+     const gfx::Rect& bounds) {
+   // Browser's window bounds should contain all web contents, so that we're sure
+   // that we will actually produce visible damage when taking a screenshot.
+-  web_contents->window_tree_host()->SetBoundsInPixels(ScaleToEnclosedRect(bounds, carbonyl::Renderer::GetDPI()));
++  web_contents->window_tree_host()->SetBoundsInPixels(ScaleToEnclosedRect(bounds, carbonyl::Bridge::GetDPI()));
+   web_contents->window_tree_host()->window()->SetBounds(bounds);
+ 
+   gfx::NativeView native_view = web_contents->web_contents()->GetNativeView();
 diff --git a/headless/lib/browser/headless_web_contents_impl.cc b/headless/lib/browser/headless_web_contents_impl.cc
 index fad8c3fdd2bfe..a166a08f6ea15 100644
 --- a/headless/lib/browser/headless_web_contents_impl.cc
