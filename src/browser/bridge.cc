@@ -5,6 +5,7 @@
 #include <stdio.h>
 
 #include "base/functional/callback.h"
+#include "carbonyl/src/browser/blink.h"
 #include "ui/gfx/geometry/rect_f.h"
 #include "third_party/skia/include/core/SkColor.h"
 #include "third_party/skia/src/core/SkBitmapDevice.h"
@@ -92,7 +93,9 @@ bool Bridge::BitmapMode() {
     if (bitmap_mode == -1) {
         bitmap_mode = carbonyl_shell_bitmap_mode();
 
-        if (!bitmap_mode) {
+        if (bitmap_mode) {
+            blink::EnableBitmapMode();
+        } else {
             SkBitmapDevice::DisableTextRendering();
         }
     }

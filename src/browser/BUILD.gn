@@ -10,6 +10,13 @@ mojom("mojom") {
   ]
 }
 
+component("blink") {
+  sources = [
+    "blink.cc",
+    "blink.h",
+  ]
+}
+
 component("carbonyl") {
   cflags_cc = ["-Wno-extra-semi"]
   sources = [

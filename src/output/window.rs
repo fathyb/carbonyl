@@ -58,7 +58,13 @@ impl Window {
         }
 
         let zoom = 1.5 * self.cmd.zoom;
-        let cell_pixels = Size::<f32>::new(7.0, 14.0);
+        let cells = Size::new(size.ws_col.max(1), size.ws_row.max(2) - 1);
+        let auto_scale = false;
+        let cell_pixels = if auto_scale {
+            Size::new(size.ws_xpixel as f32, size.ws_ypixel as f32) / cells.cast()
+        } else {
+            Size::new(8.0, 16.0)
+        };
         // Normalize the cells dimensions for an aspect ratio of 1:2
         let cell_width = (cell_pixels.width + cell_pixels.height / 2.0) / 2.0;
 
