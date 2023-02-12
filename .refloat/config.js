@@ -71,6 +71,7 @@ export const jobs = ["macos", "linux"].flatMap((platform) => {
                                         fi
                                     `,
                                     env: {
+                                        MACOSX_DEPLOYMENT_TARGET: '10.13',
                                         CARBONYL_SKIP_CARGO_BUILD: 'true',
                                         AR_AARCH64_UNKNOWN_LINUX_GNU: "aarch64-linux-gnu-ar",
                                         CC_AARCH64_UNKNOWN_LINUX_GNU: "aarch64-linux-gnu-gcc",
@@ -136,7 +137,7 @@ export const jobs = ["macos", "linux"].flatMap((platform) => {
                         {
                             name: "Build core library",
                             command: `cargo build --target ${triple} --release`,
-                            env: { MACOSX_DEPLOYMENT_TARGET: "10.13" },
+                            env: { MACOSX_DEPLOYMENT_TARGET: '10.13' },
                         },
                         {
                             name: "Set core library install name",

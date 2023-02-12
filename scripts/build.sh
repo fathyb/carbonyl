@@ -2,7 +2,7 @@
 
 export CARBONYL_ROOT=$(cd $(dirname -- "$0") && dirname -- "$(pwd)")
 
-cd $CARBONYL_ROOT
+cd "$CARBONYL_ROOT"
 source scripts/env.sh
 
 triple=$(scripts/platform-triple.sh "$2")
