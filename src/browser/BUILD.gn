@@ -11,6 +11,8 @@ mojom("mojom") {
 }
 
 component("carbonyl") {
+  cflags = ["-Wno-extra-semi"]
+  cflags_cc = ["-Wno-extra-semi"]
   sources = [
     "bridge.cc",
     "bridge.h",
