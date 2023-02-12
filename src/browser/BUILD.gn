@@ -34,19 +34,18 @@ component("carbonyl") {
 
   target = ""
 
-  if (target_cpu == "x64") {
+  if (current_cpu == "x64") {
     target += "x86_64-"
-  } else if (target_cpu == "arm64") {
+  } else if (current_cpu == "arm64") {
     target += "aarch64-"
   }
 
   if (is_mac) {
     target += "apple-darwin"
-
-    libs = ["//carbonyl/build/$target/release/libcarbonyl.dylib"]
   } else if (is_linux) {
     target += "unknown-linux-gnu"
-
-    libs = ["//carbonyl/build/$target/release/libcarbonyl.so"]
   }
+
+  libs = ["carbonyl"]
+  lib_dirs = ["//carbonyl/build/$target/release"]
 }
