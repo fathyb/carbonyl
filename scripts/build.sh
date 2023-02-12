@@ -7,11 +7,13 @@ source scripts/env.sh
 
 triple=$(scripts/platform-triple.sh "$2")
 
-if [ -z "$MACOSX_DEPLOYMENT_TARGET" ]; then
-    export MACOSX_DEPLOYMENT_TARGET=10.13
-fi
+if [ -z "$CARBONYL_SKIP_CARGO_BUILD" ];
+    if [ -z "$MACOSX_DEPLOYMENT_TARGET" ]; then
+        export MACOSX_DEPLOYMENT_TARGET=10.13
+    fi
 
-cargo build --target "$triple" --release
+    cargo build --target "$triple" --release
+fi
 
 if [ -f "build/$triple/release/libcarbonyl.dylib" ]; then
     cp "build/$triple/release/libcarbonyl.dylib" "$CHROMIUM_SRC/out/$1"
