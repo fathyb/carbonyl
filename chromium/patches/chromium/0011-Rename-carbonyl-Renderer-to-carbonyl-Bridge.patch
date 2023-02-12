@@ -1,6 +1,6 @@
-From bbbdb2b57060ad2db9342ef18fa95cdf69b6009e Mon Sep 17 00:00:00 2001
+From 5fe479d14ce2087b8fe4486615e020180ffefc65 Mon Sep 17 00:00:00 2001
 From: Fathy Boundjadj <hey@fathy.fr>
-Date: Sun, 12 Feb 2023 01:23:20 +0100
+Date: Sun, 12 Feb 2023 01:29:05 +0100
 Subject: [PATCH 11/11] Rename carbonyl::Renderer to carbonyl::Bridge
 
 ---
@@ -89,7 +89,7 @@ index fd45d215479ab..1df3ffe72c93d 100644
  }
  
 diff --git a/headless/lib/browser/headless_browser_impl_aura.cc b/headless/lib/browser/headless_browser_impl_aura.cc
-index 508660db32151..91be528753cdd 100644
+index 508660db32151..80340d9f1b3b3 100644
 --- a/headless/lib/browser/headless_browser_impl_aura.cc
 +++ b/headless/lib/browser/headless_browser_impl_aura.cc
 @@ -59,7 +59,7 @@ void HeadlessBrowserImpl::PlatformSetWebContentsBounds(
@@ -97,12 +97,12 @@ index 508660db32151..91be528753cdd 100644
    // Browser's window bounds should contain all web contents, so that we're sure
    // that we will actually produce visible damage when taking a screenshot.
 -  web_contents->window_tree_host()->SetBoundsInPixels(ScaleToEnclosedRect(bounds, carbonyl::Renderer::GetDPI()));
-+  web_contents->window_tree_host()->SetBoundsInPixels(ScaleToEnclosedRect(bounds, carbonyl::Bridge::GetDPI()));
++  web_contents->window_tree_host()->SetBoundsInPixels(ScaleToEnclosedRect(bounds, carbonyl::Bridge::GetCurrent()->GetDPI()));
    web_contents->window_tree_host()->window()->SetBounds(bounds);
  
    gfx::NativeView native_view = web_contents->web_contents()->GetNativeView();
 diff --git a/headless/lib/browser/headless_screen.cc b/headless/lib/browser/headless_screen.cc
-index 8bf00ef5e036a..f468a7174d71a 100644
+index 8bf00ef5e036a..89c5ccc8d7759 100644
 --- a/headless/lib/browser/headless_screen.cc
 +++ b/headless/lib/browser/headless_screen.cc
 @@ -51,7 +51,7 @@ display::Display HeadlessScreen::GetDisplayNearestWindow(
@@ -110,7 +110,7 @@ index 8bf00ef5e036a..f468a7174d71a 100644
    static int64_t synthesized_display_id = 2000;
    display::Display display(synthesized_display_id++);
 -  float dpi = carbonyl::Renderer::GetDPI();
-+  float dpi = carbonyl::Bridge::GetDPI();
++  float dpi = carbonyl::Bridge::GetCurrent()->GetDPI();
    display.SetScaleAndBounds(dpi, ScaleToEnclosedRect(screen_bounds, dpi));
    ProcessDisplayChanged(display, true /* is_primary */);
  }
