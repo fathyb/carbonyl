@@ -47,14 +47,17 @@ elif [[ "$1" == "save" ]]; then
     fi
 
     echo "Updating Chromium patches.."
+    rm -rf "$CARBONYL_ROOT/chromium/patches/chromium"
     git format-patch --no-signature --output-directory "$CARBONYL_ROOT/chromium/patches/chromium" "$chromium_upstream"
 
     echo "Updating Skia patches.."
     cd "$CHROMIUM_SRC/third_party/skia"
+    rm -rf "$CARBONYL_ROOT/chromium/patches/skia"
     git format-patch --no-signature --output-directory "$CARBONYL_ROOT/chromium/patches/skia" "$skia_upstream"
 
     echo "Updating WebRTC patches.."
     cd "$CHROMIUM_SRC/third_party/webrtc"
+    rm -rf "$CARBONYL_ROOT/chromium/patches/webrtc"
     git format-patch --no-signature --output-directory "$CARBONYL_ROOT/chromium/patches/webrtc" "$webrtc_upstream"
 
     echo "Patches successfully updated"
