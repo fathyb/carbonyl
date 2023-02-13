@@ -31,7 +31,7 @@ export const jobs = ["macos", "linux"].flatMap((platform) => {
                         name: `Fetch pre-built runtime for ${arch}`,
                         command: `
                             if scripts/runtime-pull.sh ${arch}; then
-                                touch skip-build-arm64
+                                touch skip-build-${arch}
                             fi
                         `
                     }))
