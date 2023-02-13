@@ -193,6 +193,7 @@ export const jobs = ["macos", "linux"].flatMap((platform) => {
 
 jobs.push({
     name: 'Publish to Docker',
+    agent: { tags: ["carbonyl-publish"] },
     steps: [
         {
             serial: ['arm64', 'amd64'].map(arch => ({
