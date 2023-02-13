@@ -1,7 +1,7 @@
 From bdc80f35a7113b7523c4d992edc9170db082deb0 Mon Sep 17 00:00:00 2001
 From: Fathy Boundjadj <hey@fathy.fr>
 Date: Sun, 12 Feb 2023 00:55:33 +0100
-Subject: [PATCH 10/13] Conditionally enable text rendering
+Subject: [PATCH 10/14] Conditionally enable text rendering
 
 ---
  content/renderer/render_frame_impl.cc         |  3 ++-

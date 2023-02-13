@@ -1,0 +1,46 @@
+From 2275364ee7e16ba6b46f0f339e34326d4a8c7584 Mon Sep 17 00:00:00 2001
+From: Fathy Boundjadj <hey@fathy.fr>
+Date: Mon, 13 Feb 2023 17:13:38 +0100
+Subject: [PATCH 14/14] Move Skia text rendering control to bridge
+
+---
+ content/renderer/render_frame_impl.cc | 5 -----
+ skia/BUILD.gn                         | 2 +-
+ 2 files changed, 1 insertion(+), 6 deletions(-)
+
+diff --git a/content/renderer/render_frame_impl.cc b/content/renderer/render_frame_impl.cc
+index 379cf6c58b2b0..891efd6a9d796 100644
+--- a/content/renderer/render_frame_impl.cc
++++ b/content/renderer/render_frame_impl.cc
+@@ -285,7 +285,6 @@
+ #include "third_party/skia/include/svg/SkSVGCanvas.h"
+ #include "third_party/skia/include/utils/SkBase64.h"
+ #include "third_party/skia/src/text/GlyphRun.h"
+-#include "third_party/skia/src/core/SkBitmapDevice.h"
+ #include "third_party/skia/src/core/SkClipStackDevice.h"
+ #include "third_party/skia/src/core/SkDevice.h"
+ #include "third_party/skia/src/core/SkFontPriv.h"
+@@ -2244,10 +2243,6 @@ void RenderFrameImpl::Initialize(blink::WebFrame* parent) {
+   );
+ 
+   host->ObserveTerminalRender(render_callback_);
+-
+-  if (!carbonyl::Bridge::BitmapMode()) {
+-    SkBitmapDevice::DisableTextRendering();
+-  }
+ }
+ 
+ void RenderFrameImpl::GetInterface(
+diff --git a/skia/BUILD.gn b/skia/BUILD.gn
+index b330273c16db3..297ffacf073fa 100644
+--- a/skia/BUILD.gn
++++ b/skia/BUILD.gn
+@@ -203,7 +203,7 @@ source_set("skcms") {
+ }
+ 
+ component("skia") {
+-  deps = []
++  deps = [ "//carbonyl/src/browser:bridge" ]
+   sources = [
+     # Chrome sources.
+     "config/SkUserConfig.h",

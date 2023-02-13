@@ -10,6 +10,31 @@ mojom("mojom") {
   ]
 }
 
+component("bridge") {
+  output_name = "carbonyl_bridge"
+  defines = [ "CARBONYL_BRIDGE_IMPLEMENTATION" ]
+  sources = [
+    "bridge.cc",
+    "bridge.h",
+  ]
+}
+
+component("viz") {
+  output_name = "carbonyl_viz"
+  defines = [ "CARBONYL_VIZ_IMPLEMENTATION" ]
+  sources = [
+    "host_display_client.cc",
+    "host_display_client.h",
+  ]
+
+  deps = [
+    ":renderer",
+    "//base",
+    "//components/viz/host",
+    "//services/viz/privileged/mojom",
+  ]
+}
+
 config("lib") {
   target = ""
 
@@ -27,33 +52,6 @@ config("lib") {
 
   libs = ["carbonyl"]
   lib_dirs = ["//carbonyl/build/$target/release"]
-}
-
-component("bridge") {
-  output_name = "carbonyl_bridge"
-  defines = [ "CARBONYL_BRIDGE_IMPLEMENTATION" ]
-  sources = [
-    "bridge.cc",
-    "bridge.h",
-  ]
-
-  configs += [ ":lib" ]
-}
-
-component("viz") {
-  output_name = "carbonyl_viz"
-  defines = [ "CARBONYL_VIZ_IMPLEMENTATION" ]
-  sources = [
-    "host_display_client.cc",
-    "host_display_client.h",
-  ]
-
-  deps = [
-    ":renderer",
-    "//base",
-    "//components/viz/host",
-    "//services/viz/privileged/mojom",
-  ]
 }
 
 component("renderer") {

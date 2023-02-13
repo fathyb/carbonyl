@@ -5,12 +5,18 @@
 
 namespace carbonyl {
 
+class Renderer;
+
 class CARBONYL_BRIDGE_EXPORT Bridge {
 public:
+  static float GetDPI();
+  static bool BitmapMode();
+
+private:
+  friend class Renderer;
 
   static void Resize();
-  static bool BitmapMode();
-  static float GetDPI();
+  static void Configure(float dpi, bool bitmap_mode);
 };
 
 }

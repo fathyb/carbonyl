@@ -1,39 +1,27 @@
 #include "carbonyl/src/browser/bridge.h"
 
-extern "C" {
-
-bool carbonyl_bridge_bitmap_mode();
-float carbonyl_bridge_get_dpi();
-
-}
-
 namespace {
 
-float dpi = -1;
-int bitmap_mode = -1;
+float dpi_ = 0.0;
+bool bitmap_mode_ = false;
 
 }
 
 namespace carbonyl {
 
-void Bridge::Resize() {
-    dpi = -1;
-}
+void Bridge::Resize() {}
 
 float Bridge::GetDPI() {
-    if (dpi == -1) {
-        dpi = carbonyl_bridge_get_dpi();
-    }
-
-    return dpi;
+    return dpi_;
 }
 
 bool Bridge::BitmapMode() {
-    if (bitmap_mode == -1) {
-        bitmap_mode = carbonyl_bridge_bitmap_mode();
-    }
+    return bitmap_mode_;
+}
 
-    return bitmap_mode == 1;
+void Bridge::Configure(float dpi, bool bitmap_mode) {
+    dpi_ = dpi;
+    bitmap_mode_ = bitmap_mode;
 }
 
 }
