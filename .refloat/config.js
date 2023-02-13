@@ -66,7 +66,7 @@ export const jobs = ["macos", "linux"].flatMap((platform) => {
                                     name: `Build Chromium (${arch})`,
                                     command: `
                                         if [ ! -f skip-build-${arch} ]; then
-                                            scripts/build.sh ${target} ${arch}
+                                            scripts/build.sh ${target} ${arch} -j4
                                             scripts/copy-binaries.sh ${target} ${arch}
                                         fi
                                     `,
