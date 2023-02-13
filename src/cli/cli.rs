@@ -75,8 +75,8 @@ impl CommandLine {
             match *key {
                 "-f" | "--fps" => set_f32!(fps = fps),
                 "-z" | "--zoom" => set_f32!(zoom = zoom / 100.0),
-                "-b" | "--bitmap" => set!(bitmap, Bitmap),
                 "-d" | "--debug" => set!(debug, Debug),
+                "-b" | "--bitmap" => set!(bitmap, Bitmap),
 
                 "-h" | "--help" => program = CommandLineProgram::Help,
                 "-v" | "--version" => program = CommandLineProgram::Version,

@@ -1,7 +1,7 @@
 From cc9c37adb3ad2613a114bd37e1fde43f83951d88 Mon Sep 17 00:00:00 2001
 From: Fathy Boundjadj <hey@fathy.fr>
 Date: Sun, 12 Feb 2023 01:00:43 +0100
-Subject: [PATCH 06/12] Setup display DPI
+Subject: [PATCH 06/13] Setup display DPI
 
 ---
  .../lib/browser/headless_browser_impl_aura.cc | 11 ++--

@@ -1,8 +1,8 @@
 use std::ffi::{CStr, CString};
 use std::io::Write;
 use std::process::{Command, Stdio};
-use std::sync::{mpsc, Arc, Mutex};
-use std::{env, io};
+use std::sync::{mpsc, Mutex};
+use std::{env, io, thread};
 
 use libc::{c_char, c_float, c_int, c_uchar, c_uint, c_void, size_t};
 
@@ -46,16 +46,16 @@ pub struct CText {
 }
 
 #[repr(C)]
-pub struct Bridge {
+pub struct RendererBridge {
     cmd: CommandLine,
-    thread: RenderThread,
     window: Window,
+    renderer: RenderThread,
 }
 
-unsafe impl Send for Bridge {}
-unsafe impl Sync for Bridge {}
+unsafe impl Send for RendererBridge {}
+unsafe impl Sync for RendererBridge {}
 
-pub type BridgePointer = *const Mutex<Bridge>;
+pub type RendererPtr = *const Mutex<RendererBridge>;
 
 impl<T: Copy> From<CPoint> for Point<T>
 where
@@ -136,55 +136,62 @@ fn main() -> io::Result<Option<i32>> {
 }
 
 #[no_mangle]
-pub extern "C" fn carbonyl_shell_main() {
+pub extern "C" fn carbonyl_bridge_main() {
     if let Some(code) = main().unwrap() {
         std::process::exit(code)
     }
 }
 
 #[no_mangle]
-pub extern "C" fn carbonyl_shell_bitmap_mode() -> bool {
+pub extern "C" fn carbonyl_bridge_bitmap_mode() -> bool {
     CommandLine::parse().bitmap
 }
 
 #[no_mangle]
-pub extern "C" fn carbonyl_bridge_create() -> BridgePointer {
-    let bridge = Bridge {
-        cmd: CommandLine::parse(),
-        thread: RenderThread::new(),
-        window: Window::read().unwrap(),
-    };
-
-    Arc::into_raw(Arc::new(Mutex::new(bridge)))
+pub extern "C" fn carbonyl_bridge_get_dpi() -> c_float {
+    Window::read().dpi
 }
 
 #[no_mangle]
-pub extern "C" fn carbonyl_bridge_start_renderer(bridge: BridgePointer) {
+pub extern "C" fn carbonyl_renderer_create() -> RendererPtr {
+    let bridge = RendererBridge {
+        cmd: CommandLine::parse(),
+        window: Window::read(),
+        renderer: RenderThread::new(),
+    };
+
+    Box::into_raw(Box::new(Mutex::new(bridge)))
+}
+
+#[no_mangle]
+pub extern "C" fn carbonyl_renderer_start(bridge: RendererPtr) {
     {
         let bridge = unsafe { bridge.as_ref() };
         let mut bridge = bridge.unwrap().lock().unwrap();
 
-        bridge.thread.enable();
+        bridge.renderer.enable()
     }
 
-    carbonyl_bridge_resize(bridge);
+    carbonyl_renderer_resize(bridge);
 }
 
 #[no_mangle]
-pub extern "C" fn carbonyl_bridge_resize(bridge: BridgePointer) {
+pub extern "C" fn carbonyl_renderer_resize(bridge: RendererPtr) {
     let bridge = unsafe { bridge.as_ref() };
     let mut bridge = bridge.unwrap().lock().unwrap();
-    let window = bridge.window.update().unwrap();
+    let window = bridge.window.update();
     let cells = window.cells.clone();
 
     log::debug!("resizing renderer, terminal window: {:?}", window);
 
-    bridge.thread.run(move |renderer| renderer.set_size(cells));
+    bridge
+        .renderer
+        .render(move |renderer| renderer.set_size(cells));
 }
 
 #[no_mangle]
-pub extern "C" fn carbonyl_bridge_push_nav(
-    bridge: BridgePointer,
+pub extern "C" fn carbonyl_renderer_push_nav(
+    bridge: RendererPtr,
     url: *const c_char,
     can_go_back: bool,
     can_go_forward: bool,
@@ -192,24 +199,24 @@ pub extern "C" fn carbonyl_bridge_push_nav(
     let (bridge, url) = unsafe { (bridge.as_ref(), CStr::from_ptr(url)) };
     let (mut bridge, url) = (bridge.unwrap().lock().unwrap(), url.to_owned());
 
-    bridge
-        .thread
-        .run(move |renderer| renderer.push_nav(url.to_str().unwrap(), can_go_back, can_go_forward));
+    bridge.renderer.render(move |renderer| {
+        renderer.push_nav(url.to_str().unwrap(), can_go_back, can_go_forward)
+    });
 }
 
 #[no_mangle]
-pub extern "C" fn carbonyl_bridge_set_title(bridge: BridgePointer, title: *const c_char) {
+pub extern "C" fn carbonyl_renderer_set_title(bridge: RendererPtr, title: *const c_char) {
     let (bridge, title) = unsafe { (bridge.as_ref(), CStr::from_ptr(title)) };
     let (mut bridge, title) = (bridge.unwrap().lock().unwrap(), title.to_owned());
 
     bridge
-        .thread
-        .run(move |renderer| renderer.set_title(title.to_str().unwrap()).unwrap());
+        .renderer
+        .render(move |renderer| renderer.set_title(title.to_str().unwrap()).unwrap());
 }
 
 #[no_mangle]
-pub extern "C" fn carbonyl_bridge_draw_text(
-    bridge: BridgePointer,
+pub extern "C" fn carbonyl_renderer_draw_text(
+    bridge: RendererPtr,
     text: *const CText,
     text_size: size_t,
 ) {
@@ -229,7 +236,7 @@ pub extern "C" fn carbonyl_bridge_draw_text(
         })
         .collect::<Vec<(String, Point, Size, Color)>>();
 
-    bridge.thread.run(move |renderer| {
+    bridge.renderer.render(move |renderer| {
         renderer.clear_text();
 
         for (text, origin, size, color) in std::mem::take(&mut vec) {
@@ -251,8 +258,8 @@ unsafe impl Send for CallbackData {}
 unsafe impl Sync for CallbackData {}
 
 #[no_mangle]
-pub extern "C" fn carbonyl_bridge_draw_bitmap(
-    bridge: BridgePointer,
+pub extern "C" fn carbonyl_renderer_draw_bitmap(
+    bridge: RendererPtr,
     pixels: *const c_uchar,
     pixels_size: CSize,
     rect: CRect,
@@ -264,7 +271,7 @@ pub extern "C" fn carbonyl_bridge_draw_bitmap(
     let callback_data = CallbackData(callback_data);
     let mut bridge = bridge.unwrap().lock().unwrap();
 
-    bridge.thread.run(move |renderer| {
+    bridge.renderer.render(move |renderer| {
         renderer.draw_background(
             pixels,
             pixels_size.into(),
@@ -279,15 +286,7 @@ pub extern "C" fn carbonyl_bridge_draw_bitmap(
 }
 
 #[no_mangle]
-pub extern "C" fn carbonyl_bridge_get_dpi(bridge: BridgePointer) -> c_float {
-    let bridge = unsafe { bridge.as_ref() };
-    let bridge = bridge.unwrap().lock().unwrap();
-
-    bridge.window.dpi
-}
-
-#[no_mangle]
-pub extern "C" fn carbonyl_bridge_get_size(bridge: BridgePointer) -> CSize {
+pub extern "C" fn carbonyl_renderer_get_size(bridge: RendererPtr) -> CSize {
     let bridge = unsafe { bridge.as_ref() };
     let bridge = bridge.unwrap().lock().unwrap();
 
@@ -316,111 +315,113 @@ where
 /// This will block so the calling code should start and own a dedicated thread.
 /// It will panic if there is any error.
 #[no_mangle]
-pub extern "C" fn carbonyl_bridge_listen(bridge: BridgePointer, delegate: *mut BrowserDelegate) {
+pub extern "C" fn carbonyl_renderer_listen(bridge: RendererPtr, delegate: *mut BrowserDelegate) {
     let bridge = unsafe { &*bridge };
     let delegate = unsafe { *delegate };
 
     use input::*;
 
-    macro_rules! emit {
-        ($event:ident($($args:expr),*) => $closure:expr) => {{
-            let run = move || {
-                (delegate.$event)($($args),*);
+    thread::spawn(move || {
+        macro_rules! emit {
+            ($event:ident($($args:expr),*) => $closure:expr) => {{
+                let run = move || {
+                    (delegate.$event)($($args),*);
 
-                $closure
-            };
-
-            unsafe { post_task(delegate.post_task, run) }
-        }};
-        ($event:ident($($args:expr),*)) => {{
-            emit!($event($($args),*) => {})
-        }};
-    }
-
-    listen(|mut events| {
-        bridge.lock().unwrap().thread.run(move |renderer| {
-            let get_scale = || bridge.lock().unwrap().window.scale;
-            let scale = |col, row| {
-                let scale = get_scale();
-
-                scale
-                    .mul(((col as f32 + 0.5), (row as f32 - 0.5)))
-                    .floor()
-                    .cast()
-                    .into()
-            };
-            let dispatch = |action| {
-                match action {
-                    NavigationAction::Ignore => (),
-                    NavigationAction::Forward => return true,
-                    NavigationAction::GoBack() => emit!(go_back()),
-                    NavigationAction::GoForward() => emit!(go_forward()),
-                    NavigationAction::Refresh() => emit!(refresh()),
-                    NavigationAction::GoTo(url) => {
-                        let c_str = CString::new(url).unwrap();
-
-                        emit!(go_to(c_str.as_ptr()))
-                    }
+                    $closure
                 };
 
-                return false;
-            };
+                unsafe { post_task(delegate.post_task, run) }
+            }};
+            ($event:ident($($args:expr),*)) => {{
+                emit!($event($($args),*) => {})
+            }};
+        }
 
-            for event in std::mem::take(&mut events) {
-                use Event::*;
+        listen(|mut events| {
+            bridge.lock().unwrap().renderer.render(move |renderer| {
+                let get_scale = || bridge.lock().unwrap().window.scale;
+                let scale = |col, row| {
+                    let scale = get_scale();
 
-                match event {
-                    Exit => (),
-                    Scroll { delta } => {
-                        let scale = get_scale();
+                    scale
+                        .mul(((col as f32 + 0.5), (row as f32 - 0.5)))
+                        .floor()
+                        .cast()
+                        .into()
+                };
+                let dispatch = |action| {
+                    match action {
+                        NavigationAction::Ignore => (),
+                        NavigationAction::Forward => return true,
+                        NavigationAction::GoBack() => emit!(go_back()),
+                        NavigationAction::GoForward() => emit!(go_forward()),
+                        NavigationAction::Refresh() => emit!(refresh()),
+                        NavigationAction::GoTo(url) => {
+                            let c_str = CString::new(url).unwrap();
 
-                        emit!(scroll((delta as f32 * scale.height) as c_int))
-                    }
-                    KeyPress { key } => {
-                        if dispatch(renderer.keypress(&key).unwrap()) {
-                            emit!(key_press(key.char as c_char))
+                            emit!(go_to(c_str.as_ptr()))
                         }
-                    }
-                    MouseUp { col, row } => {
-                        if dispatch(renderer.mouse_up((col as _, row as _).into()).unwrap()) {
-                            let (width, height) = scale(col, row);
+                    };
 
-                            emit!(mouse_up(width, height))
-                        }
-                    }
-                    MouseDown { col, row } => {
-                        if dispatch(renderer.mouse_down((col as _, row as _).into()).unwrap()) {
-                            let (width, height) = scale(col, row);
+                    return false;
+                };
 
-                            emit!(mouse_down(width, height))
-                        }
-                    }
-                    MouseMove { col, row } => {
-                        if dispatch(renderer.mouse_move((col as _, row as _).into()).unwrap()) {
-                            let (width, height) = scale(col, row);
+                for event in std::mem::take(&mut events) {
+                    use Event::*;
 
-                            emit!(mouse_move(width, height))
+                    match event {
+                        Exit => (),
+                        Scroll { delta } => {
+                            let scale = get_scale();
+
+                            emit!(scroll((delta as f32 * scale.height) as c_int))
                         }
+                        KeyPress { key } => {
+                            if dispatch(renderer.keypress(&key).unwrap()) {
+                                emit!(key_press(key.char as c_char))
+                            }
+                        }
+                        MouseUp { col, row } => {
+                            if dispatch(renderer.mouse_up((col as _, row as _).into()).unwrap()) {
+                                let (width, height) = scale(col, row);
+
+                                emit!(mouse_up(width, height))
+                            }
+                        }
+                        MouseDown { col, row } => {
+                            if dispatch(renderer.mouse_down((col as _, row as _).into()).unwrap()) {
+                                let (width, height) = scale(col, row);
+
+                                emit!(mouse_down(width, height))
+                            }
+                        }
+                        MouseMove { col, row } => {
+                            if dispatch(renderer.mouse_move((col as _, row as _).into()).unwrap()) {
+                                let (width, height) = scale(col, row);
+
+                                emit!(mouse_move(width, height))
+                            }
+                        }
+                        Terminal(terminal) => match terminal {
+                            TerminalEvent::Name(name) => log::debug!("terminal name: {name}"),
+                            TerminalEvent::TrueColorSupported => renderer.enable_true_color(),
+                        },
                     }
-                    Terminal(terminal) => match terminal {
-                        TerminalEvent::Name(name) => log::debug!("terminal name: {name}"),
-                        TerminalEvent::TrueColorSupported => renderer.enable_true_color(),
-                    },
                 }
-            }
+            })
         })
-    })
-    .unwrap();
+        .unwrap();
 
-    // Setup single-use channel
-    let (tx, rx) = mpsc::channel();
+        // Setup single-use channel
+        let (tx, rx) = mpsc::channel();
 
-    // Signal the browser to shutdown and notify our thread
-    emit!(shutdown() => tx.send(()).unwrap());
-    rx.recv().unwrap();
+        // Signal the browser to shutdown and notify our thread
+        emit!(shutdown() => tx.send(()).unwrap());
+        rx.recv().unwrap();
 
-    // Shutdown rendering thread
-    if let Some(handle) = { bridge.lock().unwrap().thread.stop() } {
-        handle.join().unwrap()
-    }
+        // Shutdown rendering thread
+        // if let Some(handle) = { bridge.lock().unwrap().renderer().stop() } {
+        //     handle.join().unwrap()
+        // }
+    });
 }

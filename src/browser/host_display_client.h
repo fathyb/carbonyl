@@ -5,6 +5,7 @@
 
 #include "base/callback.h"
 #include "base/memory/shared_memory_mapping.h"
+#include "carbonyl/src/browser/export.h"
 #include "components/viz/host/host_display_client.h"
 #include "services/viz/privileged/mojom/compositing/layered_window_updater.mojom.h"
 #include "ui/gfx/native_widget_types.h"
@@ -14,7 +15,7 @@ namespace carbonyl {
 typedef base::RepeatingCallback<void(const gfx::Rect&, const SkBitmap&)>
     OnPaintCallback;
 
-class LayeredWindowUpdater : public viz::mojom::LayeredWindowUpdater {
+class CARBONYL_VIZ_EXPORT LayeredWindowUpdater : public viz::mojom::LayeredWindowUpdater {
  public:
   explicit LayeredWindowUpdater(
       mojo::PendingReceiver<viz::mojom::LayeredWindowUpdater> receiver);
@@ -38,7 +39,7 @@ class LayeredWindowUpdater : public viz::mojom::LayeredWindowUpdater {
   base::WeakPtrFactory<LayeredWindowUpdater> weak_ptr_factory_ { this };
 };
 
-class HostDisplayClient : public viz::HostDisplayClient {
+class CARBONYL_VIZ_EXPORT HostDisplayClient : public viz::HostDisplayClient {
  public:
   explicit HostDisplayClient();
   ~HostDisplayClient() override;

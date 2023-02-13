@@ -15,7 +15,7 @@
 #include "skia/ext/skia_utils_win.h"
 #endif
 
-#include "carbonyl/src/browser/bridge.h"
+#include "carbonyl/src/browser/renderer.h"
 
 namespace carbonyl {
 
@@ -40,7 +40,7 @@ void LayeredWindowUpdater::OnAllocatedSharedMemory(
 
 void LayeredWindowUpdater::Draw(const gfx::Rect& damage_rect,
                                 DrawCallback callback) {
-  Bridge::GetCurrent()->DrawBitmap(
+  Renderer::GetCurrent()->DrawBitmap(
     shm_mapping_.GetMemoryAs<uint8_t>(),
     pixel_size_,
     damage_rect,

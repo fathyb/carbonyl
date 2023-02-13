@@ -5,10 +5,41 @@ headless_use_embedded_resources = true
 ffmpeg_branding = "Chrome"
 proprietary_codecs = true
 
+# Disable unused dependencies
+ozone_platform = "headless"
+ozone_platform_x11 = false
+
+use_static_angle = true
+
+use_qt = false
+use_gio = false
+use_gtk = false
+use_cups = false
+use_dbus = false
+use_glib = false
+use_libpci = false
+use_kerberos = false
+use_vaapi_x11 = false
+use_xkbcommon = false
+
+angle_use_x11 = false
+angle_use_wayland = false
+
+rtc_use_x11 = false
+rtc_use_pipewire = false
+rtc_use_x11_extensions = false
+
+# Linux only
+# use_wayland_gbm = false
+# use_system_libdrm = false
+# use_system_minigbm = false
+
 # Disable unused features
 enable_pdf = false
 enable_nacl = false
 enable_ppapi = false
+enable_printing = false
+enable_print_content_analysis = false
 enable_plugins = false
 enable_rust_json = false
 enable_tagged_pdf = false

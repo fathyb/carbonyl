@@ -19,7 +19,7 @@ pub struct Renderer {
     nav: Navigation,
     cells: Vec<(Cell, Cell)>,
     painter: Painter,
-    dimensions: Size,
+    size: Size,
 }
 
 impl Renderer {
@@ -28,7 +28,7 @@ impl Renderer {
             nav: Navigation::new(),
             cells: Vec::with_capacity(0),
             painter: Painter::new(),
-            dimensions: Size::new(0, 0),
+            size: Size::new(0, 0),
         }
     }
 
@@ -62,21 +62,20 @@ impl Renderer {
     }
 
     pub fn get_size(&self) -> Size {
-        self.dimensions
+        self.size
     }
 
-    pub fn set_size(&mut self, terminal: Size) {
-        let size = (terminal.width + terminal.width * terminal.height) as usize;
-
-        self.nav.set_size(terminal);
-        self.dimensions = terminal;
+    pub fn set_size(&mut self, size: Size) {
+        self.nav.set_size(size);
+        self.size = size;
 
         let mut x = 0;
         let mut y = 0;
-        let bound = terminal.width - 1;
+        let bound = size.width - 1;
+        let cells = (size.width + size.width * size.height) as usize;
 
         self.cells.clear();
-        self.cells.resize_with(size, || {
+        self.cells.resize_with(cells, || {
             let cell = (Cell::new(x, y), Cell::new(x, y));
 
             if x < bound {
@@ -91,7 +90,7 @@ impl Renderer {
     }
 
     pub fn render(&mut self) -> io::Result<()> {
-        let size = self.dimensions;
+        let size = self.size;
 
         for (origin, element) in self.nav.render(size) {
             self.fill_rect(
@@ -126,7 +125,7 @@ impl Renderer {
 
     /// Draw the background from a pixel array encoded in RGBA8888
     pub fn draw_background(&mut self, pixels: &[u8], pixels_size: Size, rect: Rect) {
-        let viewport = self.dimensions.cast::<usize>();
+        let viewport = self.size.cast::<usize>();
 
         if pixels.len() < viewport.width * viewport.height * 8 * 4 {
             log::debug!(
@@ -139,10 +138,14 @@ impl Renderer {
 
         let origin = rect.origin.cast::<f32>().max(0.0) / (2.0, 4.0);
         let size = rect.size.cast::<f32>().max(0.0) / (2.0, 4.0);
-        let top = origin.y.floor() as usize;
-        let left = origin.x.floor() as usize;
-        let right = ((origin.x + size.width).ceil() as usize).min(viewport.width);
-        let bottom = ((origin.y + size.height).ceil() as usize).min(viewport.height);
+        let top = (origin.y.floor() as usize).min(viewport.height);
+        let left = (origin.x.floor() as usize).min(viewport.width);
+        let right = ((origin.x + size.width).ceil() as usize)
+            .min(viewport.width)
+            .max(left);
+        let bottom = ((origin.y + size.height).ceil() as usize)
+            .min(viewport.height)
+            .max(top);
         let row_length = pixels_size.width as usize;
         let pixel = |x, y| {
             Color::new(
@@ -157,8 +160,7 @@ impl Renderer {
             let index = (y + 1) * viewport.width;
             let start = index + left;
             let end = index + right;
-            let mut x = left * 2;
-            let y = y * 4;
+            let (mut x, y) = (left * 2, y * 4);
 
             for (_, cell) in &mut self.cells[start..end] {
                 cell.quadrant = (
@@ -202,7 +204,7 @@ impl Renderer {
     {
         let origin = bounds.origin.cast::<usize>();
         let size = bounds.size.cast::<usize>();
-        let viewport_width = self.dimensions.width as usize;
+        let viewport_width = self.size.width as usize;
         let top = origin.y;
         let bottom = top + size.height;
 
@@ -221,7 +223,7 @@ impl Renderer {
     pub fn draw_text(&mut self, string: &str, origin: Point, size: Size, color: Color) {
         // Get an iterator starting at the text origin
         let len = self.cells.len();
-        let viewport = &self.dimensions.cast::<usize>();
+        let viewport = &self.size.cast::<usize>();
 
         if size.width > 2 && size.height > 2 {
             let origin = (origin.cast::<f32>() / (2.0, 4.0) + (0.0, 1.0)).round();
