@@ -42,7 +42,7 @@ export const jobs = ["macos", "linux"].flatMap((platform) => {
                             touch skip-build-amd64
                         fi
 
-                        if [ ! -f skip-build-amd64 ] || [ ! -f skip-build-amd64 ]; then
+                        if [ ! -f skip-build-arm64 ] || [ ! -f skip-build-amd64 ]; then
                             cp chromium/.gclient "$CHROMIUM_ROOT"
 
                             scripts/gclient.sh sync
