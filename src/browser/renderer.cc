@@ -8,7 +8,6 @@
 #include "carbonyl/src/browser/bridge.h"
 #include "ui/gfx/geometry/rect_f.h"
 #include "third_party/skia/include/core/SkColor.h"
-#include "third_party/skia/src/core/SkBitmapDevice.h"
 
 extern "C" {
 
