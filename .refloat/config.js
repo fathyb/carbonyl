@@ -191,7 +191,7 @@ export const jobs = ["macos", "linux"].flatMap((platform) => {
     ];
 });
 
-jobs.push(, {
+jobs.push({
     name: 'Publish to Docker',
     steps: [
         {
