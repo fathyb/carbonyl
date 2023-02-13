@@ -1,4 +1,4 @@
-From a9920dae2424982008baa83017e4ec008c467102 Mon Sep 17 00:00:00 2001
+From 3b67b346ec26a47b50178124d715a8320f612d4d Mon Sep 17 00:00:00 2001
 From: Fathy Boundjadj <hey@fathy.fr>
 Date: Mon, 13 Feb 2023 16:28:50 +0100
 Subject: [PATCH 13/13] Refactor rendering bridge
@@ -1006,6 +1006,3 @@ index 1d71f3b4c9857..d670831de4ca4 100644
  
  // static
  gfx::ColorSpace Display::GetForcedRasterColorProfile() {
--- 
-2.38.1
-

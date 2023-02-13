@@ -46,6 +46,3 @@ index 48efaa7d57ca2..afc0236147519 100644
  
    // Whether or not BeginFrames will be issued over DevTools protocol
    // (experimental).
--- 
-2.38.1
-

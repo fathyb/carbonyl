@@ -66,6 +66,3 @@ index bfae1e3290de0..8018111ed9898 100644
  
    if (!headless_use_embedded_resources) {
      data = [
--- 
-2.38.1
-

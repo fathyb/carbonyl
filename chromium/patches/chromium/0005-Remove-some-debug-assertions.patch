@@ -124,6 +124,3 @@ index 2518b71275670..3a1b8e6646c43 100644
  }
  
  void GraphicsContext::CopyConfigFrom(GraphicsContext& other) {
--- 
-2.38.1
-

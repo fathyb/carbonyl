@@ -50,6 +50,3 @@ index 946aac57cb..2d35be2198 100644
      /**
       *  Construct a new device with the specified bitmap as its backend. It is
       *  valid for the bitmap to have no pixels associated with it. In that case,
--- 
-2.38.1
-

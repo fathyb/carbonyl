@@ -150,6 +150,3 @@ index 466ef1fd1fe6e..1d71f3b4c9857 100644
  }
  
  void Display::SetSize(const gfx::Size& size_in_pixel) {
--- 
-2.38.1
-

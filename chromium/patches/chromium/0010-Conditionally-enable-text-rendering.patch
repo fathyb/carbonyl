@@ -1,4 +1,4 @@
-From 987c9c05601339bfff2bab0ddcfc7a04208b6c93 Mon Sep 17 00:00:00 2001
+From bdc80f35a7113b7523c4d992edc9170db082deb0 Mon Sep 17 00:00:00 2001
 From: Fathy Boundjadj <hey@fathy.fr>
 Date: Sun, 12 Feb 2023 00:55:33 +0100
 Subject: [PATCH 10/13] Conditionally enable text rendering
@@ -135,6 +135,3 @@ index dfdc79eacce3b..4625300729523 100644
      auto string = StringView(
        text_info.text,
        text_info.from,
--- 
-2.38.1
-

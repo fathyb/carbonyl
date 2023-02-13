@@ -1,4 +1,4 @@
-From c1b3862eb002696394372a0b83c83649024843c5 Mon Sep 17 00:00:00 2001
+From 6862e372717eff278470453e800dc693f33b873c Mon Sep 17 00:00:00 2001
 From: Fathy Boundjadj <hey@fathy.fr>
 Date: Sun, 12 Feb 2023 02:20:32 +0100
 Subject: [PATCH 12/13] Create separate bridge for Blink
@@ -84,6 +84,3 @@ index 4625300729523..3d1b463e9651c 100644
      auto string = StringView(
        text_info.text,
        text_info.from,
--- 
-2.38.1
-

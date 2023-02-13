@@ -637,6 +637,3 @@ index 089a11b156ade..dfdc79eacce3b 100644
    ShapeResultBloberizer::FillGlyphsNG bloberizer(
        GetFontDescription(), device_scale_factor > 1.0f, text_info.text,
        text_info.from, text_info.to, text_info.shape_result,
--- 
-2.38.1
-

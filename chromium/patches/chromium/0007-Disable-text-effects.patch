@@ -1,4 +1,4 @@
-From 4f9316128dc474b9b52d3023e1181432231106ec Mon Sep 17 00:00:00 2001
+From 022ed4d808369659eab4e83cd677eb974215c58c Mon Sep 17 00:00:00 2001
 From: Fathy Boundjadj <hey@fathy.fr>
 Date: Thu, 9 Feb 2023 03:31:17 +0100
 Subject: [PATCH 07/13] Disable text effects
@@ -108,6 +108,3 @@ index 67fbf128ea158..a645ba61c8597 100644
  }
  
  StyleIterator::StyleIterator(const BreakList<SkColor>* colors,
--- 
-2.38.1
-
