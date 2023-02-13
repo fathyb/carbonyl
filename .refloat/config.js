@@ -1,4 +1,5 @@
 import { commit } from "refloat";
+import docker from 'github.com/refloat-plugins/docker'
 
 import pkg from "../package.json";
 
@@ -189,6 +190,33 @@ export const jobs = ["macos", "linux"].flatMap((platform) => {
         }),
     ];
 });
+
+jobs.push(, {
+    name: 'Publish to Docker',
+    steps: [
+        {
+            serial: ['arm64', 'amd64'].map(arch => ({
+                import: { workspace: `runtime-${triple('linux', arch)}` },
+            }))
+        },
+        {
+            parallel: ['arm64', 'amd64'].map(arch => ({
+                serial: [{
+                    name: `Build ${arch} image`,
+                    command: `scripts/docker-build.sh ${arch}`
+                }]
+            }))
+        },
+        {
+            name: 'Publish images to DockerHub',
+            command: 'scripts/docker-push.sh next',
+            using: docker.login({
+                username: { secret: 'DOCKER_PUBLISH_USERNAME' },
+                password: { secret: 'DOCKER_PUBLISH_TOKEN' },
+            })
+        }
+    ]
+})
 
 if (commit.defaultBranch) {
     jobs.push({

@@ -5,8 +5,7 @@ export CARBONYL_ROOT=$(cd $(dirname -- "$0") && dirname -- "$(pwd)")
 cd "$CARBONYL_ROOT"
 source "scripts/env.sh"
 
-target="$1"
-cpu="$2"
+cpu="$1"
 
 triple=$(scripts/platform-triple.sh "$cpu")
 build_dir="build/docker/$triple"
