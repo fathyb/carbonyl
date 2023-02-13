@@ -27,19 +27,22 @@ export const jobs = ["macos", "linux"].flatMap((platform) => {
                     import: { workspace: `core-${triple(platform, arch)}` },
                 })),
                 {
+                    parallel: ['arm64', 'amd64'].map(arch => ({
+                        name: `Fetch pre-built runtime for ${arch}`,
+                        command: `
+                            if scripts/runtime-pull.sh ${arch}; then
+                                touch skip-build-arm64
+                            fi
+                        `
+                    }))
+                },
+                {
                     name: "Fetch Chromium",
                     command: `
                         if [ -z "$CHROMIUM_ROOT" ]; then
                             echo "Chromium build environment not setup"
 
                             exit 2
-                        fi
-
-                        if scripts/runtime-pull.sh arm64; then
-                            touch skip-build-arm64
-                        fi
-                        if scripts/runtime-pull.sh amd64; then
-                            touch skip-build-amd64
                         fi
 
                         if [ ! -f skip-build-arm64 ] || [ ! -f skip-build-amd64 ]; then
