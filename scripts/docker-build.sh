@@ -7,7 +7,7 @@ source "scripts/env.sh"
 
 cpu="$1"
 
-triple=$(scripts/platform-triple.sh "$cpu")
+triple=$(scripts/platform-triple.sh "$cpu" linux)
 build_dir="build/docker/$triple"
 
 rm -rf "$build_dir"
