@@ -191,7 +191,7 @@ export const jobs = ["macos", "linux"].flatMap((platform) => {
   ];
 });
 
-if (!commit.defaultBranch) {
+if (commit.defaultBranch) {
   jobs.push(
     {
       name: "Publish to Docker",
@@ -247,7 +247,7 @@ if (!commit.defaultBranch) {
           parallel: ["amd64", "arm64"].flatMap((arch) =>
             ["linux", "macos"].map((platform) => ({
               name: `Publish ${platform}/${arch} package`,
-              command: `scripts/npm-publish.sh --tag next`,
+              command: "scripts/npm-publish.sh --tag next",
               env: {
                 CARBONYL_PUBLISH_ARCH: arch,
                 CARBONYL_PUBLISH_PLATFORM: platform,
@@ -257,7 +257,7 @@ if (!commit.defaultBranch) {
         },
         {
           name: "Publish main package",
-          command: `scripts/npm-publish.sh --tag next`,
+          command: "scripts/npm-publish.sh --tag next",
         },
       ],
     }
