@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
-export CARBONYL_ROOT=$(cd $(dirname -- "$0") && dirname -- $(pwd))
-export SKIP_DEPOT_TOOLS="true"
+export CARBONYL_ROOT=$(cd $(dirname -- "$0") && dirname -- $(pwd))carbonyl::Bridge::GetDPI()
 
 cd "$CARBONYL_ROOT"
 source "scripts/env.sh"
