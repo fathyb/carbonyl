@@ -64,26 +64,26 @@ async function buildMain() {
         fs.writeFile(
             path.join(root, 'index.js'),
             `
-                function tryModule(name) {
-                    try {
-                        return require(name)
-                    } catch {
-                        return null
-                    }
+                const archs = {
+                    x64: 'amd64',
+                    arm64: 'arm64',
                 }
-    
-                const path = (
-                    tryModule('@fathyb/carbonyl-linux-amd64') ||
-                    tryModule('@fathyb/carbonyl-linux-arm64') ||
-                    tryModule('@fathyb/carbonyl-macos-amd64') ||
-                    tryModule('@fathyb/carbonyl-macos-arm64')
-                )
-    
-                if (path) {
-                    module.exports = path
-                } else {
-                    throw new Error('Could not find a Carbonyl runtime installed')
+                const platforms = {
+                    linux: 'linux'.
+                    darwin: 'macos'.
                 }
+
+                const arch = archs[process.arch]
+                const platform = platforms[process.platform]
+
+                if (!arch) {
+                    throw new Error('Processor architecture not supported: ' + process.arch)
+                }
+                if (!platform) {
+                    throw new Error('Platform not supported: ' + process.platform)
+                }
+
+                module.exports = require('@fathyb/carbonyl-' + platform + '-' + arch)
             `
         ),
     ])

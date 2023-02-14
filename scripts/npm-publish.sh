@@ -6,22 +6,15 @@ export SKIP_DEPOT_TOOLS="true"
 cd "$CARBONYL_ROOT"
 source "scripts/env.sh"
 
-VERSION_ID="$(git rev-parse --short HEAD)" \
-    node "$CARBONYL_ROOT/scripts/npm-publish.mjs"
+platform="$1"; shift
+arch="$1"; shift
 
-cd "$CARBONYL_ROOT/build/packages"
+cd "build/packages"
 
-cd carbonyl-linux-amd64
-yarn publish --non-interactive --access public "$@"
+if [ -z "$CARBONYL_PUBLISH_PLATFORM" ] && [ -z "$CARBONYL_PUBLISH_ARCH" ]; then
+    cd "carbonyl"
+else
+    cd "carbonyl-$CARBONYL_PUBLISH_PLATFORM-$CARBONYL_PUBLISH_ARCH"
+fi
 
-cd ../carbonyl-linux-arm64
-yarn publish --non-interactive --access public "$@"
-
-cd ../carbonyl-macos-amd64
-yarn publish --non-interactive --access public "$@"
-
-cd ../carbonyl-macos-arm64
-yarn publish --non-interactive --access public "$@"
-
-cd ../carbonyl
 yarn publish --non-interactive --access public "$@"
