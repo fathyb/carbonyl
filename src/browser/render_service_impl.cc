@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-#include "carbonyl/src/browser/bridge.h"
+#include "carbonyl/src/browser/renderer.h"
 
 namespace carbonyl {
 
@@ -14,13 +14,13 @@ CarbonylRenderServiceImpl::CarbonylRenderServiceImpl(
 CarbonylRenderServiceImpl::~CarbonylRenderServiceImpl() = default;
 
 void CarbonylRenderServiceImpl::DrawText(std::vector<mojom::TextDataPtr> data) {
-    auto* renderer = Renderer::Main();
-
-    renderer->ClearText();
+    std::vector<Text> mapped;
 
     for (auto& text: data) {
-        renderer->DrawText(text->contents, text->bounds, text->color);
+        mapped.emplace_back(text->contents, text->bounds, text->color);
     }
+
+    Renderer::GetCurrent()->DrawText(mapped);
 }
 
 }

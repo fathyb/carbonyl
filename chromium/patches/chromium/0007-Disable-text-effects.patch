@@ -1,7 +1,7 @@
-From 5557ea65c9769fd0f99bd1f8eb58b05634f9faa2 Mon Sep 17 00:00:00 2001
+From 022ed4d808369659eab4e83cd677eb974215c58c Mon Sep 17 00:00:00 2001
 From: Fathy Boundjadj <hey@fathy.fr>
 Date: Thu, 9 Feb 2023 03:31:17 +0100
-Subject: [PATCH 7/9] Disable text effects
+Subject: [PATCH 07/14] Disable text effects
 
 ---
  .../core/paint/ng/ng_text_painter_base.cc     | 30 ++++++++--------
@@ -108,6 +108,3 @@ index 67fbf128ea158..a645ba61c8597 100644
  }
  
  StyleIterator::StyleIterator(const BreakList<SkColor>* colors,
--- 
-2.38.1
-

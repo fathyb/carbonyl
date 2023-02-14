@@ -6,7 +6,7 @@ use crate::input::*;
 /// This will block, so it should run from a dedicated thread.
 pub fn listen<F>(mut callback: F) -> io::Result<()>
 where
-    F: FnMut(Event),
+    F: FnMut(Vec<Event>),
 {
     let mut buf = [0u8; 1024];
     let mut stdin = io::stdin();
@@ -15,20 +15,22 @@ where
     loop {
         // Wait for some input
         let size = stdin.read(&mut buf)?;
+        let read = parser.parse(&buf[0..size]);
         let mut scroll = 0;
+        let mut events = Vec::with_capacity(read.len());
 
-        // Parse the input for xterm commands
-        for event in parser.parse(&buf[0..size]) {
-            // Allow the callback to return early (ie. handle ctrl+c)
+        for event in read {
             match event {
                 Event::Exit => return Ok(()),
                 Event::Scroll { delta } => scroll += delta,
-                event => callback(event),
+                event => events.push(event),
             }
         }
 
         if scroll != 0 {
-            callback(Event::Scroll { delta: scroll })
+            events.push(Event::Scroll { delta: scroll })
         }
+
+        callback(events)
     }
 }

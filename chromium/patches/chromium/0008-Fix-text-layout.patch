@@ -1,7 +1,7 @@
-From 1820cd34967c756d2459f4a2894492662edbf58b Mon Sep 17 00:00:00 2001
+From 7b1f72900f704ffecc48c66da7ccd6de205b88f7 Mon Sep 17 00:00:00 2001
 From: Fathy Boundjadj <hey@fathy.fr>
 Date: Thu, 9 Feb 2023 03:32:14 +0100
-Subject: [PATCH 8/9] Fix text layout
+Subject: [PATCH 08/14] Fix text layout
 
 ---
  .../core/css/resolver/style_resolver.cc         | 17 ++++++++++++++++-
@@ -42,6 +42,3 @@ index 6207b72d17cb9..79cb8c85b697f 100644
    state.LoadPendingResources();
  
    // Now return the style.
--- 
-2.38.1
-

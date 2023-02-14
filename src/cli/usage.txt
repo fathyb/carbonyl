@@ -7,6 +7,9 @@ O —— Cr —— O   In addition to the following options,
 Usage: carbonyl [options] [url]
 
 Options:
-    -h, --help                 display this help message
+    -f, --fps=<fps>            set the maximum number of frames per second (default: 60)
+    -z, --zoom=<zoom>          set the zoom level in percent (default: 100)
+    -b, --bitmap               render text as bitmaps
     -d, --debug                enable debug logs
+    -h, --help                 display this help message
     -v, --version              output the version number

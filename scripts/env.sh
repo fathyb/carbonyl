@@ -20,7 +20,7 @@ fi
 
 export PATH="$PATH:$DEPOT_TOOLS_ROOT"
 
-if [ ! -f "$DEPOT_TOOLS_ROOT/README.md" ] && [ -z "$SKIP_DEPOT_TOOLS" ]; then
+if [ "$INSTALL_DEPOT_TOOLS" = "true" ] && [ ! -f "$DEPOT_TOOLS_ROOT/README.md" ]; then
     echo "depot_tools not found, fetching submodule.."
 
     git -C "$CARBONYL_ROOT" submodule update --init --recursive

@@ -189,8 +189,9 @@ impl Navigation {
     }
 
     pub fn render(&self, size: Size) -> Vec<(Point, NavigationElement)> {
-        let space = if size.width >= 13 {
-            size.width as usize - 13
+        let ui_elements = 13;
+        let space = if size.width >= ui_elements {
+            (size.width - ui_elements) as usize
         } else {
             0
         };

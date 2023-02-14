@@ -1,7 +1,7 @@
-From 0697c3ab8f52592b0a0d4241e2938b8e622a01f6 Mon Sep 17 00:00:00 2001
+From 792e123bb57b1b379b0367b2568302e2cb0dc3c9 Mon Sep 17 00:00:00 2001
 From: Fathy Boundjadj <hey@fathy.fr>
 Date: Thu, 9 Feb 2023 03:32:30 +0100
-Subject: [PATCH 9/9] Bridge browser into Carbonyl library
+Subject: [PATCH 09/14] Bridge browser into Carbonyl library
 
 ---
  headless/app/headless_shell.cc                |  33 +-
@@ -645,6 +645,3 @@ index b80147fd06be8..09773596aa5ce 100644
  
    content::WebContents* web_contents() const;
    bool OpenURL(const GURL& url);
--- 
-2.38.1
-

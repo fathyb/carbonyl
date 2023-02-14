@@ -1,4 +1,4 @@
-From a2a7ed0af31ef13bd8e30be86bcc58fa2c34b41c Mon Sep 17 00:00:00 2001
+From a271b203a2b60f0cd450bda0fa2cc14885f1d9a8 Mon Sep 17 00:00:00 2001
 From: Fathy Boundjadj <hey@fathy.fr>
 Date: Thu, 9 Feb 2023 03:38:05 +0100
 Subject: [PATCH 2/2] Export some private APIs
@@ -77,6 +77,3 @@ index 95ca905bf1..a31aba8e2b 100644
  public:
      /*  This is the size we use when we ask for a glyph's path. We then
       *  post-transform it as we draw to match the request.
--- 
-2.38.1
-

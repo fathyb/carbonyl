@@ -2,15 +2,16 @@
 
 export CARBONYL_ROOT=$(cd $(dirname -- "$0") && dirname -- "$(pwd)")
 
-source "$CARBONYL_ROOT/scripts/env.sh"
+cd "$CARBONYL_ROOT"
+source "scripts/env.sh"
 
-target="$1"
-cpu="$2"
+cpu="$1"
 
-build_dir="$CARBONYL_ROOT/build/browser/$cpu"
-triple=$(scripts/platform-triple.sh "$cpu")
+triple=$(scripts/platform-triple.sh "$cpu" linux)
+build_dir="build/docker/$triple"
 
 rm -rf "$build_dir"
+mkdir -p "build/docker"
 cp -r "$CARBONYL_ROOT/build/pre-built/$triple" "$build_dir"
 cp "$CARBONYL_ROOT/Dockerfile" "$build_dir"
 

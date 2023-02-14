@@ -1,5 +1,5 @@
-mod main;
-mod parser;
+mod cli;
+mod program;
 
-pub use main::*;
-pub use parser::*;
+pub use cli::*;
+pub use program::*;

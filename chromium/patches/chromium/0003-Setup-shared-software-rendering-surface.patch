@@ -1,7 +1,7 @@
 From eea9662f4ba08a655057143d320e4e692fd92469 Mon Sep 17 00:00:00 2001
 From: Fathy Boundjadj <hey@fathy.fr>
 Date: Thu, 9 Feb 2023 03:24:29 +0100
-Subject: [PATCH 3/9] Setup shared software rendering surface
+Subject: [PATCH 03/14] Setup shared software rendering surface
 
 ---
  components/viz/host/host_display_client.cc       |  4 +++-
@@ -224,6 +224,3 @@ index 50cea82c6b477..f024e6013bfb9 100644
    // The root of the Layer tree drawn by this compositor.
    raw_ptr<Layer> root_layer_ = nullptr;
  
--- 
-2.38.1
-

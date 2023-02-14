@@ -1,7 +1,7 @@
 From 795b29828fd7ac95548c4dcab483cbc3b6c1d361 Mon Sep 17 00:00:00 2001
 From: Fathy Boundjadj <hey@fathy.fr>
 Date: Thu, 9 Feb 2023 03:21:59 +0100
-Subject: [PATCH 2/9] Add Carbonyl service
+Subject: [PATCH 02/14] Add Carbonyl service
 
 ---
  cc/trees/layer_tree_host.cc                   |  21 ++
@@ -637,6 +637,3 @@ index 089a11b156ade..dfdc79eacce3b 100644
    ShapeResultBloberizer::FillGlyphsNG bloberizer(
        GetFontDescription(), device_scale_factor > 1.0f, text_info.text,
        text_info.from, text_info.to, text_info.shape_result,
--- 
-2.38.1
-
