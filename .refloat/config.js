@@ -191,74 +191,75 @@ export const jobs = ["macos", "linux"].flatMap((platform) => {
   ];
 });
 
-jobs.push({
-  name: "Publish to Docker",
-  agent: { tags: ["carbonyl-publish"] },
-  docker: "fathyb/rust-cross",
-  steps: [
+if (commit.defaultBranch) {
+  jobs.push(
     {
-      serial: ["arm64", "amd64"].map((arch) => ({
-        import: { workspace: `runtime-${triple("linux", arch)}` },
-      })),
+      name: "Publish to Docker",
+      agent: { tags: ["carbonyl-publish"] },
+      docker: "fathyb/rust-cross",
+      steps: [
+        {
+          serial: ["arm64", "amd64"].map((arch) => ({
+            import: { workspace: `runtime-${triple("linux", arch)}` },
+          })),
+        },
+        {
+          parallel: ["arm64", "amd64"].map((arch) => ({
+            serial: [
+              {
+                name: `Build ${arch} image`,
+                command: `scripts/docker-build.sh ${arch}`,
+              },
+            ],
+          })),
+        },
+        {
+          name: "Publish images to DockerHub",
+          command: "scripts/docker-push.sh next",
+          using: docker.login({
+            username: { secret: "DOCKER_PUBLISH_USERNAME" },
+            password: { secret: "DOCKER_PUBLISH_TOKEN" },
+          }),
+        },
+      ],
     },
     {
-      parallel: ["arm64", "amd64"].map((arch) => ({
-        serial: [
-          {
-            name: `Build ${arch} image`,
-            command: `scripts/docker-build.sh ${arch}`,
-          },
-        ],
-      })),
-    },
-    {
-      name: "Publish images to DockerHub",
-      command: "scripts/docker-push.sh next",
-      using: docker.login({
-        username: { secret: "DOCKER_PUBLISH_USERNAME" },
-        password: { secret: "DOCKER_PUBLISH_TOKEN" },
-      }),
-    },
-  ],
-});
-
-if (!commit.defaultBranch) {
-  jobs.push({
-    name: "Publish to npm",
-    agent: { tags: ["carbonyl-publish"] },
-    docker: "node:18",
-    steps: [
-      ...["macos", "linux"].flatMap((platform) =>
-        ["arm64", "amd64"].map((arch) => ({
-          import: { workspace: `runtime-${triple(platform, arch)}` },
-        }))
-      ),
-      {
-        name: "Package",
-        command: "scripts/npm-package.sh",
-      },
-      {
-        name: "Write npm token",
-        env: { CARBONYL_NPM_PUBLISH_TOKEN: { secret: true } },
-        command:
-          'echo "//registry.npmjs.org/:_authToken=${CARBONYL_NPM_PUBLISH_TOKEN}" > ~/.npmrc',
-      },
-      {
-        parallel: ["amd64", "arm64"].flatMap((arch) =>
-          ["linux", "macos"].map((platform) => ({
-            name: `Publish ${platform}/${arch} package`,
-            command: `scripts/npm-publish.sh --tag next`,
-            env: {
-              CARBONYL_PUBLISH_ARCH: arch,
-              CARBONYL_PUBLISH_PLATFORM: platform,
-            },
+      name: "Publish to npm",
+      agent: { tags: ["carbonyl-publish"] },
+      docker: "node:18",
+      steps: [
+        ...["macos", "linux"].flatMap((platform) =>
+          ["arm64", "amd64"].map((arch) => ({
+            import: { workspace: `runtime-${triple(platform, arch)}` },
           }))
         ),
-      },
-      {
-        name: "Publish main package",
-        command: `scripts/npm-publish.sh --tag next`,
-      },
-    ],
-  });
+        {
+          name: "Package",
+          command: "scripts/npm-package.sh",
+        },
+        {
+          name: "Write npm token",
+          env: { CARBONYL_NPM_PUBLISH_TOKEN: { secret: true } },
+          command:
+            'echo "//registry.npmjs.org/:_authToken=${CARBONYL_NPM_PUBLISH_TOKEN}" > ~/.npmrc',
+        },
+        {
+          parallel: ["amd64", "arm64"].flatMap((arch) =>
+            ["linux", "macos"].map((platform) => ({
+              name: `Publish ${platform}/${arch} package`,
+              command: `scripts/npm-publish.sh --tag next`,
+              env: {
+                CARBONYL_PUBLISH_ARCH: arch,
+                CARBONYL_PUBLISH_PLATFORM: platform,
+              },
+            }))
+          ),
+        },
+        {
+          name: "Publish main package",
+          command: `scripts/npm-publish.sh --tag next`,
+        },
+      ],
+    }
+  );
 }
