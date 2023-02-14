@@ -191,7 +191,7 @@ export const jobs = ["macos", "linux"].flatMap((platform) => {
   ];
 });
 
-if (commit.defaultBranch) {
+if (!commit.defaultBranch) {
   jobs.push(
     {
       name: "Publish to Docker",
