@@ -194,6 +194,7 @@ export const jobs = ["macos", "linux"].flatMap((platform) => {
 jobs.push({
   name: "Publish to Docker",
   agent: { tags: ["carbonyl-publish"] },
+  docker: "fathyb/rust-cross",
   steps: [
     {
       serial: ["arm64", "amd64"].map((arch) => ({
@@ -234,28 +235,28 @@ if (!commit.defaultBranch) {
       ),
       {
         name: "Package",
-        command: `
-          echo "//registry.npmjs.org/:_authToken=\${CARBONYL_NPM_PUBLISH_TOKEN}" > ~/.npmrc
-
-          scripts/npm-package.sh
-        `,
+        command: "scripts/npm-package.sh",
+      },
+      {
+        name: "Write npm token",
+        env: { CARBONYL_NPM_PUBLISH_TOKEN: { secret: true } },
+        command:
+          'echo "//registry.npmjs.org/:_authToken=${CARBONYL_NPM_PUBLISH_TOKEN}" > ~/.npmrc',
       },
       {
         parallel: ["amd64", "arm64"].flatMap((arch) =>
           ["linux", "macos"].map((platform) => ({
-            name: `Publish for ${platform}/${arch}`,
+            name: `Publish ${platform}/${arch} package`,
+            command: `scripts/npm-publish.sh --tag next`,
             env: {
               CARBONYL_PUBLISH_ARCH: arch,
               CARBONYL_PUBLISH_PLATFORM: platform,
-              CARBONYL_NPM_PUBLISH_TOKEN: { secret: true },
             },
-            command: `scripts/npm-publish.sh --tag next`,
           }))
         ),
       },
       {
         name: "Publish main package",
-        env: { CARBONYL_NPM_PUBLISH_TOKEN: { secret: true } },
         command: `scripts/npm-publish.sh --tag next`,
       },
     ],
