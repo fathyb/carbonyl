@@ -114,10 +114,16 @@ fn main() -> io::Result<Option<i32>> {
     }
 
     let mut terminal = input::Terminal::setup();
-    let output = Command::new(env::current_exe()?)
+    let mut command = Command::new(env::current_exe()?);
+
+    if !cmd.bitmap {
+        command
+            .arg("--disable-threaded-scrolling")
+            .arg("--disable-threaded-animation");
+    }
+
+    let output = command
         .args(cmd.args)
-        .arg("--disable-threaded-scrolling")
-        .arg("--disable-threaded-animation")
         .env(EnvVar::ShellMode, "1")
         .stdin(Stdio::inherit())
         .stdout(Stdio::inherit())
