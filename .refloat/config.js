@@ -5,6 +5,8 @@ import pkg from "../package.json";
 
 const { version } = JSON.parse(pkg);
 const triple = (platform, arch) => `${archs[arch]}-${platforms[platform]}`;
+const lib = (platform, arch) =>
+  `build/${triple(platform, arch)}/release/libcarbonyl.${sharedLib[platform]}`;
 const sharedLib = {
   macos: "dylib",
   linux: "so",
@@ -33,6 +35,9 @@ export const jobs = ["macos", "linux"].flatMap((platform) => {
             command: `
               if scripts/runtime-pull.sh ${arch}; then
                   touch skip-build-${arch}
+                  cp \\
+                    ${lib(platform, arch)} \\
+                    build/pre-built/${triple(platform, arch)}
               fi
             `,
           })),
