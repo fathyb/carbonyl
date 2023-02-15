@@ -80,7 +80,6 @@ impl RenderThread {
                     rx.recv_timeout(deadline - Instant::now()).ok()
                 };
 
-                // Wait for some events before the deadline
                 match message {
                     // Timeout and no message, render if needed
                     None => break,
