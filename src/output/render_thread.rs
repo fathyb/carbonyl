@@ -69,19 +69,14 @@ impl RenderThread {
             let mut wait = true;
 
             loop {
-                let message = match wait {
-                    // First iteration
-                    true => {
-                        wait = false;
+                let message = if wait {
+                    // Wait until we receive a message
+                    wait = false;
 
-                        // Wait until we receive a message
-                        rx.recv().ok()
-                    }
-                    // Subsequent iterations
-                    false => {
-                        // Wait until it's time for the next frame or we receive a message
-                        rx.recv_timeout(deadline - Instant::now()).ok()
-                    }
+                    rx.recv().ok()
+                } else {
+                    // Wait until it's time for the next frame or we receive a message
+                    rx.recv_timeout(deadline - Instant::now()).ok()
                 };
 
                 // Wait for some events before the deadline
