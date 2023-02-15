@@ -65,17 +65,18 @@ impl RenderThread {
         loop {
             // Get a deadline for the next frame
             let deadline = sync.deadline();
-            // Get the deadline for the next frame
             let mut wait = true;
 
             loop {
                 let message = if wait {
-                    // Wait until we receive a message
+                    // On the first iteration of this loop, we want to block indefinitely
+                    // until we get a message, after which we schedule a render.
                     wait = false;
 
                     rx.recv().ok()
                 } else {
-                    // Wait until it's time for the next frame or we receive a message
+                    // On subsequence iterations, we want to process a maximum number of events
+                    // until the deadline for the next frame.
                     rx.recv_timeout(deadline - Instant::now()).ok()
                 };
 
