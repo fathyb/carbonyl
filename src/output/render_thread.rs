@@ -69,14 +69,14 @@ impl RenderThread {
 
             loop {
                 let message = if wait {
-                    // On the first iteration of this loop, we want to block indefinitely
+                    // On the first iteration, we want to block indefinitely
                     // until we get a message, after which we schedule a render.
                     wait = false;
 
                     rx.recv().ok()
                 } else {
-                    // On subsequence iterations, we want to process a maximum number of events
-                    // until the deadline for the next frame.
+                    // On subsequence iterations, we want to process a maximum
+                    // number of events until the deadline for the next frame.
                     rx.recv_timeout(deadline - Instant::now()).ok()
                 };
 
