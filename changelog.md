@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.0.3] - 2023-02-18
+
+### 🚀 Features
+
+- Add `--help` and `--version` ([#105](https://github.com/fathyb/carbonyl/issues/105))
+- Add logo and description to `--help` ([#106](https://github.com/fathyb/carbonyl/issues/106))
+- Use Cmd instead of Alt for navigation shortcuts ([#109](https://github.com/fathyb/carbonyl/issues/109))
+- Enable h.264 support ([#103](https://github.com/fathyb/carbonyl/issues/103))
+- Introduce quadrant rendering ([#120](https://github.com/fathyb/carbonyl/issues/120))
+
+### 🐛 Bug Fixes
+
+- Fix arguments parsing ([#108](https://github.com/fathyb/carbonyl/issues/108))
+- Fix missing module error on npm package ([#113](https://github.com/fathyb/carbonyl/issues/113))
+- Enable threaded compositing with bitmap mode
+- Fix idling CPU usage ([#126](https://github.com/fathyb/carbonyl/issues/126))
+- Package proper library in binaries ([#127](https://github.com/fathyb/carbonyl/issues/127))
+
+### 📖 Documentation
+
+- Update download links
+- Fix commit_preprocessors url ([#102](https://github.com/fathyb/carbonyl/issues/102))
+- Add `--rm` to Docker example ([#101](https://github.com/fathyb/carbonyl/issues/101))
+
 ## [0.0.2] - 2023-02-09
 
 ### 🚀 Features
