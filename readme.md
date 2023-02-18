@@ -42,10 +42,10 @@ $ carbonyl https://github.com
 
 ### Binaries
 
-- [macOS amd64](https://github.com/fathyb/carbonyl/releases/download/v0.0.2/carbonyl.macos-amd64.zip)
-- [macOS arm64](https://github.com/fathyb/carbonyl/releases/download/v0.0.2/carbonyl.macos-arm64.zip)
-- [Linux amd64](https://github.com/fathyb/carbonyl/releases/download/v0.0.2/carbonyl.linux-amd64.zip)
-- [Linux arm64](https://github.com/fathyb/carbonyl/releases/download/v0.0.2/carbonyl.linux-arm64.zip)
+- [macOS amd64](https://github.com/fathyb/carbonyl/releases/download/v0.0.3/carbonyl.macos-amd64.zip)
+- [macOS arm64](https://github.com/fathyb/carbonyl/releases/download/v0.0.3/carbonyl.macos-arm64.zip)
+- [Linux amd64](https://github.com/fathyb/carbonyl/releases/download/v0.0.3/carbonyl.linux-amd64.zip)
+- [Linux arm64](https://github.com/fathyb/carbonyl/releases/download/v0.0.3/carbonyl.linux-arm64.zip)
 
 ## Demo
 
