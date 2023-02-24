@@ -23,7 +23,7 @@ if [ -z "$CARBONYL_SKIP_CARGO_BUILD" ]; then
         export MACOSX_DEPLOYMENT_TARGET=10.13
     fi
 
-    cargo rustc --target "$triple" --release -- -C link-args='--sysroot ./chromium/src/build/linux/debian_bullseye_amd64-sysroot'
+    cargo build --target "$triple" --release
 fi
 
 if [ -f "build/$triple/release/libcarbonyl.dylib" ]; then
