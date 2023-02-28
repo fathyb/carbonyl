@@ -15,7 +15,7 @@ O —— Cr —— O
   </tbody>
 </table>
 
-Carbonyl is a Chromium based browser built to run in a terminal. [Read the blog post](https://fathy.fr/carbonyl).
+Carbonyl is a Chromium based browser built to run in a terminal.  [Read the blog post](https://fathy.fr/carbonyl).
 
 It supports pretty much all Web APIs including WebGL, WebGPU, audio and video playback, animations, etc..
 
