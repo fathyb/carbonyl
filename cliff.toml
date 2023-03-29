@@ -1,0 +1,44 @@
+[changelog]
+header = """
+# Changelog\n
+All notable changes to this project will be documented in this file.\n
+"""
+body = """
+{% if version %}\
+    ## [{{ version | trim_start_matches(pat="v") }}] - {{ timestamp | date(format="%Y-%m-%d") }}
+{% else %}\
+    ## [unreleased]
+{% endif %}\
+{% for group, commits in commits | group_by(attribute="group") %}
+    ### {{ group | striptags | trim | upper_first }}
+    {% for commit in commits %}
+        - {% if commit.breaking %}[**breaking**] {% endif %}{{ commit.message | upper_first }}\
+            {%- if commit.links %} ({% for link in commit.links %}[{{link.text}}]({{link.href}}){% endfor -%}){% endif %}\
+    {% endfor %}
+{% endfor %}\n
+"""
+trim = true
+footer = ""
+
+[git]
+conventional_commits = true
+filter_unconventional = true
+split_commits = false
+commit_preprocessors = [
+    { pattern = "#([0-9]+)", replace = "[#${1}](https://github.com/fathyb/carbonyl/issues/${1})" }
+]
+commit_parsers = [
+    { message = "^feat", group = "<!-- 0 -->🚀 Features" },
+    { message = "^fix", group = "<!-- 1 -->🐛 Bug Fixes" },
+    { message = "^doc", group = "<!-- 2 -->📖 Documentation" },
+    { message = "^perf", group = "<!-- 3 -->⚡ Performance"},
+    { message = "^chore", skip = true },
+    { body = ".*security", group = "<!-- 8 -->🔐 Security"},
+]
+protect_breaking_commits = false
+filter_commits = false
+tag_pattern = "v[0-9]*"
+skip_tags = ""
+ignore_tags = ""
+topo_order = true
+sort_commits = "oldest"

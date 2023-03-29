@@ -1,0 +1,68 @@
+From 0ed9a390f25d73492ce1170ce229b95772fd458d Mon Sep 17 00:00:00 2001
+From: Fathy Boundjadj <hey@fathy.fr>
+Date: Thu, 9 Feb 2023 03:20:50 +0100
+Subject: [PATCH 01/14] Add Carbonyl library
+
+---
+ carbonyl/build    |  1 +
+ carbonyl/src      |  1 +
+ headless/BUILD.gn | 15 ++++++++++++++-
+ 3 files changed, 16 insertions(+), 1 deletion(-)
+ create mode 120000 carbonyl/build
+ create mode 120000 carbonyl/src
+
+diff --git a/carbonyl/build b/carbonyl/build
+new file mode 120000
+index 0000000000000..44735d5866459
+--- /dev/null
++++ b/carbonyl/build
+@@ -0,0 +1 @@
++../../../build
+\ No newline at end of file
+diff --git a/carbonyl/src b/carbonyl/src
+new file mode 120000
+index 0000000000000..dabb0e15a991e
+--- /dev/null
++++ b/carbonyl/src
+@@ -0,0 +1 @@
++../../../src
+\ No newline at end of file
+diff --git a/headless/BUILD.gn b/headless/BUILD.gn
+index bfae1e3290de0..8018111ed9898 100644
+--- a/headless/BUILD.gn
++++ b/headless/BUILD.gn
+@@ -453,6 +453,7 @@ component("headless_non_renderer") {
+     "//build:branding_buildflags",
+     "//build:branding_buildflags",
+     "//build:chromeos_buildflags",
++    "//carbonyl/src/browser:carbonyl",
+     "//components/cookie_config",
+     "//components/crash/core/common:common",
+     "//components/embedder_support",
+@@ -993,13 +994,25 @@ static_library("headless_shell_lib") {
+ }
+ 
+ executable("headless_shell") {
++  if (is_mac && !use_lld) {
++    ldflags = [ "-Wl,-no_compact_unwind" ]
++  } else if (is_linux) {
++    ldflags = [
++      "-Wl,-rpath=\$ORIGIN/.",
++      "-Wl,-rpath-link=.",
++    ]
++  }
++
+   configs -= [ "//build/config/compiler:thinlto_optimize_default" ]
+   configs += [ "//build/config/compiler:thinlto_optimize_max" ]
+ 
+   sources = [ "app/headless_shell_main.cc" ]
+   defines = []
+ 
+-  deps = [ ":headless_shell_lib" ]
++  deps = [
++    ":headless_shell_lib",
++    "//carbonyl/src/browser:carbonyl",
++  ]
+ 
+   if (!headless_use_embedded_resources) {
+     data = [

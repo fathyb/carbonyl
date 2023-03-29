@@ -1,0 +1,35 @@
+From 218fbf4bba772c465712c4ea442adb57968e9c22 Mon Sep 17 00:00:00 2001
+From: Fathy Boundjadj <hey@fathy.fr>
+Date: Mon, 13 Feb 2023 17:18:18 +0100
+Subject: [PATCH 1/2] Disable text rendering
+
+---
+ src/core/SkBitmapDevice.cpp | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/src/core/SkBitmapDevice.cpp b/src/core/SkBitmapDevice.cpp
+index b497d690f7..9631f47967 100644
+--- a/src/core/SkBitmapDevice.cpp
++++ b/src/core/SkBitmapDevice.cpp
+@@ -28,6 +28,8 @@
+ #include "src/image/SkImage_Base.h"
+ #include "src/text/GlyphRun.h"
+ 
++#include "carbonyl/src/browser/bridge.h"
++
+ struct Bounder {
+     SkRect  fBounds;
+     bool    fHasBounds;
+@@ -522,8 +524,10 @@ void SkBitmapDevice::onDrawGlyphRunList(SkCanvas* canvas,
+                                         const sktext::GlyphRunList& glyphRunList,
+                                         const SkPaint& initialPaint,
+                                         const SkPaint& drawingPaint) {
+-    SkASSERT(!glyphRunList.hasRSXForm());
+-    LOOP_TILER( drawGlyphRunList(canvas, &fGlyphPainter, glyphRunList, drawingPaint), nullptr )
++    if (carbonyl::Bridge::BitmapMode()) {
++        SkASSERT(!glyphRunList.hasRSXForm());
++        LOOP_TILER( drawGlyphRunList(canvas, &fGlyphPainter, glyphRunList, drawingPaint), nullptr )
++    }
+ }
+ 
+ void SkBitmapDevice::drawVertices(const SkVertices* vertices,

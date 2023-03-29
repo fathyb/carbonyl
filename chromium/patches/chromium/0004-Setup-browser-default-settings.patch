@@ -1,0 +1,48 @@
+From c960c9b1f7ef3f16b27e4eaa4896e3563c88ea91 Mon Sep 17 00:00:00 2001
+From: Fathy Boundjadj <hey@fathy.fr>
+Date: Thu, 9 Feb 2023 03:27:27 +0100
+Subject: [PATCH 04/14] Setup browser default settings
+
+---
+ headless/public/headless_browser.cc | 4 ++--
+ headless/public/headless_browser.h  | 4 ++--
+ 2 files changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/headless/public/headless_browser.cc b/headless/public/headless_browser.cc
+index b6c70ecb0fc23..c836a082d2e68 100644
+--- a/headless/public/headless_browser.cc
++++ b/headless/public/headless_browser.cc
+@@ -22,14 +22,14 @@ namespace headless {
+ 
+ namespace {
+ // Product name for building the default user agent string.
+-const char kHeadlessProductName[] = "HeadlessChrome";
++const char kHeadlessProductName[] = "Google Chrome";
+ constexpr gfx::Size kDefaultWindowSize(800, 600);
+ 
+ constexpr gfx::FontRenderParams::Hinting kDefaultFontRenderHinting =
+     gfx::FontRenderParams::Hinting::HINTING_FULL;
+ 
+ std::string GetProductNameAndVersion() {
+-  return std::string(kHeadlessProductName) + "/" + PRODUCT_VERSION;
++  return std::string(kHeadlessProductName) + "/" + PRODUCT_VERSION + " (Carbonyl)";
+ }
+ }  // namespace
+ 
+diff --git a/headless/public/headless_browser.h b/headless/public/headless_browser.h
+index 48efaa7d57ca2..afc0236147519 100644
+--- a/headless/public/headless_browser.h
++++ b/headless/public/headless_browser.h
+@@ -176,10 +176,10 @@ struct HEADLESS_EXPORT HeadlessBrowser::Options {
+   base::FilePath user_data_dir;
+ 
+   // Run a browser context in an incognito mode. Enabled by default.
+-  bool incognito_mode = true;
++  bool incognito_mode = false;
+ 
+   // If true, then all pop-ups and calls to window.open will fail.
+-  bool block_new_web_contents = false;
++  bool block_new_web_contents = true;
+ 
+   // Whether or not BeginFrames will be issued over DevTools protocol
+   // (experimental).

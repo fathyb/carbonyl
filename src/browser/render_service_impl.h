@@ -1,13 +1,14 @@
 #ifndef CARBONYL_SRC_BROWSER_RENDER_SERVICE_IMPL_H_
 #define CARBONYL_SRC_BROWSER_RENDER_SERVICE_IMPL_H_
 
+#include "carbonyl/src/browser/export.h"
 #include "carbonyl/src/browser/carbonyl.mojom.h"
 #include "mojo/public/cpp/bindings/pending_receiver.h"
 #include "mojo/public/cpp/bindings/receiver.h"
 
 namespace carbonyl {
 
-class CarbonylRenderServiceImpl: public mojom::CarbonylRenderService {
+class CARBONYL_RENDERER_EXPORT CarbonylRenderServiceImpl: public mojom::CarbonylRenderService {
  public:
   explicit CarbonylRenderServiceImpl(mojo::PendingReceiver<mojom::CarbonylRenderService> receiver);
   CarbonylRenderServiceImpl(const CarbonylRenderServiceImpl&) = delete;

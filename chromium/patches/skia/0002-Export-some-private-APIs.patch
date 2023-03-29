@@ -1,3 +1,17 @@
+From a271b203a2b60f0cd450bda0fa2cc14885f1d9a8 Mon Sep 17 00:00:00 2001
+From: Fathy Boundjadj <hey@fathy.fr>
+Date: Thu, 9 Feb 2023 03:38:05 +0100
+Subject: [PATCH 2/2] Export some private APIs
+
+Temporary until TextCaptureDevice moves here
+---
+ include/utils/SkBase64.h     | 2 +-
+ src/core/SkClipStack.h       | 2 +-
+ src/core/SkClipStackDevice.h | 2 +-
+ src/core/SkDevice.h          | 2 +-
+ src/core/SkFontPriv.h        | 2 +-
+ 5 files changed, 5 insertions(+), 5 deletions(-)
+
 diff --git a/include/utils/SkBase64.h b/include/utils/SkBase64.h
 index e01028543a..beddbd2c95 100644
 --- a/include/utils/SkBase64.h
@@ -11,21 +25,6 @@ index e01028543a..beddbd2c95 100644
  public:
      enum Error {
          kNoError,
-diff --git a/src/core/SkBitmapDevice.cpp b/src/core/SkBitmapDevice.cpp
-index b497d690f7..5e4ee2b1ce 100644
---- a/src/core/SkBitmapDevice.cpp
-+++ b/src/core/SkBitmapDevice.cpp
-@@ -522,8 +522,8 @@ void SkBitmapDevice::onDrawGlyphRunList(SkCanvas* canvas,
-                                         const sktext::GlyphRunList& glyphRunList,
-                                         const SkPaint& initialPaint,
-                                         const SkPaint& drawingPaint) {
--    SkASSERT(!glyphRunList.hasRSXForm());
--    LOOP_TILER( drawGlyphRunList(canvas, &fGlyphPainter, glyphRunList, drawingPaint), nullptr )
-+    // SkASSERT(!glyphRunList.hasRSXForm());
-+    // LOOP_TILER( drawGlyphRunList(canvas, &fGlyphPainter, glyphRunList, drawingPaint), nullptr )
- }
- 
- void SkBitmapDevice::drawVertices(const SkVertices* vertices,
 diff --git a/src/core/SkClipStack.h b/src/core/SkClipStack.h
 index c325d2c619..d93b9cf37f 100644
 --- a/src/core/SkClipStack.h

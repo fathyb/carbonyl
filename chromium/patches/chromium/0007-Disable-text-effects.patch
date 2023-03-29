@@ -1,0 +1,110 @@
+From 022ed4d808369659eab4e83cd677eb974215c58c Mon Sep 17 00:00:00 2001
+From: Fathy Boundjadj <hey@fathy.fr>
+Date: Thu, 9 Feb 2023 03:31:17 +0100
+Subject: [PATCH 07/14] Disable text effects
+
+---
+ .../core/paint/ng/ng_text_painter_base.cc     | 30 ++++++++--------
+ ui/gfx/render_text.cc                         | 34 +++++++++----------
+ 2 files changed, 32 insertions(+), 32 deletions(-)
+
+diff --git a/third_party/blink/renderer/core/paint/ng/ng_text_painter_base.cc b/third_party/blink/renderer/core/paint/ng/ng_text_painter_base.cc
+index 008d80040e719..c11da51d0e906 100644
+--- a/third_party/blink/renderer/core/paint/ng/ng_text_painter_base.cc
++++ b/third_party/blink/renderer/core/paint/ng/ng_text_painter_base.cc
+@@ -123,21 +123,21 @@ void NGTextPainterBase::PaintUnderOrOverLineDecorations(
+       continue;
+     }
+ 
+-    if (decoration_info.HasUnderline() && decoration_info.FontData() &&
+-        EnumHasFlags(lines_to_paint, TextDecorationLine::kUnderline)) {
+-      decoration_info.SetUnderlineLineData(decoration_offset);
+-      PaintDecorationUnderOrOverLine(fragment_paint_info, context,
+-                                     decoration_info,
+-                                     TextDecorationLine::kUnderline, flags);
+-    }
+-
+-    if (decoration_info.HasOverline() && decoration_info.FontData() &&
+-        EnumHasFlags(lines_to_paint, TextDecorationLine::kOverline)) {
+-      decoration_info.SetOverlineLineData(decoration_offset);
+-      PaintDecorationUnderOrOverLine(fragment_paint_info, context,
+-                                     decoration_info,
+-                                     TextDecorationLine::kOverline, flags);
+-    }
++    // if (decoration_info.HasUnderline() && decoration_info.FontData() &&
++    //     EnumHasFlags(lines_to_paint, TextDecorationLine::kUnderline)) {
++    //   decoration_info.SetUnderlineLineData(decoration_offset);
++    //   PaintDecorationUnderOrOverLine(fragment_paint_info, context,
++    //                                  decoration_info,
++    //                                  TextDecorationLine::kUnderline, flags);
++    // }
++
++    // if (decoration_info.HasOverline() && decoration_info.FontData() &&
++    //     EnumHasFlags(lines_to_paint, TextDecorationLine::kOverline)) {
++    //   decoration_info.SetOverlineLineData(decoration_offset);
++    //   PaintDecorationUnderOrOverLine(fragment_paint_info, context,
++    //                                  decoration_info,
++    //                                  TextDecorationLine::kOverline, flags);
++    // }
+   }
+ }
+ 
+diff --git a/ui/gfx/render_text.cc b/ui/gfx/render_text.cc
+index 67fbf128ea158..a645ba61c8597 100644
+--- a/ui/gfx/render_text.cc
++++ b/ui/gfx/render_text.cc
+@@ -55,9 +55,9 @@ constexpr char16_t kEllipsisCodepoint = 0x2026;
+ 
+ // Fraction of the text size to raise the center of a strike-through line above
+ // the baseline.
+-const SkScalar kStrikeThroughOffset = (SK_Scalar1 * 65 / 252);
++// const SkScalar kStrikeThroughOffset = (SK_Scalar1 * 65 / 252);
+ // Fraction of the text size to lower an underline below the baseline.
+-const SkScalar kUnderlineOffset = (SK_Scalar1 / 9);
++// const SkScalar kUnderlineOffset = (SK_Scalar1 / 9);
+ 
+ // Float comparison needs epsilon to consider rounding errors in float
+ // arithmetic. Epsilon should be dependent on the context and here, we are
+@@ -374,27 +374,27 @@ void SkiaTextRenderer::DrawUnderline(int x,
+                                      int y,
+                                      int width,
+                                      SkScalar thickness_factor) {
+-  SkScalar x_scalar = SkIntToScalar(x);
+-  const SkScalar text_size = font_.getSize();
+-  SkRect r = SkRect::MakeLTRB(
+-      x_scalar, y + text_size * kUnderlineOffset, x_scalar + width,
+-      y + (text_size *
+-           (kUnderlineOffset +
+-            (thickness_factor * RenderText::kLineThicknessFactor))));
+-  canvas_skia_->drawRect(r, flags_);
++  // SkScalar x_scalar = SkIntToScalar(x);
++  // const SkScalar text_size = font_.getSize();
++  // SkRect r = SkRect::MakeLTRB(
++  //     x_scalar, y + text_size * kUnderlineOffset, x_scalar + width,
++  //     y + (text_size *
++  //          (kUnderlineOffset +
++  //           (thickness_factor * RenderText::kLineThicknessFactor))));
++  // canvas_skia_->drawRect(r, flags_);
+ }
+ 
+ void SkiaTextRenderer::DrawStrike(int x,
+                                   int y,
+                                   int width,
+                                   SkScalar thickness_factor) {
+-  const SkScalar text_size = font_.getSize();
+-  const SkScalar height = text_size * thickness_factor;
+-  const SkScalar top = y - text_size * kStrikeThroughOffset - height / 2;
+-  SkScalar x_scalar = SkIntToScalar(x);
+-  const SkRect r =
+-      SkRect::MakeLTRB(x_scalar, top, x_scalar + width, top + height);
+-  canvas_skia_->drawRect(r, flags_);
++  // const SkScalar text_size = font_.getSize();
++  // const SkScalar height = text_size * thickness_factor;
++  // const SkScalar top = y - text_size * kStrikeThroughOffset - height / 2;
++  // SkScalar x_scalar = SkIntToScalar(x);
++  // const SkRect r =
++  //     SkRect::MakeLTRB(x_scalar, top, x_scalar + width, top + height);
++  // canvas_skia_->drawRect(r, flags_);
+ }
+ 
+ StyleIterator::StyleIterator(const BreakList<SkColor>* colors,

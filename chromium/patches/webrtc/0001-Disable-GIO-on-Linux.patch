@@ -1,0 +1,22 @@
+From 5ad57c96f23739717bcea018baf2bc8f4157b01d Mon Sep 17 00:00:00 2001
+From: Fathy Boundjadj <hey@fathy.fr>
+Date: Mon, 13 Feb 2023 16:37:40 +0100
+Subject: [PATCH] Disable GIO on Linux
+
+---
+ modules/portal/BUILD.gn | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/modules/portal/BUILD.gn b/modules/portal/BUILD.gn
+index 36bcb53e8e..822688b1dc 100644
+--- a/modules/portal/BUILD.gn
++++ b/modules/portal/BUILD.gn
+@@ -85,7 +85,7 @@ if ((is_linux || is_chromeos) && rtc_use_pipewire) {
+     # `rtc_use_pipewire` is not set, which causes pipewire_config to not be
+     # included in targets. More details in: webrtc:13898
+     if (is_linux && !is_castos) {
+-      defines += [ "WEBRTC_USE_GIO" ]
++      $ defines += [ "WEBRTC_USE_GIO" ]
+     }
+   }
+ 

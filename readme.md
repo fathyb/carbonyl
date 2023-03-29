@@ -25,10 +25,27 @@ Carbonyl originally started as [`html2svg`](https://github.com/fathyb/html2svg) 
 
 ## Usage
 
+> Carbonyl on Linux without Docker requires the same dependencies as Chromium.
+
+### Docker
+
 ```shell
-# Watch YouTube inside a Docker container
-$ docker run -ti fathyb/carbonyl https://youtube.com
+$ docker run --rm -ti fathyb/carbonyl https://youtube.com
 ```
+
+### npm
+
+```console
+$ npm install --global carbonyl
+$ carbonyl https://github.com
+```
+
+### Binaries
+
+- [macOS amd64](https://github.com/fathyb/carbonyl/releases/download/v0.0.3/carbonyl.macos-amd64.zip)
+- [macOS arm64](https://github.com/fathyb/carbonyl/releases/download/v0.0.3/carbonyl.macos-arm64.zip)
+- [Linux amd64](https://github.com/fathyb/carbonyl/releases/download/v0.0.3/carbonyl.linux-amd64.zip)
+- [Linux arm64](https://github.com/fathyb/carbonyl/releases/download/v0.0.3/carbonyl.linux-arm64.zip)
 
 ## Demo
 
@@ -50,61 +67,75 @@ $ docker run -ti fathyb/carbonyl https://youtube.com
   </tbody>
 </table>
 
-## Know issues
+## Known issues
 
--   Fullscreen mode not supported yet
+- Fullscreen mode not supported yet
 
 ## Comparisons
 
 ### Lynx
 
-Lynx is the OG terminal web browser, and the oldest one still maintained.
+Lynx is the original terminal web browser, and the oldest one still maintained.
 
 #### Pros
 
--   When it understands a page, Lynx has the best layout, fully optimized for the terminal
+- When it understands a page, Lynx has the best layout, fully optimized for the terminal
 
 #### Cons
 
 > Some might sound like pluses, but Browsh and Carbonyl let you disable most of those if you'd like
 
--   Does not support a lot of modern web standards
--   Cannot run JavaScript/WebAssembly
--   Cannot view or play medias (audio, video, DOOM)
+- Does not support a lot of modern web standards
+- Cannot run JavaScript/WebAssembly
+- Cannot view or play media (audio, video, DOOM)
 
 ### Browsh
 
-Browsh is the OG "normal browser into a terminal" project. It starts Firefox in headless mode and connects to it through an automation protocol.
+Browsh is the original "normal browser into a terminal" project. It starts Firefox in headless mode and connects to it through an automation protocol.
 
 #### Pro
 
--   It's easier to update the underlying browser: just update Firefox
--   This makes development easier: just install Firefox and compile the Go code in a few seconds
--   As of today, Browsh supports extensions while Carbonyl doesn't, although it's on our roadmap
+- It's easier to update the underlying browser: just update Firefox
+- This makes development easier: just install Firefox and compile the Go code in a few seconds
+- As of today, Browsh supports extensions while Carbonyl doesn't, although it's on our roadmap
 
 #### Cons
 
--   It runs slower and requires more resources than Carbonyl. 50x more CPU power is needed for the same content in average, that's because Carbonyl does not downscale or copy the window framebuffer, it natively renders to the terminal resolution.
--   It uses custom stylesheets to fix the layout, which is less reliable than Carbonyl's changes to its HTML engine (Blink).
+- It runs slower and requires more resources than Carbonyl. 50x more CPU power is needed for the same content in average, that's because Carbonyl does not downscale or copy the window framebuffer, it natively renders to the terminal resolution.
+- It uses custom stylesheets to fix the layout, which is less reliable than Carbonyl's changes to its HTML engine (Blink).
 
 ## Operating System Support
+
 As far as tested, the operating systems under are supported:
-  
-  -  Linux (Debian, Ubuntu and Arch tested)
-  -  MacOS 
-  -  Windows 11 and WSL
-  
-## Development
+
+- Linux (Debian, Ubuntu and Arch tested)
+- MacOS
+- Windows 11 and WSL
+
+## Contributing
+
+Carbonyl is split in two parts: the "core" which is built into a shared library (`libcarbonyl`), and the "runtime" which dynamically loads the core (`carbonyl` executable).
+
+The core is written in Rust and takes a few seconds to build from scratch. The runtime is a modified version of the Chromium headless shell and takes more than an hour to build from scratch.
+
+If you're just making changes to the Rust code, build `libcarbonyl` and replace it in a release version of Carbonyl.
+
+### Core
+
+```console
+$ cargo build
+```
+
+### Runtime
 
 Few notes:
 
--   You need to build Chromium
--   Building Carbonyl is almost the same as building Chromium with extra steps to patch and bundle the Rust library. Scripts in the `scripts/` directory are simple wrappers around `gn`, `ninja`, etc..
--   Building Chromium for arm64 on Linux requires an amd64 processor
--   Carbonyl is only tested on Linux and macOS, other platforms likely require code changes to Chromium
--   Chromium is huge and takes a long time to build, making your computer mostly unresponsive. An 8-core CPU such as an M1 Max or an i9 9900k with 10 Gbps fiber takes around ~1 hour to fetch and build. It requires around 100 GB of disk space.
+- Building the runtime is almost the same as building Chromium with extra steps to patch and bundle the Rust library. Scripts in the `scripts/` directory are simple wrappers around `gn`, `ninja`, etc..
+- Building Chromium for arm64 on Linux requires an amd64 processor
+- Carbonyl is only tested on Linux and macOS, other platforms likely require code changes to Chromium
+- Chromium is huge and takes a long time to build, making your computer mostly unresponsive. An 8-core CPU such as an M1 Max or an i9 9900k with 10 Gbps fiber takes around ~1 hour to fetch and build. It requires around 100 GB of disk space.
 
-### Fetch
+#### Fetch
 
 > Fetch Chromium's code.
 
@@ -112,7 +143,7 @@ Few notes:
 $ ./scripts/gclient.sh sync
 ```
 
-### Apply patches
+#### Apply patches
 
 > Any changes made to Chromium will be reverted, make sure to save any changes you made.
 
@@ -120,7 +151,7 @@ $ ./scripts/gclient.sh sync
 $ ./scripts/patches.sh apply
 ```
 
-### Configure
+#### Configure
 
 ```console
 $ ./scripts/gn.sh args out/Default
@@ -142,20 +173,18 @@ When prompted, enter the following arguments:
 import("//carbonyl/src/browser/args.gn")
 
 # uncomment this to build for arm64
-# target_cpu="arm64"
+# target_cpu = "arm64"
 
-# uncomment this to enable ccache
-# cc_wrapper="env CCACHE_SLOPPINESS=time_macros ccache"
+# comment this to disable ccache
+cc_wrapper = "env CCACHE_SLOPPINESS=time_macros ccache"
 
-# uncomment this if you're building for macOS
-# use_lld=false
-
-# uncomment this for a release build
-# is_debug=false
-# symbol_level=0
+# comment this for a debug build
+is_debug = false
+symbol_level = 0
+is_official_build = true
 ```
 
-### Build binaries
+#### Build binaries
 
 ```console
 $ ./scripts/build.sh Default
@@ -163,13 +192,13 @@ $ ./scripts/build.sh Default
 
 This should produce the following outputs:
 
--   `out/Default/headless_shell`: browser binary
--   `out/Default/icudtl.dat`
--   `out/Default/libEGL.so`
--   `out/Default/libGLESv2.so`
--   `out/Default/v8_context_snapshot.bin`
+- `out/Default/headless_shell`: browser binary
+- `out/Default/icudtl.dat`
+- `out/Default/libEGL.so`
+- `out/Default/libGLESv2.so`
+- `out/Default/v8_context_snapshot.bin`
 
-### Build Docker image
+#### Build Docker image
 
 ```console
 # Build arm64 Docker image using binaries from the Default target
@@ -178,7 +207,7 @@ $ ./scripts/docker-build.sh Default arm64
 $ ./scripts/docker-build.sh Default amd64
 ```
 
-### Run
+#### Run
 
 ```
 $ ./scripts/run.sh Default https://wikipedia.org

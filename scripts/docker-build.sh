@@ -1,33 +1,22 @@
 #!/usr/bin/env bash
 
-export CARBONYL_ROOT=$(cd $(dirname -- "$0") && dirname -- $(pwd))
+export CARBONYL_ROOT=$(cd $(dirname -- "$0") && dirname -- "$(pwd)")
 
-source "$CARBONYL_ROOT/scripts/env.sh"
+cd "$CARBONYL_ROOT"
+source "scripts/env.sh"
 
-target="$1"
-cpu="$2"
+cpu="$1"
 
-build_dir="$CARBONYL_ROOT/build/browser/$cpu"
+triple=$(scripts/platform-triple.sh "$cpu" linux)
+build_dir="build/docker/$triple"
 
 rm -rf "$build_dir"
-mkdir -p "$build_dir"
-cd "$build_dir"
-
-cp "$CARBONYL_ROOT/Dockerfile" .
-cp "$CHROMIUM_SRC/out/$target/headless_shell" carbonyl
-cp "$CHROMIUM_SRC/out/$target/icudtl.dat" .
-cp "$CHROMIUM_SRC/out/$target/libEGL.so" .
-cp "$CHROMIUM_SRC/out/$target/libGLESv2.so" .
-cp "$CHROMIUM_SRC/out/$target/v8_context_snapshot.bin" .
-
-if [[ "$cpu" == "arm64" ]]; then
-    aarch64-linux-gnu-strip carbonyl *.so
-else
-    strip carbonyl *.so
-fi
+mkdir -p "build/docker"
+cp -r "$CARBONYL_ROOT/build/pre-built/$triple" "$build_dir"
+cp "$CARBONYL_ROOT/Dockerfile" "$build_dir"
 
 tag="fathyb/carbonyl:$cpu"
 
-docker buildx build . --load --platform "linux/$cpu" --tag "$tag"
+docker buildx build "$build_dir" --load --platform "linux/$cpu" --tag "$tag"
 
 echo "Image tag: $tag"

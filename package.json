@@ -1,24 +1,5 @@
 {
-    "name": "carbonyl",
-    "version": "1.0.0",
-    "main": "index.js",
-    "license": "MIT",
-    "scripts": {
-        "gclient": "scripts/gclient.sh",
-        "gn": "scripts/gn.sh",
-        "ninja": "scripts/ninja.sh",
-        "build": "tsc -b ."
-    },
-    "dependencies": {
-        "commander": "^9.4.1"
-    },
-    "devDependencies": {
-        "@electron/build-tools": "^1.1.0",
-        "@types/node": "^18.11.3",
-        "electron": "^21.2.0",
-        "npm-run-all": "^4.1.5",
-        "prettier": "^2.7.1",
-        "standard-version": "^9.5.0",
-        "typescript": "^4.8.4"
-    }
+  "name": "carbonyl",
+  "version": "0.0.3",
+  "license": "BSD-3-Clause"
 }

@@ -10,38 +10,65 @@ mojom("mojom") {
   ]
 }
 
-component("carbonyl") {
+component("bridge") {
+  output_name = "carbonyl_bridge"
+  defines = [ "CARBONYL_BRIDGE_IMPLEMENTATION" ]
   sources = [
     "bridge.cc",
     "bridge.h",
+  ]
+}
+
+component("viz") {
+  output_name = "carbonyl_viz"
+  defines = [ "CARBONYL_VIZ_IMPLEMENTATION" ]
+  sources = [
     "host_display_client.cc",
     "host_display_client.h",
-    "render_service_impl.cc",
-    "render_service_impl.h",
   ]
 
   deps = [
-    ":mojom",
+    ":renderer",
     "//base",
     "//components/viz/host",
-    "//services/viz/privileged/mojom/compositing",
-    "//ui/compositor",
-    "//ui/display",
+    "//services/viz/privileged/mojom",
   ]
+}
 
+config("lib") {
   target = ""
 
-  if (target_cpu == "x64") {
+  if (current_cpu == "x64") {
     target += "x86_64-"
-  } else if (target_cpu == "arm64") {
+  } else if (current_cpu == "arm64") {
     target += "aarch64-"
   }
 
-  if (is_linux) {
-    target += "unknown-linux-gnu"
-  } else if (is_mac) {
+  if (is_mac) {
     target += "apple-darwin"
+  } else if (is_linux) {
+    target += "unknown-linux-gnu"
   }
 
-  libs = ["//carbonyl/build/$target/release/libcarbonyl.a"]
+  libs = ["carbonyl"]
+  lib_dirs = ["//carbonyl/build/$target/release"]
+}
+
+component("renderer") {
+  output_name = "carbonyl_renderer"
+  defines = [ "CARBONYL_RENDERER_IMPLEMENTATION" ]
+  sources = [
+    "render_service_impl.cc",
+    "render_service_impl.h",
+    "renderer.cc",
+    "renderer.h",
+  ]
+
+  configs += [ ":lib" ]
+  deps = [
+    ":mojom",
+    ":bridge",
+    "//base",
+    "//skia"
+  ]
 }

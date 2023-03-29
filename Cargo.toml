@@ -1,6 +1,6 @@
 [package]
 name = "carbonyl"
-version = "0.0.1"
+version = "0.0.3"
 edition = "2021"
 
 [dependencies]
@@ -12,4 +12,4 @@ chrono = "0.4.23"
 [lib]
 name = "carbonyl"
 path = "src/lib.rs"
-crate-type = ["staticlib"]
+crate-type = ["cdylib"]

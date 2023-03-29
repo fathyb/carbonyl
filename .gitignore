@@ -8,3 +8,5 @@ node_modules/
 /chromium/*
 !/chromium/.gclient
 !/chromium/depot_tools
+!/chromium/patches
+/packages/*/build

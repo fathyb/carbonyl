@@ -1,0 +1,15 @@
+   O    O      Carbonyl is a Chromium based browser for the terminal.
+    \  /       
+O —— Cr —— O   In addition to the following options,
+    /  \       Carbonyl also supports most Chromium options.
+   O    O      
+
+Usage: carbonyl [options] [url]
+
+Options:
+    -f, --fps=<fps>            set the maximum number of frames per second (default: 60)
+    -z, --zoom=<zoom>          set the zoom level in percent (default: 100)
+    -b, --bitmap               render text as bitmaps
+    -d, --debug                enable debug logs
+    -h, --help                 display this help message
+    -v, --version              output the version number

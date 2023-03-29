@@ -1,3 +1,3 @@
-mod ffi;
+mod bridge;
 
-pub use ffi::*;
+pub use bridge::*;

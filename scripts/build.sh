@@ -1,37 +1,40 @@
 #!/usr/bin/env bash
 
-export CARBONYL_ROOT=$(cd $(dirname -- "$0") && dirname -- $(pwd))
+export CARBONYL_ROOT=$(cd $(dirname -- "$0") && dirname -- "$(pwd)")
+export INSTALL_DEPOT_TOOLS="true"
 
-source "$CARBONYL_ROOT/scripts/env.sh"
+cd "$CARBONYL_ROOT"
+source scripts/env.sh
 
 target="$1"
 cpu="$2"
-platform="linux"
 
-if [ -z "$cpu" ]; then
-    cpu="$(uname -m)"
+if [ ! -z "$target" ]; then
+    shift
+fi
+if [ ! -z "$cpu" ]; then
+    shift
 fi
 
-if [[ "$cpu" == "arm64" ]]; then
-    cpu="aarch64"
-elif [[ "$cpu" == "amd64" ]]; then
-    cpu="x86_64"
+triple=$(scripts/platform-triple.sh "$cpu")
+
+if [ -z "$CARBONYL_SKIP_CARGO_BUILD" ]; then
+    if [ -z "$MACOSX_DEPLOYMENT_TARGET" ]; then
+        export MACOSX_DEPLOYMENT_TARGET=10.13
+    fi
+
+    cargo build --target "$triple" --release
 fi
 
-if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-    platform="unknown-linux-gnu"
-elif [[ "$OSTYPE" == "darwin"* ]]; then
-    platform="apple-darwin"
+if [ -f "build/$triple/release/libcarbonyl.dylib" ]; then
+    cp "build/$triple/release/libcarbonyl.dylib" "$CHROMIUM_SRC/out/$target"
+    install_name_tool \
+        -id @executable_path/libcarbonyl.dylib \
+        "build/$triple/release/libcarbonyl.dylib"
 else
-    echo "Unsupported platform: $OSTYPE"
-
-    exit 2
+    cp "build/$triple/release/libcarbonyl.so" "$CHROMIUM_SRC/out/$target"
 fi
 
-target="$cpu-$platform"
+cd "$CHROMIUM_SRC/out/$target"
 
-cargo build --target "$target" --release
-
-cd "$CHROMIUM_SRC/out/$1"
-
-ninja headless:headless_shell
+ninja headless:headless_shell "$@"

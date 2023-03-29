@@ -1,86 +1,27 @@
 #include "carbonyl/src/browser/bridge.h"
 
-#include <memory>
-#include <iostream>
-#include <stdio.h>
+namespace {
 
-#include "third_party/skia/include/core/SkColor.h"
-
-extern "C" {
-
-struct carbonyl_renderer* carbonyl_renderer_create();
-void carbonyl_renderer_set_title(struct carbonyl_renderer* renderer, const char* title);
-void carbonyl_renderer_clear_text(struct carbonyl_renderer* renderer);
-void carbonyl_input_listen(struct carbonyl_renderer* renderer, const struct carbonyl_bridge_browser_delegate* delegate);
-void carbonyl_renderer_draw_text(
-    struct carbonyl_renderer* renderer,
-    const char* title,
-    const struct carbonyl_bridge_rect* rect,
-    const struct carbonyl_bridge_color* color
-);
-void carbonyl_renderer_draw_background(
-    struct carbonyl_renderer* renderer,
-    const unsigned char* pixels,
-    size_t pixels_size,
-    const struct carbonyl_bridge_rect* rect
-);
+float dpi_ = 0.0;
+bool bitmap_mode_ = false;
 
 }
 
 namespace carbonyl {
 
-namespace {
-    static std::unique_ptr<Renderer> globalInstance;
+void Bridge::Resize() {}
+
+float Bridge::GetDPI() {
+    return dpi_;
 }
 
-Renderer::Renderer(struct carbonyl_renderer* ptr): ptr_(ptr) {}
-
-Renderer* Renderer::Main() {
-    if (!globalInstance) {
-        globalInstance = std::unique_ptr<Renderer>(
-            new Renderer(carbonyl_renderer_create())
-        );
-    }
-
-    return globalInstance.get();
-}
-void Renderer::Listen(const struct carbonyl_bridge_browser_delegate* delegate) {
-    carbonyl_input_listen(ptr_, delegate);
+bool Bridge::BitmapMode() {
+    return bitmap_mode_;
 }
 
-void Renderer::SetTitle(const std::string& title) {
-    carbonyl_renderer_set_title(ptr_, title.c_str());
-}
-
-void Renderer::ClearText() {
-    carbonyl_renderer_clear_text(ptr_);
-}
-
-void Renderer::DrawText(const std::string& text, const gfx::RectF& bounds, uint32_t sk_color) {
-    struct carbonyl_bridge_rect rect;
-    struct carbonyl_bridge_color color;
-
-    rect.origin.x = bounds.x();
-    rect.origin.y = bounds.y();
-    rect.size.width = bounds.width();
-    rect.size.height = bounds.height();
-
-    color.r = SkColorGetR(sk_color);
-    color.g = SkColorGetG(sk_color);
-    color.b = SkColorGetB(sk_color);
-
-    carbonyl_renderer_draw_text(ptr_, text.c_str(), &rect, &color);
-}
-
-void Renderer::DrawBackgrond(const unsigned char* pixels, size_t pixels_size, const gfx::Rect& bounds) {
-    struct carbonyl_bridge_rect rect;
-
-    rect.origin.x = bounds.x();
-    rect.origin.y = bounds.y();
-    rect.size.width = bounds.width();
-    rect.size.height = bounds.height();
-
-    carbonyl_renderer_draw_background(ptr_, pixels, pixels_size, &rect);
+void Bridge::Configure(float dpi, bool bitmap_mode) {
+    dpi_ = dpi;
+    bitmap_mode_ = bitmap_mode;
 }
 
 }

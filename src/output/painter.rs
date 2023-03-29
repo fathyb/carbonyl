@@ -2,16 +2,9 @@ use std::io::{self, Stdout, Write};
 
 use crate::gfx::{Color, Point};
 
-use super::Cell;
-
-#[derive(PartialEq)]
-enum PaintMode {
-    Text,
-    Bitmap,
-}
+use super::{binarize_quandrant, Cell};
 
 pub struct Painter {
-    mode: PaintMode,
     output: Stdout,
     buffer: Vec<u8>,
     cursor: Option<Point<u32>>,
@@ -25,7 +18,6 @@ pub struct Painter {
 impl Painter {
     pub fn new() -> Painter {
         Painter {
-            mode: PaintMode::Text,
             buffer: Vec::new(),
             cursor: None,
             output: io::stdout(),
@@ -48,10 +40,24 @@ impl Painter {
         self.true_color = true_color
     }
 
-    pub fn flush(&mut self) -> io::Result<()> {
+    pub fn begin(&mut self) -> io::Result<()> {
+        write!(self.buffer, "\x1b[?25l\x1b[?12l")
+    }
+
+    pub fn end(&mut self, cursor: Option<Point>) -> io::Result<()> {
+        if let Some(cursor) = cursor {
+            write!(
+                self.buffer,
+                "\x1b[{};{}H\x1b[?25h\x1b[?12h",
+                cursor.y + 1,
+                cursor.x + 1
+            )?;
+        }
+
         self.output.write(self.buffer.as_slice())?;
         self.output.flush()?;
         self.buffer.clear();
+        self.cursor = None;
 
         Ok(())
     }
@@ -59,42 +65,29 @@ impl Painter {
     pub fn paint(&mut self, cell: &Cell) -> io::Result<()> {
         let &Cell {
             cursor,
+            quadrant,
             ref grapheme,
-            top: mut background,
-            bottom: mut foreground,
         } = cell;
 
-        let (char, width, escape) = if let Some(grapheme) = grapheme {
+        let (char, background, foreground, width) = if let Some(grapheme) = grapheme {
             if grapheme.index > 0 {
                 return Ok(());
             }
 
-            background = background.avg_with(foreground);
-            foreground = grapheme.color;
-
             (
                 grapheme.char.as_str(),
+                quadrant
+                    .0
+                    .avg_with(quadrant.1)
+                    .avg_with(quadrant.2)
+                    .avg_with(quadrant.3),
+                grapheme.color,
                 grapheme.width as u32,
-                if self.mode == PaintMode::Bitmap {
-                    self.mode = PaintMode::Text;
-
-                    Some("\x1b[22m\x1b[24m")
-                } else {
-                    None
-                },
             )
         } else {
-            (
-                "▄",
-                1,
-                if self.mode == PaintMode::Text {
-                    self.mode = PaintMode::Bitmap;
+            let (char, background, foreground) = binarize_quandrant(quadrant);
 
-                    Some("\x1b[1m\x1b[4m")
-                } else {
-                    None
-                },
-            )
+            (char, background, foreground, 1)
         };
 
         if self.cursor != Some(cursor) {
@@ -141,10 +134,6 @@ impl Painter {
                     write!(self.buffer, "\x1b[38;5;{code}m")?
                 }
             }
-        }
-
-        if let Some(escape) = escape {
-            self.buffer.write_all(escape.as_bytes())?
         }
 
         self.buffer.write_all(char.as_bytes())?;

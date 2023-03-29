@@ -7,6 +7,7 @@ solutions = [
     "custom_vars": {
       "use_rust": True,
       "checkout_pgo_profiles": True, 
+      "checkout_nacl": False,
     }
   },
 ]
