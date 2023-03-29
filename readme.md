@@ -110,7 +110,7 @@ As far as tested, the operating systems under are supported:
 
 - Linux (Debian, Ubuntu and Arch tested)
 - MacOS
-- Windows 11 and WSL
+- Windows 11 and WSL (only through docker. does not works normal)
 
 ## Contributing
 
