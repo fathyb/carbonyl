@@ -108,9 +108,9 @@ Browsh is the original "normal browser into a terminal" project. It starts Firef
 
 As far as tested, the operating systems under are supported:
 
-- Linux (Debian, Ubuntu and Arch tested)
+- Linux (Debian, Ubuntu and Arch tested. Should work at fedora too with docker but not fully tested)
 - MacOS
-- Windows 11 and WSL
+- Windows 11 and WSL (only through docker. does not works normal)
 
 ## Contributing
 
