@@ -13,6 +13,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
-    - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag my-image-name:$(date +%s)
+    - name: Build and push Docker images
+  # You may pin to the exact commit or the version.
+  # uses: docker/build-push-action@3b5e8027fcad23fda98b2e3ac259d8d67585f671
+      uses: docker/build-push-action@v4.0.0
