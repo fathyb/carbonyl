@@ -1,4 +1,4 @@
-FROM rust:1.67 AS cross-compile
+FROM rust:1.68.2 AS cross-compile
 
 RUN apt-get update && \
     apt-get install -y \
