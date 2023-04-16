@@ -33,6 +33,6 @@ ENV HOME=/carbonyl/data
 
 COPY . /carbonyl
 
-RUN /carbonyl/carbonyl --version
+# RUN /carbonyl/carbonyl --version
 
 ENTRYPOINT ["/carbonyl/carbonyl", "--no-sandbox", "--disable-dev-shm-usage", "--user-data-dir=/carbonyl/data"]
