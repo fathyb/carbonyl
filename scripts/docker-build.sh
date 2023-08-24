@@ -1,22 +1,75 @@
 #!/usr/bin/env bash
 
-export CARBONYL_ROOT=$(cd $(dirname -- "$0") && dirname -- "$(pwd)")
+CARBONYL_ROOT=$(cd $(dirname -- "$0") && dirname -- "$(pwd)")
+
+if [[ $# -lt 2 ]]; then
+    echo "Error: Expected at least two arguments."
+    exit 1
+fi
 
 cd "$CARBONYL_ROOT"
-source "scripts/env.sh"
 
-cpu="$1"
+if [[ -f "scripts/env.sh" && -r "scripts/env.sh" ]]; then
+    source "scripts/env.sh"
+else
+    echo "Error: Cannot find or read scripts/env.sh"
+    exit 1
+fi
 
-triple=$(scripts/platform-triple.sh "$cpu" linux)
-build_dir="build/docker/$triple"
+target="$1"
+cpu="$2"
+triple=$(scripts/platform-triple.sh "$cpu")
 
-rm -rf "$build_dir"
-mkdir -p "build/docker"
-cp -r "$CARBONYL_ROOT/build/pre-built/$triple" "$build_dir"
-cp "$CARBONYL_ROOT/Dockerfile" "$build_dir"
+dest="build/pre-built/$triple"
+src="$CHROMIUM_SRC/out/$target"
 
-tag="fathyb/carbonyl:$cpu"
+lib_ext="so"
+[ -f "$src/libEGL.dylib" ] && lib_ext="dylib"
 
-docker buildx build "$build_dir" --load --platform "linux/$cpu" --tag "$tag"
+rm -rf "$dest"
+mkdir -p "$dest"
+cd "$dest"
 
-echo "Image tag: $tag"
+files_to_copy=(
+    "$src/headless_shell"
+    "$src/icudtl.dat"
+    "$src/libEGL.$lib_ext"
+    "$src/libGLESv2.$lib_ext"
+    "$src/v8_context_snapshot*.bin"
+    "$CARBONYL_ROOT/build/$triple/release/libcarbonyl.$lib_ext"
+)
+
+for file in "${files_to_copy[@]}"; do
+    if [[ -f "$file" ]]; then
+        cp "$file" .
+    else
+        echo "Warning: $file not found."
+    fi
+done
+
+files="carbonyl"
+
+[ "$lib_ext" == "so" ] && {
+    swiftshader_files=(
+        "$src/libvk_swiftshader.so"
+        "$src/libvulkan.so.1"
+        "$src/vk_swiftshader_icd.json"
+    )
+
+    for file in "${swiftshader_files[@]}"; do
+        if [[ -f "$file" ]]; then
+            cp "$file" .
+            files+=" $(basename $file)"
+        else
+            echo "Warning: $file not found."
+        fi
+    done
+}
+
+if [[ "$cpu" == "arm64" ]] && command -v aarch64-linux-gnu-strip &> /dev/null; then
+    aarch64-linux-gnu-strip $files
+else
+    strip $files
+fi
+
+echo "Binaries copied to $dest"
