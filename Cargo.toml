@@ -5,9 +5,9 @@ edition = "2021"
 
 [dependencies]
 libc = "0.2"
-unicode-width = "0.1.10"
-unicode-segmentation = "1.10.0"
-chrono = "0.4.23"
+unicode-width = "0.1.13"
+unicode-segmentation = "1.11.0"
+chrono = "0.4.38"
 
 [lib]
 name = "carbonyl"

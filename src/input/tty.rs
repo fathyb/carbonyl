@@ -65,7 +65,7 @@ enum TTY {
     File(File),
 }
 
-const SEQUENCES: [(u32, bool); 4] = [(1049, true), (1003, true), (1006, true), (25, false)];
+const SEQUENCES: [(u32, bool); 5] = [(1049, true), (1002, true), (1003, true), (1006, true), (25, false)];
 
 impl TTY {
     fn stdin() -> TTY {
