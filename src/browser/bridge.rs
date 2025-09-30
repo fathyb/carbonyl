@@ -187,12 +187,15 @@ pub extern "C" fn carbonyl_renderer_resize(bridge: RendererPtr) {
     let mut bridge = bridge.unwrap().lock().unwrap();
     let window = bridge.window.update();
     let cells = window.cells.clone();
+    // Use the full terminal pixel geometry for SIXEL frames.
+    let geometry = window.graphics_px;
 
     log::debug!("resizing renderer, terminal window: {:?}", window);
 
-    bridge
-        .renderer
-        .render(move |renderer| renderer.set_size(cells));
+    bridge.renderer.render(move |renderer| {
+        renderer.set_size(cells);
+        renderer.update_sixel_geometry(geometry);
+    });
 }
 
 #[no_mangle]
@@ -411,6 +414,11 @@ pub extern "C" fn carbonyl_renderer_listen(bridge: RendererPtr, delegate: *mut B
                         Terminal(terminal) => match terminal {
                             TerminalEvent::Name(name) => log::debug!("terminal name: {name}"),
                             TerminalEvent::TrueColorSupported => renderer.enable_true_color(),
+                            TerminalEvent::SixelSupported { .. } => {
+                                let geometry = bridge.lock().unwrap().window.graphics_px;
+
+                                renderer.enable_sixel(geometry)
+                            }
                         },
                     }
                 }

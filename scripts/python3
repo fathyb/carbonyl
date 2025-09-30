@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+
+exec "$HOME/carbonyl/chromium/depot_tools/vpython3" "$@"

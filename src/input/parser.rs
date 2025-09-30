@@ -1,5 +1,6 @@
 use std::ops::ControlFlow;
 
+use super::graphics::Graphics;
 use crate::input::*;
 
 #[derive(Default)]
@@ -17,12 +18,14 @@ enum Sequence {
     Mouse(Mouse),
     Keyboard(Keyboard),
     DeviceControl(DeviceControl),
+    Graphics(Graphics),
 }
 
 #[derive(Clone, Debug)]
 pub enum TerminalEvent {
     Name(String),
     TrueColorSupported,
+    SixelSupported { width: u32, height: u32 },
 }
 
 #[derive(Clone, Debug)]
@@ -91,12 +94,14 @@ impl Parser {
                 },
                 Sequence::Control => match key {
                     b'<' => Sequence::Mouse(Mouse::new()),
+                    b'?' => Sequence::Graphics(Graphics::new()),
                     b'1' => Sequence::Keyboard(Keyboard::new()),
                     key => emit!(Keyboard::key(key, 0)),
                 },
                 Sequence::Mouse(ref mut mouse) => parse!(mouse, key),
                 Sequence::Keyboard(ref mut keyboard) => parse!(keyboard, key),
                 Sequence::DeviceControl(ref mut dcs) => parse!(dcs, key),
+                Sequence::Graphics(ref mut graphics) => parse!(graphics, key),
             }
         }
 

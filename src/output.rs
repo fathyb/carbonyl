@@ -6,6 +6,7 @@ mod painter;
 mod quad;
 mod render_thread;
 mod renderer;
+mod sixel;
 mod window;
 mod xterm;
 

@@ -23,17 +23,28 @@ pub struct Renderer {
 }
 
 impl Renderer {
-    pub fn new() -> Renderer {
+    pub fn new(sixel_only: bool) -> Renderer {
+        let mut painter = Painter::new();
+        painter.set_sixel_only(sixel_only);
+
         Renderer {
             nav: Navigation::new(),
             cells: Vec::with_capacity(0),
-            painter: Painter::new(),
+            painter,
             size: Size::new(0, 0),
         }
     }
 
     pub fn enable_true_color(&mut self) {
         self.painter.set_true_color(true)
+    }
+
+    pub fn enable_sixel(&mut self, geometry: Size) {
+        self.painter.enable_sixel(geometry);
+    }
+
+    pub fn update_sixel_geometry(&mut self, geometry: Size) {
+        self.painter.update_sixel_geometry(geometry);
     }
 
     pub fn keypress(&mut self, key: &Key) -> io::Result<NavigationAction> {
@@ -114,6 +125,7 @@ impl Renderer {
 
             previous.quadrant = current.quadrant;
             previous.grapheme = current.grapheme.clone();
+            previous.image = current.image;
 
             self.painter.paint(current)?;
         }
@@ -125,6 +137,8 @@ impl Renderer {
 
     /// Draw the background from a pixel array encoded in RGBA8888
     pub fn draw_background(&mut self, pixels: &[u8], pixels_size: Size, rect: Rect) {
+        let uses_sixel = self.painter.queue_sixel_background(pixels, pixels_size);
+
         let viewport = self.size.cast::<usize>();
 
         if pixels.len() < viewport.width * viewport.height * 8 * 4 {
@@ -163,12 +177,23 @@ impl Renderer {
             let (mut x, y) = (left * 2, y * 4);
 
             for (_, cell) in &mut self.cells[start..end] {
-                cell.quadrant = (
-                    pair(x + 0, y + 0),
-                    pair(x + 1, y + 0),
-                    pair(x + 1, y + 2),
-                    pair(x + 0, y + 2),
-                );
+                if uses_sixel {
+                    cell.quadrant = (
+                        Color::black(),
+                        Color::black(),
+                        Color::black(),
+                        Color::black(),
+                    );
+                    cell.grapheme = None;
+                } else {
+                    cell.quadrant = (
+                        pair(x + 0, y + 0),
+                        pair(x + 1, y + 0),
+                        pair(x + 1, y + 2),
+                        pair(x + 0, y + 2),
+                    );
+                }
+                cell.image = true;
 
                 x += 2;
             }
@@ -195,6 +220,7 @@ impl Renderer {
         self.draw(rect, |cell| {
             cell.grapheme = None;
             cell.quadrant = (color, color, color, color);
+            cell.image = false;
         })
     }
 
@@ -214,6 +240,7 @@ impl Renderer {
             let right = left + size.width;
 
             for (_, current) in self.cells[left..right].iter_mut() {
+                current.image = false;
                 draw(current)
             }
         }
@@ -273,6 +300,7 @@ impl Renderer {
                                     previous.color != next.color || previous.char != next.char
                                 }
                             } {
+                                cell.image = false;
                                 cell.grapheme = Some(Rc::new(next))
                             }
                         }

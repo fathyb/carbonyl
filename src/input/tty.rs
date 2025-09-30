@@ -87,12 +87,16 @@ impl TTY {
             write!(out, "\x1b[?{}{}", sequence, if enable { "h" } else { "l" })?;
         }
 
-        // Set the current foreground color to black
+        // Set the current background color to black
         write!(out, "\x1b[48;2;0;0;0m")?;
         // Query current foreground color to for true-color support detection
         write!(out, "\x1bP$qm\x1b\\")?;
         // Query current terminal name
         write!(out, "\x1bP+q544e\x1b\\")?;
+        // Query graphics capability (XTSMGRAPHICS). Some terminals expect DCS form;
+        // use it first and fall back to CSI if ignored.
+        write!(out, "\x1bP?2;1;0S\x1b\\")?;
+        write!(out, "\x1b[?2;1;0S")?;
 
         out.flush()
     }

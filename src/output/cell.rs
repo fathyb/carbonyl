@@ -18,6 +18,7 @@ pub struct Cell {
     /// Text grapheme if any
     pub grapheme: Option<Rc<Grapheme>>,
     pub quadrant: (Color, Color, Color, Color),
+    pub image: bool,
 }
 
 impl Cell {
@@ -31,6 +32,7 @@ impl Cell {
                 Color::black(),
                 Color::black(),
             ),
+            image: false,
         }
     }
 }

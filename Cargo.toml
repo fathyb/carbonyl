@@ -8,6 +8,7 @@ libc = "0.2"
 unicode-width = "0.1.10"
 unicode-segmentation = "1.10.0"
 chrono = "0.4.23"
+sixel-bytes = "0.2"
 
 [lib]
 name = "carbonyl"

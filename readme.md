@@ -67,6 +67,10 @@ $ carbonyl https://github.com
   </tbody>
 </table>
 
+## Rendering
+
+Carbonyl now prefers Sixel graphics for page rendering whenever the terminal reports support. Legacy character-based rendering is automatically used as a fallback if Sixel frames cannot be sent. Sixel scrolling is enabled by default so web content can be browsed normally; set `CARBONYL_SIXEL_SCROLL=off` (or `0`) to opt back into the legacy non-scrolling behaviour.
+
 ## Known issues
 
 - Fullscreen mode not supported yet

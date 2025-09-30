@@ -12,8 +12,14 @@ fn link_sysroot() {
             "cargo:rustc-link-arg=--sysroot=./chromium/src/build/linux/debian_bullseye_amd64-sysroot"
         );
     } else {
-        println!("cargo:warning={}", "x86_64 debian sysroot provided by chromium was not found!");
-        println!("cargo:warning={}", "carbonyl may fail to link against a proper libc!");
+        println!(
+            "cargo:warning={}",
+            "x86_64 debian sysroot provided by chromium was not found!"
+        );
+        println!(
+            "cargo:warning={}",
+            "carbonyl may fail to link against a proper libc!"
+        );
     }
 }
 
@@ -29,8 +35,14 @@ fn link_sysroot() {
             "cargo:rustc-link-arg=--sysroot=./chromium/src/build/linux/debian_bullseye_i386-sysroot"
         );
     } else {
-        println!("cargo:warning={}", "x86 debian sysroot provided by chromium was not found!");
-        println!("cargo:warning={}", "carbonyl may fail to link against a proper libc!");
+        println!(
+            "cargo:warning={}",
+            "x86 debian sysroot provided by chromium was not found!"
+        );
+        println!(
+            "cargo:warning={}",
+            "carbonyl may fail to link against a proper libc!"
+        );
     }
 }
 
