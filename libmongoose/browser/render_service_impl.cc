@@ -4,6 +4,7 @@
 
 #include "base/files/file_path.h"
 #include "base/logging.h"
+#include "base/memory/read_only_shared_memory_region.h"
 #include "base/path_service.h"
 #include "carbonyl/src/browser/renderer.h"
 
@@ -57,20 +58,89 @@ void MongooseRenderServiceImpl::CheckNetworkRequest(
     mojom::NetworkRequestDataPtr request,
     CheckNetworkRequestCallback callback) {
 
-  // TODO: Implement network blocking using Mongoose privacy engine
-  // For now, allow all requests
   auto result = mojom::BlockResult::New();
   result->should_block = false;
   result->matched_filter = std::nullopt;
+
+  if (!mongoose_handle_) {
+    LOG(ERROR) << "CheckNetworkRequest: Mongoose not initialized";
+    std::move(callback).Run(std::move(result));
+    return;
+  }
+
+  // Call Rust FFI to check if request should be blocked
+  bool should_block = false;
+  char* filter = nullptr;
+
+  std::string url_str = request->url.spec();
+  std::string initiator_str = request->initiator.Serialize();
+
+  bool success = mongoose_check_network_request(
+      mongoose_handle_,
+      url_str.c_str(),
+      initiator_str.c_str(),
+      request->resource_type,
+      &should_block,
+      &filter
+  );
+
+  if (success) {
+    result->should_block = should_block;
+    if (filter != nullptr) {
+      result->matched_filter = std::string(filter);
+      mongoose_free_string(filter);
+    }
+
+    if (should_block) {
+      LOG(INFO) << "Mongoose: Blocked " << url_str
+                << " (filter: " << result->matched_filter.value_or("unknown") << ")";
+    }
+  } else {
+    LOG(ERROR) << "Failed to check network request with Mongoose";
+  }
 
   std::move(callback).Run(std::move(result));
 }
 
 void MongooseRenderServiceImpl::DrawImageBitmap(mojom::BitmapDataPtr bitmap) {
-  // TODO: Implement ASCII art rendering using Mongoose render engine
-  // This will extract pixels from shared memory and send to Rust for chafa conversion
-  LOG(INFO) << "DrawImageBitmap called (not yet implemented) - "
-            << bitmap->width << "x" << bitmap->height;
+  if (!mongoose_handle_) {
+    LOG(ERROR) << "DrawImageBitmap: Mongoose not initialized";
+    return;
+  }
+
+  // Map the shared memory region to access pixel data
+  base::ReadOnlySharedMemoryMapping mapping = bitmap->pixels.Map();
+  if (!mapping.IsValid()) {
+    LOG(ERROR) << "DrawImageBitmap: Failed to map shared memory";
+    return;
+  }
+
+  // Get pointer to RGBA pixel data
+  const uint8_t* pixel_data = static_cast<const uint8_t*>(mapping.memory());
+  size_t expected_size = bitmap->width * bitmap->height * 4;  // RGBA = 4 bytes per pixel
+
+  if (mapping.size() < expected_size) {
+    LOG(ERROR) << "DrawImageBitmap: Shared memory too small ("
+               << mapping.size() << " < " << expected_size << ")";
+    return;
+  }
+
+  // Call Rust FFI to render the bitmap as ASCII art
+  bool success = mongoose_render_bitmap(
+      mongoose_handle_,
+      pixel_data,
+      bitmap->width,
+      bitmap->height,
+      bitmap->bounds.x(),
+      bitmap->bounds.y()
+  );
+
+  if (!success) {
+    LOG(ERROR) << "Failed to render bitmap with Mongoose";
+  } else {
+    LOG(INFO) << "Mongoose: Rendered " << bitmap->width << "x" << bitmap->height
+              << " bitmap at (" << bitmap->bounds.x() << ", " << bitmap->bounds.y() << ")";
+  }
 }
 
 void MongooseRenderServiceImpl::SetHybridAsciiMode(bool enabled) {

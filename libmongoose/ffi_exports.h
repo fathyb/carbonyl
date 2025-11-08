@@ -71,6 +71,54 @@ void mongoose_shutdown(MongooseHandle handle);
 bool mongoose_is_initialized(MongooseHandle handle);
 
 // ============================================================================
+// Privacy Engine
+// ============================================================================
+
+/**
+ * Check if a network request should be blocked.
+ *
+ * This function calls the Mongoose privacy engine to check if a request
+ * matches any blocking filters. It must return quickly (microseconds) as
+ * it's called synchronously from the network stack.
+ *
+ * @param handle Handle from mongoose_initialize()
+ * @param url The URL being requested (null-terminated C string)
+ * @param source_url The page initiating the request (null-terminated C string)
+ * @param resource_type Type of resource:
+ *        0=document, 1=stylesheet, 2=image, 3=media, 4=font, 5=script,
+ *        6=XHR, 7=WebSocket, 8=ping, etc.
+ * @param should_block_out Output: set to true if request should be blocked
+ * @param filter_out Output: pointer to receive matched filter string (or NULL).
+ *        If non-NULL and a filter matches, this will be set to an allocated
+ *        string that must be freed with mongoose_free_string().
+ * @return true on success, false on error (invalid handle or strings)
+ *
+ * Example:
+ *   bool should_block = false;
+ *   char* filter = nullptr;
+ *   bool success = mongoose_check_network_request(
+ *       handle,
+ *       "https://ads.example.com/script.js",
+ *       "https://site.com",
+ *       5,  // Script
+ *       &should_block,
+ *       &filter
+ *   );
+ *   if (success && should_block) {
+ *     LOG(INFO) << "Blocked by filter: " << filter;
+ *     mongoose_free_string(filter);
+ *   }
+ */
+bool mongoose_check_network_request(
+    MongooseHandle handle,
+    const char* url,
+    const char* source_url,
+    int32_t resource_type,
+    bool* should_block_out,
+    char** filter_out
+);
+
+// ============================================================================
 // Rendering Engine
 // ============================================================================
 
@@ -90,6 +138,41 @@ bool mongoose_is_initialized(MongooseHandle handle);
  *   mongoose_set_ascii_mode(mongoose, true);  // Enable chafa rendering
  */
 void mongoose_set_ascii_mode(MongooseHandle handle, bool enabled);
+
+/**
+ * Render a bitmap as ASCII art and send to terminal.
+ *
+ * This function captures a rendered bitmap and sends it to the Rust
+ * rendering engine for ASCII art conversion using chafa. The bitmap
+ * is stamped onto the frame buffer at the specified position.
+ *
+ * @param handle Handle from mongoose_initialize()
+ * @param pixels Pointer to RGBA pixel data (4 bytes per pixel: R, G, B, A)
+ * @param width Width of the image in pixels
+ * @param height Height of the image in pixels
+ * @param x X coordinate for rendering (terminal column)
+ * @param y Y coordinate for rendering (terminal row)
+ * @return true on success, false on error
+ *
+ * Example:
+ *   std::vector<uint8_t> rgba_pixels = GetBitmapPixels();
+ *   bool success = mongoose_render_bitmap(
+ *       handle,
+ *       rgba_pixels.data(),
+ *       800,  // width
+ *       600,  // height
+ *       0,    // x
+ *       0     // y
+ *   );
+ */
+bool mongoose_render_bitmap(
+    MongooseHandle handle,
+    const uint8_t* pixels,
+    uint32_t width,
+    uint32_t height,
+    int32_t x,
+    int32_t y
+);
 
 // ============================================================================
 // Statistics and Debugging
