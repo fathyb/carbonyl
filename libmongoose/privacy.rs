@@ -3,7 +3,11 @@
 /// This module integrates the adblock-rust engine (the same engine used by Brave)
 /// to provide network-level blocking of ads and trackers.
 
-use adblock::Engine;
+use adblock::{
+    lists::{FilterSet, ParseOptions},
+    request::Request,
+    Engine,
+};
 use anyhow::{Context, Result};
 use log::{debug, error, info, warn};
 use parking_lot::RwLock;
@@ -162,11 +166,13 @@ impl PrivacyEngine {
 
     /// Add filter rules to the engine
     pub fn add_filter_rules(&self, rules: &[String]) -> Result<()> {
-        // Join all rules into a single string separated by newlines
-        let filter_text = rules.join("\n");
+        // Create a FilterSet and add all rules
+        let debug_info = cfg!(debug_assertions);
+        let mut filter_set = FilterSet::new(debug_info);
+        filter_set.add_filters(rules, ParseOptions::default());
 
-        // Create new engine with these rules
-        let mut new_engine = Engine::from_rules(&[&filter_text], Default::default());
+        // Create engine from the filter set (true = optimize)
+        let new_engine = Engine::from_filter_set(filter_set, true);
 
         // Swap with the current engine
         *self.engine.write() = new_engine;
@@ -180,20 +186,43 @@ impl PrivacyEngine {
     /// This is a fast, in-memory operation that returns immediately.
     /// It is safe to call from any thread.
     pub fn check_request(&self, request: &NetworkRequest) -> BlockResult {
-        let _engine = self.engine.read();
+        let engine = self.engine.read();
 
-        // TODO: Use the correct adblock-rust API once we determine the exact method signature
-        // For now, return allow for all requests (privacy engine compiles but doesn't block)
-        debug!("Privacy check for: {} (placeholder implementation)", request.url);
+        // Create an adblock Request object
+        let adblock_request = match Request::new(
+            &request.url,
+            &request.source_url,
+            request.request_type.to_adblock_type(),
+        ) {
+            Ok(req) => req,
+            Err(e) => {
+                warn!("Failed to create adblock request: {}", e);
+                return BlockResult::allow();
+            }
+        };
 
-        // Placeholder: Always allow for now
-        // The real implementation will use engine.check_network_urls() or similar
-        BlockResult::allow()
+        // Check if the request should be blocked
+        let blocker_result = engine.check_network_request(&adblock_request);
+
+        if blocker_result.matched {
+            debug!(
+                "Blocking request: {} (matched filter: {:?})",
+                request.url, blocker_result.filter
+            );
+
+            BlockResult::block(
+                blocker_result
+                    .filter
+                    .unwrap_or_else(|| "unknown".to_string()),
+            )
+        } else {
+            BlockResult::allow()
+        }
     }
 
     /// Get statistics about the loaded filters
     pub fn get_stats(&self) -> EngineStats {
-        let engine = self.engine.read();
+        let _engine = self.engine.read();
 
         // adblock-rust doesn't expose filter count directly,
         // so we'll return basic stats
@@ -240,5 +269,39 @@ mod tests {
         assert_eq!(RequestType::Script.to_adblock_type(), "script");
         assert_eq!(RequestType::Image.to_adblock_type(), "image");
         assert_eq!(RequestType::Document.to_adblock_type(), "document");
+    }
+
+    #[test]
+    fn test_adblock_integration() {
+        let engine = PrivacyEngine::new().unwrap();
+
+        // Add some test filter rules
+        let rules = vec![
+            "-advertisement-icon.".to_string(),
+            "-advertisement.".to_string(),
+            "||ads.example.com^".to_string(),
+        ];
+
+        engine.add_filter_rules(&rules).unwrap();
+
+        // Test that ad URLs are blocked
+        let ad_request = NetworkRequest {
+            url: "http://example.com/-advertisement-icon.png".to_string(),
+            source_url: "http://example.com/".to_string(),
+            request_type: RequestType::Image,
+        };
+
+        let result = engine.check_request(&ad_request);
+        assert!(result.should_block, "Advertisement should be blocked");
+
+        // Test that normal URLs are allowed
+        let normal_request = NetworkRequest {
+            url: "http://example.com/normal-image.png".to_string(),
+            source_url: "http://example.com/".to_string(),
+            request_type: RequestType::Image,
+        };
+
+        let result = engine.check_request(&normal_request);
+        assert!(!result.should_block, "Normal request should be allowed");
     }
 }
