@@ -1,5 +1,5 @@
-// Our C++ bindings will be in the carbonyl::mojom namespace
-module carbonyl.mojom;
+// Our C++ bindings will be in the mongoose::mojom namespace
+module mongoose.mojom;
 
 // Import existing bindings to common structures
 import "ui/gfx/geometry/mojom/geometry.mojom";
@@ -16,7 +16,7 @@ struct TextData {
 };
 
 // The browser process runs this service
-interface CarbonylRenderService {
+interface MongooseRenderService {
     // The renderer process calls this method
     DrawText(array<TextData> data);
 };

@@ -1,5 +1,5 @@
 [package]
-name = "carbonyl"
+name = "mongoose"
 version = "0.0.3"
 edition = "2021"
 
@@ -10,6 +10,6 @@ unicode-segmentation = "1.10.0"
 chrono = "0.4.23"
 
 [lib]
-name = "carbonyl"
-path = "src/lib.rs"
+name = "mongoose"
+path = "libmongoose/lib.rs"
 crate-type = ["cdylib"]
