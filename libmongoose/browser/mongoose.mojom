@@ -4,6 +4,10 @@ module mongoose.mojom;
 // Import existing bindings to common structures
 import "ui/gfx/geometry/mojom/geometry.mojom";
 import "skia/public/mojom/skcolor.mojom";
+import "url/mojom/url.mojom";
+import "url/mojom/origin.mojom";
+
+// === Existing Rendering Structures ===
 
 // Define a structure to hold text to render
 struct TextData {
@@ -15,8 +19,62 @@ struct TextData {
     skia.mojom.SkColor color;
 };
 
+// === Phase 3: Privacy Engine Structures ===
+
+// Network request data for blocking checks
+struct NetworkRequestData {
+    // The URL being requested
+    url.mojom.Url url;
+    // The origin initiating the request
+    url.mojom.Origin initiator;
+    // Resource type (0=document, 1=stylesheet, 2=image, 3=media, 4=font, 5=script, etc.)
+    int32 resource_type;
+};
+
+// Result of a network blocking check
+struct BlockResult {
+    // Whether the request should be blocked
+    bool should_block;
+    // The filter that matched (optional, for debugging)
+    string? matched_filter;
+};
+
+// === Phase 3: Hybrid Rendering Structures ===
+
+// Raw bitmap data for ASCII art rendering
+struct BitmapData {
+    // Shared memory handle containing RGBA pixel data
+    handle<shared_buffer> pixels;
+    // Width of the image in pixels
+    uint32 width;
+    // Height of the image in pixels
+    uint32 height;
+    // Bounds in the browser coordinate system
+    gfx.mojom.Rect bounds;
+};
+
 // The browser process runs this service
 interface MongooseRenderService {
-    // The renderer process calls this method
+    // === Existing Methods ===
+
+    // The renderer process calls this method to render text
     DrawText(array<TextData> data);
+
+    // === Phase 3: New Methods ===
+
+    // Check if a network request should be blocked (Privacy Engine)
+    // This is called synchronously from the C++ network interceptor
+    [Sync]
+    CheckNetworkRequest(NetworkRequestData request) => (BlockResult result);
+
+    // Send a raw image bitmap for high-fidelity ASCII art rendering
+    // This is called when hybrid ASCII mode is enabled
+    DrawImageBitmap(BitmapData bitmap);
+
+    // Enable or disable hybrid ASCII art mode
+    // When enabled, images are rendered as chafa art instead of blocks
+    SetHybridAsciiMode(bool enabled);
+
+    // Set the window title (existing, kept for compatibility)
+    SetTitle(string title);
 };
