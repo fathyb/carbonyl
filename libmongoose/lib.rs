@@ -19,6 +19,12 @@ pub mod render;
 /// Data persistence - Hybrid SQLite + Redb storage
 pub mod data;
 
+/// Data persistence extensions - Advanced features (migrations, cleanup, export)
+pub mod data_ext;
+
+/// Private data store - In-memory storage for private browsing mode
+pub mod data_private;
+
 /// Mojo IPC implementation - Handlers for mongoose.mojom interface
 pub mod mojo_impl;
 
@@ -27,3 +33,10 @@ pub use mojo_impl::MongooseOrchestrator;
 pub use privacy::{BlockResult, NetworkRequest, PrivacyEngine, RequestType};
 pub use render::{AsciiEngine, FrameBuffer, RenderMode};
 pub use data::{DataStore, HistoryEntry, Bookmark};
+
+// Re-export extension types
+pub use data_ext::{
+    CleanupPolicy, CleanupResult, DatabaseStats, DataExport,
+    DataStoreExt, ImportResult,
+};
+pub use data_private::{PrivateDataStore, PrivateStoreStats};

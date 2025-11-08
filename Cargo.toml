@@ -40,6 +40,15 @@ log = "0.4"
 # Phase 3: Threading and concurrency
 parking_lot = "0.12"
 
+# Phase 3 Extensions: JSON export/import
+serde_json = "1.0"
+
+# Phase 3 Extensions: System directories
+dirs = "5.0"
+
+[dev-dependencies]
+tempfile = "3.8"
+
 [lib]
 name = "mongoose"
 path = "libmongoose/lib.rs"
