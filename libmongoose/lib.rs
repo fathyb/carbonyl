@@ -28,6 +28,9 @@ pub mod data_private;
 /// Mojo IPC implementation - Handlers for mongoose.mojom interface
 pub mod mojo_impl;
 
+/// FFI bridge - C-compatible interface for C++ integration
+pub mod ffi;
+
 // Re-export key types for convenience
 pub use mojo_impl::MongooseOrchestrator;
 pub use privacy::{BlockResult, NetworkRequest, PrivacyEngine, RequestType};
