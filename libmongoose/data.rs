@@ -7,7 +7,7 @@
 use anyhow::{Context, Result};
 use log::{debug, info};
 use parking_lot::Mutex;
-use redb::{Database, ReadableTable, TableDefinition};
+use redb::{Database, TableDefinition};
 use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
@@ -55,6 +55,7 @@ pub struct SitePermissions {
 pub struct DataStore {
     sqlite: Arc<Mutex<Connection>>,
     redb: Arc<Database>,
+    #[allow(dead_code)]  // May be used in future for file path operations
     data_dir: PathBuf,
 }
 

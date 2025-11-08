@@ -5,7 +5,7 @@
 /// with the Rust logic layers (privacy, rendering, data).
 
 use crate::data::DataStore;
-use crate::privacy::{BlockResult, NetworkRequest, PrivacyEngine, RequestType};
+use crate::privacy::{NetworkRequest, PrivacyEngine, RequestType};
 use crate::render::{AsciiEngine, FrameBuffer, RenderMode};
 use log::{debug, error, info, warn};
 use parking_lot::RwLock;

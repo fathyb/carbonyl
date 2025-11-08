@@ -9,11 +9,11 @@ use adblock::{
     Engine,
 };
 use anyhow::{Context, Result};
-use log::{debug, error, info, warn};
+use log::{debug, info, warn};
 use parking_lot::RwLock;
 use reqwest::blocking::Client;
 use std::sync::Arc;
-use std::time::{Duration, SystemTime};
+use std::time::Duration;
 
 /// Default filter lists to load on first run
 const DEFAULT_FILTER_LISTS: &[(&str, &str)] = &[
@@ -25,6 +25,8 @@ const DEFAULT_FILTER_LISTS: &[(&str, &str)] = &[
 ];
 
 /// How long before we consider a filter list stale (24 hours)
+/// This will be used in the future for automatic filter list updates
+#[allow(dead_code)]
 const FILTER_LIST_MAX_AGE: Duration = Duration::from_secs(24 * 60 * 60);
 
 /// Network request data for blocking checks

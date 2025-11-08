@@ -3,9 +3,8 @@
 /// This module provides the hybrid rendering engine that converts images
 /// to high-fidelity ASCII/Unicode art using the chafa library.
 
-use anyhow::{Context, Result};
-use log::{debug, warn};
-use std::ptr;
+use anyhow::Result;
+use log::debug;
 
 /// Rendering mode for the hybrid engine
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
