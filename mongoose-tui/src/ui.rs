@@ -1,5 +1,4 @@
 use ratatui::{
-    backend::Backend,
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
@@ -9,7 +8,7 @@ use ratatui::{
 
 use crate::app::{App, InputMode};
 
-pub fn draw<B: Backend>(f: &mut Frame<B>, app: &App) {
+pub fn draw(f: &mut Frame, app: &App) {
     // Create main layout with tabs, URL bar, browser pane, and status
     let chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -39,7 +38,7 @@ pub fn draw<B: Backend>(f: &mut Frame<B>, app: &App) {
     }
 }
 
-fn draw_tabs<B: Backend>(f: &mut Frame<B>, app: &App, area: Rect) {
+fn draw_tabs(f: &mut Frame, app: &App, area: Rect) {
     let titles: Vec<Line> = app
         .tabs
         .iter()
@@ -76,24 +75,24 @@ fn draw_tabs<B: Backend>(f: &mut Frame<B>, app: &App, area: Rect) {
     f.render_widget(tabs, area);
 }
 
-fn draw_url_bar<B: Backend>(f: &mut Frame<B>, app: &App, area: Rect) {
+fn draw_url_bar(f: &mut Frame, app: &App, area: Rect) {
     let (text, style) = match app.input_mode {
         InputMode::Insert => (
-            &app.url_input,
+            app.url_input.as_str(),
             Style::default()
                 .fg(Color::Yellow)
                 .add_modifier(Modifier::BOLD),
         ),
         _ => {
             if let Some(tab) = app.get_current_tab() {
-                (&tab.url, Style::default().fg(Color::White))
+                (tab.url.as_str(), Style::default().fg(Color::White))
             } else {
                 ("", Style::default().fg(Color::White))
             }
         }
     };
 
-    let input = Paragraph::new(text.as_str())
+    let input = Paragraph::new(text)
         .style(style)
         .block(
             Block::default()
@@ -112,7 +111,7 @@ fn draw_url_bar<B: Backend>(f: &mut Frame<B>, app: &App, area: Rect) {
     }
 }
 
-fn draw_browser_pane<B: Backend>(f: &mut Frame<B>, app: &App, area: Rect) {
+fn draw_browser_pane(f: &mut Frame, app: &App, area: Rect) {
     // Placeholder browser rendering
     // In the future, this will fetch the pre-rendered buffer from libmongoose
     // and display it directly
@@ -189,14 +188,14 @@ fn draw_browser_pane<B: Backend>(f: &mut Frame<B>, app: &App, area: Rect) {
     f.render_widget(paragraph, area);
 }
 
-fn draw_status_bar<B: Backend>(f: &mut Frame<B>, app: &App, area: Rect) {
+fn draw_status_bar(f: &mut Frame, app: &App, area: Rect) {
     let status = Paragraph::new(app.status_message.as_str())
         .style(Style::default().fg(Color::White));
 
     f.render_widget(status, area);
 }
 
-fn draw_command_palette<B: Backend>(f: &mut Frame<B>, app: &App) {
+fn draw_command_palette(f: &mut Frame, app: &App) {
     // Create a centered popup
     let area = centered_rect(60, 40, f.size());
 

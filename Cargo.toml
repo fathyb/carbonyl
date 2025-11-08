@@ -16,8 +16,8 @@ chrono = "0.4.23"
 # Phase 3: Privacy Engine
 adblock = "0.8"
 
-# Phase 3: ASCII Art Rendering
-chafa-sys = "0.1"
+# Phase 3: ASCII Art Rendering (optional - requires system chafa library)
+chafa-sys = { version = "0.1", optional = true }
 
 # Phase 3: Data Persistence
 rusqlite = { version = "0.31", features = ["bundled"] }
@@ -45,6 +45,10 @@ serde_json = "1.0"
 
 # Phase 3 Extensions: System directories
 dirs = "5.0"
+
+[features]
+default = []
+chafa = ["chafa-sys"]
 
 [dev-dependencies]
 tempfile = "3.8"

@@ -31,13 +31,12 @@ impl MongooseOrchestrator {
         // Initialize privacy engine
         let privacy_engine = Arc::new(PrivacyEngine::new()?);
 
-        // Load default filter lists in background
-        let privacy_clone = privacy_engine.clone();
-        std::thread::spawn(move || {
-            if let Err(e) = privacy_clone.load_default_filters() {
-                error!("Failed to load default filters: {}", e);
-            }
-        });
+        // Load default filter lists synchronously
+        // TODO: Load in background once adblock-rust supports Send+Sync
+        if let Err(e) = privacy_engine.load_default_filters() {
+            warn!("Failed to load default filters: {}", e);
+            info!("Privacy engine will run with no filters until manually loaded");
+        }
 
         // Initialize ASCII art engine
         let ascii_engine = Arc::new(RwLock::new(AsciiEngine::default()));
