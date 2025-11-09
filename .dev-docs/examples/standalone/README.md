@@ -19,7 +19,7 @@ make run
 make all
 
 # Then run manually
-LD_LIBRARY_PATH=../../../target/release ./test_ffi
+LD_LIBRARY_PATH=../../../build/release ./test_ffi
 ```
 
 ---
@@ -139,7 +139,7 @@ This test demonstrates the complete FFI API. To use Mongoose in your own C/C++ p
    ```bash
    gcc -o myapp myapp.c \
        -I/path/to/mongoose \
-       -L/path/to/mongoose/target/release \
+       -L/path/to/mongoose/build/release \
        -lmongoose \
        -lpthread -ldl -lm
    ```
@@ -170,7 +170,7 @@ This test demonstrates the complete FFI API. To use Mongoose in your own C/C++ p
 
 **Linking errors**:
 - Make sure `cargo build --lib --release` completed successfully
-- Verify `libmongoose.so` (or `.dylib`/`.dll`) exists in `target/release/`
+- Verify `libmongoose.so` (or `.dylib`/`.dll`) exists in `build/release/`
 - Check `LD_LIBRARY_PATH` is set correctly
 
 **Segmentation fault**:

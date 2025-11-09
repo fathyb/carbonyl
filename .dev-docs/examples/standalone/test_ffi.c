@@ -8,12 +8,12 @@
  *   cargo build --lib --release
  *   gcc -o test_ffi test_ffi.c \
  *       -I../../.. \
- *       -L../../../target/release \
+ *       -L../../../build/release \
  *       -lmongoose \
  *       -lpthread -ldl -lm
  *
  * Run:
- *   LD_LIBRARY_PATH=../../../target/release ./test_ffi
+ *   LD_LIBRARY_PATH=../../../build/release ./test_ffi
  */
 
 #include <stdio.h>

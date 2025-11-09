@@ -5,7 +5,7 @@
 
 # Paths
 ROOT_DIR := ../../..
-TARGET_DIR := $(ROOT_DIR)/target/release
+TARGET_DIR := $(ROOT_DIR)/build/release
 FFI_HEADER := $(ROOT_DIR)/libmongoose/ffi_exports.h
 
 # Compiler settings
