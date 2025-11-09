@@ -22,9 +22,9 @@ pub enum EnvVar {
 impl EnvVar {
     pub fn as_str(&self) -> &'static str {
         match self {
-            EnvVar::Debug => "CARBONYL_ENV_DEBUG",
-            EnvVar::Bitmap => "CARBONYL_ENV_BITMAP",
-            EnvVar::ShellMode => "CARBONYL_ENV_SHELL_MODE",
+            EnvVar::Debug => "MONGOOSE_ENV_DEBUG",
+            EnvVar::Bitmap => "MONGOOSE_ENV_BITMAP",
+            EnvVar::ShellMode => "MONGOOSE_ENV_SHELL_MODE",
         }
     }
 }

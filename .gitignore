@@ -10,3 +10,27 @@ node_modules/
 !/chromium/depot_tools
 !/chromium/patches
 /packages/*/build
+
+# AI-generated design and meta-documentation
+.dev-docs/
+
+# Rust build artifacts
+target/
+Cargo.lock
+
+# Chromium build artifacts
+mongoose-core/out/
+
+# Local configuration & data
+.env*
+*.env
+*.env.local
+
+# Local database and cache files
+mongoose.sqlite
+mongoose.sqlite-journal
+cache.redb
+cache.redb-wal/
+
+# IDE config
+.idea/

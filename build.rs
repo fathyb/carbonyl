@@ -13,7 +13,7 @@ fn link_sysroot() {
         );
     } else {
         println!("cargo:warning={}", "x86_64 debian sysroot provided by chromium was not found!");
-        println!("cargo:warning={}", "carbonyl may fail to link against a proper libc!");
+        println!("cargo:warning={}", "mongoose may fail to link against a proper libc!");
     }
 }
 
@@ -30,7 +30,7 @@ fn link_sysroot() {
         );
     } else {
         println!("cargo:warning={}", "x86 debian sysroot provided by chromium was not found!");
-        println!("cargo:warning={}", "carbonyl may fail to link against a proper libc!");
+        println!("cargo:warning={}", "mongoose may fail to link against a proper libc!");
     }
 }
 

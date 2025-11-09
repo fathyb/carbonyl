@@ -1,15 +1,59 @@
 [package]
-name = "carbonyl"
+name = "mongoose"
 version = "0.0.3"
 edition = "2021"
+authors = ["orpheus497"]
+description = "Privacy-first terminal web browser with hybrid rendering"
+license = "MIT"
 
 [dependencies]
+# Existing dependencies
 libc = "0.2"
 unicode-width = "0.1.10"
 unicode-segmentation = "1.10.0"
 chrono = "0.4.23"
 
+# Phase 3: Privacy Engine
+adblock = "0.8"
+
+# Phase 3: ASCII Art Rendering (optional - requires system chafa library)
+chafa-sys = { version = "0.1", optional = true }
+
+# Phase 3: Data Persistence
+rusqlite = { version = "0.31", features = ["bundled"] }
+redb = "2.1"
+
+# Phase 3: Serialization for cache storage
+serde = { version = "1.0", features = ["derive"] }
+bincode = "1.3"
+
+# Phase 3: HTTP client for fetching filter lists
+reqwest = { version = "0.11", features = ["blocking"] }
+
+# Phase 3: Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Phase 3: Logging
+log = "0.4"
+
+# Phase 3: Threading and concurrency
+parking_lot = "0.12"
+
+# Phase 3 Extensions: JSON export/import
+serde_json = "1.0"
+
+# Phase 3 Extensions: System directories
+dirs = "5.0"
+
+[features]
+default = []
+chafa = ["chafa-sys"]
+
+[dev-dependencies]
+tempfile = "3.8"
+
 [lib]
-name = "carbonyl"
-path = "src/lib.rs"
+name = "mongoose"
+path = "libmongoose/lib.rs"
 crate-type = ["cdylib"]
