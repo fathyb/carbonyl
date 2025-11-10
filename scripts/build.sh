@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -eo pipefail
+
 export CARBONYL_ROOT=$(cd $(dirname -- "$0") && dirname -- "$(pwd)")
 export INSTALL_DEPOT_TOOLS="true"
 
@@ -18,6 +20,11 @@ fi
 
 triple=$(scripts/platform-triple.sh "$cpu")
 
+if [ -z "$triple" ]; then
+    echo "Error: Failed to determine platform triple"
+    exit 1
+fi
+
 if [ -z "$CARBONYL_SKIP_CARGO_BUILD" ]; then
     if [ -z "$MACOSX_DEPLOYMENT_TARGET" ]; then
         export MACOSX_DEPLOYMENT_TARGET=10.13
@@ -27,12 +34,28 @@ if [ -z "$CARBONYL_SKIP_CARGO_BUILD" ]; then
 fi
 
 if [ -f "build/$triple/release/libcarbonyl.dylib" ]; then
+    if [ -z "$target" ] || [ ! -d "$CHROMIUM_SRC/out/$target" ]; then
+        echo "Error: Invalid target directory: $CHROMIUM_SRC/out/$target"
+        exit 1
+    fi
     cp "build/$triple/release/libcarbonyl.dylib" "$CHROMIUM_SRC/out/$target"
     install_name_tool \
         -id @executable_path/libcarbonyl.dylib \
         "build/$triple/release/libcarbonyl.dylib"
-else
+elif [ -f "build/$triple/release/libcarbonyl.so" ]; then
+    if [ -z "$target" ] || [ ! -d "$CHROMIUM_SRC/out/$target" ]; then
+        echo "Error: Invalid target directory: $CHROMIUM_SRC/out/$target"
+        exit 1
+    fi
     cp "build/$triple/release/libcarbonyl.so" "$CHROMIUM_SRC/out/$target"
+else
+    echo "Error: libcarbonyl library not found at build/$triple/release/"
+    exit 1
+fi
+
+if [ ! -d "$CHROMIUM_SRC/out/$target" ]; then
+    echo "Error: Target directory does not exist: $CHROMIUM_SRC/out/$target"
+    exit 1
 fi
 
 cd "$CHROMIUM_SRC/out/$target"
