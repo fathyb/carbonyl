@@ -3,9 +3,8 @@
 set -eo pipefail
 
 if [ -z "$CARBONYL_ROOT" ]; then
-    echo "CARBONYL_ROOT should be defined"
-
-    exit 2
+    echo "Error: CARBONYL_ROOT must be defined" >&2
+    exit 1
 fi
 
 if [ -z "$CHROMIUM_ROOT" ]; then
@@ -22,6 +21,11 @@ export PATH="$PATH:$DEPOT_TOOLS_ROOT"
 
 if [ "$INSTALL_DEPOT_TOOLS" = "true" ] && [ ! -f "$DEPOT_TOOLS_ROOT/README.md" ]; then
     echo "depot_tools not found, fetching submodule.."
+
+    if ! command -v git &> /dev/null; then
+        echo "Error: git is required but not installed" >&2
+        exit 1
+    fi
 
     git -C "$CARBONYL_ROOT" submodule update --init --recursive
 fi
