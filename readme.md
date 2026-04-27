@@ -36,8 +36,8 @@ $ docker run --rm -ti fathyb/carbonyl https://youtube.com
 ### npm
 
 ```console
-$ npm install --global carbonyl
-$ carbonyl https://github.com
+npm install --global carbonyl
+carbonyl https://github.com
 ```
 
 ### Binaries
