@@ -72,3 +72,19 @@ component("renderer") {
     "//skia"
   ]
 }
+
+component("downloads") {
+  output_name = "carbonyl_downloads"
+  sources = [
+    "download_manager_delegate.cc",
+    "download_manager_delegate.h",
+  ]
+
+  deps = [
+    ":renderer",
+    "//base",
+    "//components/download/public/common:public",
+    "//content/public/browser",
+    "//net",
+  ]
+}

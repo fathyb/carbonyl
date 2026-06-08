@@ -59,6 +59,11 @@ void carbonyl_renderer_draw_bitmap(
     void (*callback) (void*),
     void* callback_data
 );
+void carbonyl_renderer_notify_download(
+    struct carbonyl_renderer* renderer,
+    const char* path,
+    long long bytes
+);
 
 }
 
@@ -124,6 +129,14 @@ void Renderer::SetTitle(const std::string& title) {
     }
 
     carbonyl_renderer_set_title(ptr_, title.c_str());
+}
+
+void Renderer::NotifyDownload(const std::string& path, long long bytes) {
+    if (!path.size()) {
+        return;
+    }
+
+    carbonyl_renderer_notify_download(ptr_, path.c_str(), bytes);
 }
 
 void Renderer::DrawText(const std::vector<Text>& text) {

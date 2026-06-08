@@ -220,6 +220,35 @@ pub extern "C" fn carbonyl_renderer_set_title(bridge: RendererPtr, title: *const
         .render(move |renderer| renderer.set_title(title.to_str().unwrap()).unwrap());
 }
 
+/// Called by the C++ download delegate when a download is determined and written.
+/// Displays a short status message in the terminal title area.
+#[no_mangle]
+pub extern "C" fn carbonyl_renderer_notify_download(
+    bridge: RendererPtr,
+    path: *const c_char,
+    bytes: i64,
+) {
+    let (bridge, path) = unsafe { (bridge.as_ref(), CStr::from_ptr(path)) };
+    let (mut bridge, path) = (bridge.unwrap().lock().unwrap(), path.to_owned());
+
+    bridge.renderer.render(move |renderer| {
+        let filename = path
+            .to_str()
+            .unwrap_or("unknown")
+            .rsplit('/')
+            .next()
+            .unwrap_or("download");
+
+        let msg = if bytes >= 0 {
+            format!("Downloaded: {} ({} bytes)", filename, bytes)
+        } else {
+            format!("Downloading: {}", filename)
+        };
+
+        renderer.set_title(&msg).unwrap_or(());
+    });
+}
+
 #[no_mangle]
 pub extern "C" fn carbonyl_renderer_draw_text(
     bridge: RendererPtr,

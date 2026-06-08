@@ -1,0 +1,102 @@
+From 1d06e8a7eac07b836affba47d8aafe34faff22ee Mon Sep 17 00:00:00 2001
+From: Carbonyl Build <build@carbonyl.local>
+Date: Mon, 8 Jun 2026 12:49:56 -0400
+Subject: [PATCH 15/15] Add file download support
+
+---
+ base/threading/thread_restrictions.h                  | 5 +++++
+ headless/BUILD.gn                                     | 4 ++++
+ headless/lib/browser/headless_browser_context_impl.cc | 6 +++++-
+ headless/lib/browser/headless_browser_context_impl.h  | 3 +++
+ 4 files changed, 17 insertions(+), 1 deletion(-)
+
+diff --git a/base/threading/thread_restrictions.h b/base/threading/thread_restrictions.h
+index 9cc4929deb249..b19d161c73e86 100644
+--- a/base/threading/thread_restrictions.h
++++ b/base/threading/thread_restrictions.h
+@@ -136,6 +136,10 @@ class GaiaConfig;
+ class WebEngineBrowserMainParts;
+ class ScopedAllowBlockingForProfile;
+ 
++namespace carbonyl {
++class DownloadManagerDelegate;
++}  // namespace carbonyl
++
+ namespace base {
+ class File;
+ class FilePath;
+@@ -542,6 +546,7 @@ class BASE_EXPORT ScopedAllowBlocking {
+                            NestedAllowRestoresPreviousStack);
+   FRIEND_TEST_ALL_PREFIXES(ThreadRestrictionsTest, ScopedAllowBlocking);
+   friend class ScopedAllowBlockingForTesting;
++  friend class carbonyl::DownloadManagerDelegate;
+ 
+   // This can only be instantiated by friends. Use ScopedAllowBlockingForTesting
+   // in unit tests to avoid the friend requirement.
+diff --git a/headless/BUILD.gn b/headless/BUILD.gn
+index 17120c83ee13e..c717863b8378b 100644
+--- a/headless/BUILD.gn
++++ b/headless/BUILD.gn
+@@ -454,6 +454,7 @@ component("headless_non_renderer") {
+     "//build:branding_buildflags",
+     "//build:chromeos_buildflags",
+     "//carbonyl/src/browser:bridge",
++    "//carbonyl/src/browser:downloads",
+     "//carbonyl/src/browser:renderer",
+     "//components/cookie_config",
+     "//components/crash/core/common:common",
+@@ -1002,6 +1003,9 @@ executable("headless_shell") {
+     ldflags = [
+       "-Wl,-rpath=\$ORIGIN/.",
+       "-Wl,-rpath-link=.",
++      # libcarbonyl.so is built against host glibc (2.34+) but sysroot has 2.31;
++      # allow the shlib undefined check to pass since runtime host has glibc 2.38.
++      "-Wl,--allow-shlib-undefined",
+     ]
+   }
+ 
+diff --git a/headless/lib/browser/headless_browser_context_impl.cc b/headless/lib/browser/headless_browser_context_impl.cc
+index 0028e98dce329..4691ac33ccd8f 100644
+--- a/headless/lib/browser/headless_browser_context_impl.cc
++++ b/headless/lib/browser/headless_browser_context_impl.cc
+@@ -27,6 +27,7 @@
+ #include "headless/lib/browser/headless_browser_main_parts.h"
+ #include "headless/lib/browser/headless_permission_manager.h"
+ #include "headless/lib/browser/headless_web_contents_impl.h"
++#include "carbonyl/src/browser/download_manager_delegate.h"
+ #include "third_party/blink/public/common/origin_trials/trial_token_validator.h"
+ #include "ui/base/resource/resource_bundle.h"
+ 
+@@ -236,7 +237,10 @@ content::ResourceContext* HeadlessBrowserContextImpl::GetResourceContext() {
+ 
+ content::DownloadManagerDelegate*
+ HeadlessBrowserContextImpl::GetDownloadManagerDelegate() {
+-  return nullptr;
++  if (!download_manager_delegate_) {
++    download_manager_delegate_ = new carbonyl::DownloadManagerDelegate();
++  }
++  return download_manager_delegate_;
+ }
+ 
+ content::BrowserPluginGuestManager*
+diff --git a/headless/lib/browser/headless_browser_context_impl.h b/headless/lib/browser/headless_browser_context_impl.h
+index ad8062aced30e..aaae85d07ee99 100644
+--- a/headless/lib/browser/headless_browser_context_impl.h
++++ b/headless/lib/browser/headless_browser_context_impl.h
+@@ -17,6 +17,7 @@
+ #include "content/public/browser/browser_context.h"
+ #include "content/public/browser/global_routing_id.h"
+ #include "content/public/browser/resource_context.h"
++#include "carbonyl/src/browser/download_manager_delegate.h"
+ #include "headless/lib/browser/headless_browser_context_options.h"
+ #include "headless/lib/browser/headless_request_context_manager.h"
+ #include "headless/public/headless_browser_context.h"
+@@ -151,6 +152,8 @@ class HEADLESS_EXPORT HeadlessBrowserContextImpl final
+ 
+   std::unique_ptr<content::OriginTrialsControllerDelegate>
+       origin_trials_controller_delegate_;
++
++  carbonyl::DownloadManagerDelegate* download_manager_delegate_ = nullptr;
+ };
+ 
+ }  // namespace headless

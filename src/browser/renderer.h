@@ -57,6 +57,7 @@ public:
     void Listen(const struct carbonyl_renderer_browser_delegate* delegate);
     void PushNav(const std::string& url, bool can_go_back, bool can_go_forward);
     void SetTitle(const std::string& title);
+    void NotifyDownload(const std::string& path, long long bytes);
     void DrawText(const std::vector<Text>& text);
     void DrawBitmap(
         const unsigned char* pixels,
