@@ -63,8 +63,8 @@ impl Navigation {
                 if let Some(url) = &mut self.url {
                     // TODO: Unicode
                     match key.char {
-                        // Return
-                        0x0d => return NavigationAction::GoTo(url.clone()),
+                        // Return (CR or LF)
+                        0x0d | 0x0a => return NavigationAction::GoTo(resolve_url(url)),
                         // Up
                         0x11 => self.cursor = Some(0),
                         // Down
@@ -217,5 +217,92 @@ impl Navigation {
         }
 
         elements
+    }
+}
+
+/// Turn what the user typed in the address bar into something Chromium can load,
+/// the way a browser omnibox does: keep anything that already has a scheme,
+/// assume `https://` for a bare host like `youtube.com`, and send everything
+/// else to a search engine. Without this, typing `youtube.com` and pressing
+/// Return does nothing, because the raw string isn't a valid URL.
+fn resolve_url(input: &str) -> String {
+    let trimmed = input.trim();
+
+    if trimmed.is_empty() {
+        return "about:blank".to_owned();
+    }
+
+    // Already a full URL or a special scheme: load it verbatim.
+    if trimmed.contains("://")
+        || trimmed.starts_with("about:")
+        || trimmed.starts_with("data:")
+        || trimmed.starts_with("file:")
+    {
+        return trimmed.to_owned();
+    }
+
+    // A bare host such as `youtube.com`, `localhost` or `localhost:3000`.
+    let host = trimmed.split(['/', '?', '#']).next().unwrap_or(trimmed);
+    let host_only = host.split(':').next().unwrap_or(host);
+    let looks_like_host =
+        !trimmed.contains(' ') && (host_only.contains('.') || host_only == "localhost");
+
+    if looks_like_host {
+        format!("https://{trimmed}")
+    } else {
+        format!("https://duckduckgo.com/?q={}", percent_encode(trimmed))
+    }
+}
+
+/// Percent-encode a search query for use in a URL.
+fn percent_encode(input: &str) -> String {
+    let mut out = String::with_capacity(input.len());
+
+    for byte in input.bytes() {
+        match byte {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                out.push(byte as char)
+            }
+            b' ' => out.push('+'),
+            _ => out.push_str(&format!("%{byte:02X}")),
+        }
+    }
+
+    out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::resolve_url;
+
+    #[test]
+    fn keeps_full_urls() {
+        assert_eq!(resolve_url("https://youtube.com"), "https://youtube.com");
+        assert_eq!(resolve_url("http://example.com/x"), "http://example.com/x");
+        assert_eq!(resolve_url("about:blank"), "about:blank");
+        assert_eq!(resolve_url("file:///etc/hosts"), "file:///etc/hosts");
+    }
+
+    #[test]
+    fn assumes_https_for_bare_hosts() {
+        assert_eq!(resolve_url("youtube.com"), "https://youtube.com");
+        assert_eq!(resolve_url("youtube.com/watch?v=1"), "https://youtube.com/watch?v=1");
+        assert_eq!(resolve_url("localhost"), "https://localhost");
+        assert_eq!(resolve_url("localhost:3000"), "https://localhost:3000");
+        assert_eq!(resolve_url("  arxiv.org  "), "https://arxiv.org");
+    }
+
+    #[test]
+    fn searches_plain_text() {
+        assert_eq!(
+            resolve_url("hello world"),
+            "https://duckduckgo.com/?q=hello+world"
+        );
+        assert_eq!(resolve_url("rust"), "https://duckduckgo.com/?q=rust");
+    }
+
+    #[test]
+    fn empty_is_blank() {
+        assert_eq!(resolve_url("   "), "about:blank");
     }
 }
