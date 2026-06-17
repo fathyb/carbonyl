@@ -9,6 +9,7 @@ pub struct CommandLine {
     pub zoom: f32,
     pub debug: bool,
     pub bitmap: bool,
+    pub graphics: bool,
     pub program: CommandLineProgram,
     pub shell_mode: bool,
 }
@@ -16,6 +17,7 @@ pub struct CommandLine {
 pub enum EnvVar {
     Debug,
     Bitmap,
+    Graphics,
     ShellMode,
 }
 
@@ -24,6 +26,7 @@ impl EnvVar {
         match self {
             EnvVar::Debug => "CARBONYL_ENV_DEBUG",
             EnvVar::Bitmap => "CARBONYL_ENV_BITMAP",
+            EnvVar::Graphics => "CARBONYL_ENV_GRAPHICS",
             EnvVar::ShellMode => "CARBONYL_ENV_SHELL_MODE",
         }
     }
@@ -41,6 +44,7 @@ impl CommandLine {
         let mut zoom = 1.0;
         let mut debug = false;
         let mut bitmap = false;
+        let mut graphics = false;
         let mut shell_mode = false;
         let mut program = CommandLineProgram::Main;
         let args = env::args().skip(1).collect::<Vec<String>>();
@@ -77,6 +81,14 @@ impl CommandLine {
                 "-z" | "--zoom" => set_f32!(zoom = zoom / 100.0),
                 "-d" | "--debug" => set!(debug, Debug),
                 "-b" | "--bitmap" => set!(bitmap, Bitmap),
+                // Graphics mode renders the page through the kitty graphics
+                // protocol. It requires the full page (including text) in the
+                // framebuffer, which is exactly what bitmap mode produces, so
+                // it implies bitmap rendering.
+                "-g" | "--graphics" => {
+                    set!(graphics, Graphics);
+                    set!(bitmap, Bitmap);
+                }
 
                 "-h" | "--help" => program = CommandLineProgram::Help,
                 "-v" | "--version" => program = CommandLineProgram::Version,
@@ -92,6 +104,11 @@ impl CommandLine {
             bitmap = true;
         }
 
+        if env::var(EnvVar::Graphics).is_ok() {
+            graphics = true;
+            bitmap = true;
+        }
+
         if env::var(EnvVar::ShellMode).is_ok() {
             shell_mode = true;
         }
@@ -102,6 +119,7 @@ impl CommandLine {
             zoom,
             debug,
             bitmap,
+            graphics,
             program,
             shell_mode,
         }

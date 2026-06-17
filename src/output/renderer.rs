@@ -7,19 +7,24 @@ use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::UnicodeWidthStr;
 
 use crate::{
+    cli::CommandLine,
     gfx::{Color, Point, Rect, Size},
     input::Key,
     ui::navigation::{Navigation, NavigationAction},
     utils::log,
 };
 
-use super::{Cell, Grapheme, Painter};
+use super::{Cell, Grapheme, KittyGraphics, Painter};
 
 pub struct Renderer {
     nav: Navigation,
     cells: Vec<(Cell, Cell)>,
     painter: Painter,
     size: Size,
+    /// Kitty graphics backend, present only in `--graphics` mode. When set, the
+    /// page is drawn from the framebuffer via the kitty graphics protocol
+    /// instead of the quadrant glyphs.
+    graphics: Option<KittyGraphics>,
 }
 
 impl Renderer {
@@ -29,6 +34,11 @@ impl Renderer {
             cells: Vec::with_capacity(0),
             painter: Painter::new(),
             size: Size::new(0, 0),
+            graphics: if CommandLine::parse().graphics {
+                Some(KittyGraphics::new())
+            } else {
+                None
+            },
         }
     }
 
@@ -68,6 +78,14 @@ impl Renderer {
     pub fn set_size(&mut self, size: Size) {
         self.nav.set_size(size);
         self.size = size;
+
+        // Drop any image we transmitted at the old size so the terminal doesn't
+        // keep a stale placement around while we redraw at the new size.
+        if self.graphics.is_some() {
+            let mut stdout = io::stdout();
+            let _ = stdout.write_all(KittyGraphics::reset());
+            let _ = stdout.flush();
+        }
 
         let mut x = 0;
         let mut y = 0;
@@ -120,11 +138,31 @@ impl Renderer {
 
         self.painter.end(self.nav.cursor())?;
 
+        // In graphics mode the page lives in the framebuffer rather than in the
+        // cells: blit it via the kitty graphics protocol. The navigation bar
+        // occupies row 1, so the page fills the rest starting at row 2.
+        let (width, height) = (self.size.width, self.size.height);
+        if let Some(graphics) = &mut self.graphics {
+            if graphics.dirty() {
+                let bytes = graphics.encode(1, 2, width, height)?;
+                let mut stdout = io::stdout();
+                stdout.write_all(&bytes)?;
+                stdout.flush()?;
+            }
+        }
+
         Ok(())
     }
 
     /// Draw the background from a pixel array encoded in RGBA8888
     pub fn draw_background(&mut self, pixels: &[u8], pixels_size: Size, rect: Rect) {
+        // Graphics mode: keep the raw framebuffer and let the kitty protocol
+        // render it at full resolution instead of downsampling to quadrants.
+        if let Some(graphics) = &mut self.graphics {
+            graphics.store(pixels, pixels_size);
+            return;
+        }
+
         let viewport = self.size.cast::<usize>();
 
         if pixels.len() < viewport.width * viewport.height * 8 * 4 {

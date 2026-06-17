@@ -50,6 +50,9 @@ impl Window {
             }
         };
 
+        // Whether the terminal reported real cell pixel dimensions (kitty does).
+        let pixel_known = cell.width > 0 && cell.height > 0;
+
         if cell.width == 0 || cell.height == 0 {
             cell.width = 8;
             cell.height = 16;
@@ -89,9 +92,31 @@ impl Window {
         let cell_width = (cell_pixels.width + cell_pixels.height / 2.0) / 2.0;
 
         // Round DPI to 2 decimals for proper viewport computations
-        self.dpi = (2.0 / cell_width * zoom * 100.0).ceil() / 100.0;
-        // A virtual cell should contain a 2x4 pixel quadrant
-        self.scale = Size::new(2.0, 4.0) / self.dpi;
+        let dpi = (2.0 / cell_width * zoom * 100.0).ceil() / 100.0;
+        // In graphics mode the framebuffer is shown at full pixel resolution via
+        // the kitty protocol, so render it at a higher device-pixel-ratio for a
+        // crisp result. Scaling both the DPI and the per-cell pixel size by the
+        // same factor keeps the page layout identical while quadrupling the
+        // pixels behind each cell.
+        let supersample = if self.cmd.graphics { 2.0 } else { 1.0 };
+        // Device pixel ratio reported to Chromium
+        self.dpi = dpi * supersample;
+        // A virtual cell should contain a 2x4 pixel quadrant (times supersample)
+        self.scale = Size::new(2.0, 4.0) / (dpi / supersample);
+
+        // In graphics mode the framebuffer is scaled to fill the cell box. The
+        // 2x4 quadrant assumes a 1:2 cell, but real terminal cells are usually
+        // taller than that, which stretches the image vertically. Match the
+        // framebuffer's aspect ratio to the reported cell so it isn't distorted.
+        if self.cmd.graphics && pixel_known {
+            let cell_w = cell.width as f32 / term.width.max(1) as f32;
+            let cell_h = cell.height as f32 / term.height.max(1) as f32;
+
+            if cell_w > 0.0 && cell_h > 0.0 {
+                self.scale.height = self.scale.width * (cell_h / cell_w);
+            }
+        }
+
         // Keep some space for the UI
         self.cells = Size::new(term.width.max(1), term.height.max(2) - 1).cast();
         self.browser = self.cells.cast::<f32>().mul(self.scale).ceil().cast();
