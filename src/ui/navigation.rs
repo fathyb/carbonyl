@@ -2,6 +2,7 @@ use std::env;
 
 use unicode_width::UnicodeWidthStr;
 
+use super::vimium::{HintTarget, Mode, Vimium};
 use crate::{
     gfx::{Color, Point, Size},
     input::Key,
@@ -11,6 +12,9 @@ use crate::{
 pub enum NavigationAction {
     Ignore,
     Forward,
+    KeyPress(u8),
+    Scroll(i32),
+    Click(u32, u32),
     GoTo(String),
     GoBack(),
     GoForward(),
@@ -30,6 +34,7 @@ pub struct Navigation {
     cursor: Option<usize>,
     can_go_back: bool,
     can_go_forward: bool,
+    vimium: Vimium,
 }
 
 impl Navigation {
@@ -40,6 +45,7 @@ impl Navigation {
             cursor: None,
             can_go_back: false,
             can_go_forward: false,
+            vimium: Vimium::new(),
         }
     }
 
@@ -47,18 +53,54 @@ impl Navigation {
         Some((11 + self.cursor? as i32, 0).into())
     }
 
-    pub fn keypress(&mut self, key: &Key) -> NavigationAction {
+    pub fn vimium_mode(&self) -> Mode {
+        self.vimium.mode()
+    }
+
+    pub fn vimium_find_buf(&self) -> &str {
+        self.vimium.find_buf()
+    }
+
+    pub fn vimium_find_query(&self) -> Option<&str> {
+        self.vimium.find_query()
+    }
+
+    pub fn vimium_find_cursor(&self) -> usize {
+        self.vimium.find_cursor()
+    }
+
+    pub fn vimium_hints(&self) -> &[HintTarget] {
+        self.vimium.hints()
+    }
+
+    pub fn vimium_hint_buf(&self) -> &str {
+        self.vimium.hint_buf()
+    }
+
+    pub fn vimium_set_hints(&mut self, hints: Vec<HintTarget>) {
+        self.vimium.set_hints(hints)
+    }
+
+    pub fn vimium_exit_hint(&mut self) {
+        self.vimium.exit_hint()
+    }
+
+    pub fn keypress(&mut self, key: &Key, viewport_px_height: i32) -> NavigationAction {
         let modifier_key = match env::consts::OS {
             "macos" => key.modifiers.meta,
             _ => key.modifiers.alt,
         };
 
         match self.cursor {
-            None => match (modifier_key, key.char) {
-                (true, 0x14) => NavigationAction::GoBack(),
-                (true, 0x13) => NavigationAction::GoForward(),
-                _ => NavigationAction::Forward,
-            },
+            None => {
+                if let (true, 0x14) = (modifier_key, key.char) {
+                    return NavigationAction::GoBack();
+                }
+                if let (true, 0x13) = (modifier_key, key.char) {
+                    return NavigationAction::GoForward();
+                }
+                self.vimium.handle(key, viewport_px_height)
+            }
             Some(cursor) => {
                 if let Some(url) = &mut self.url {
                     // TODO: Unicode

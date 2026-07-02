@@ -11,5 +11,7 @@ Options:
     -z, --zoom=<zoom>          set the zoom level in percent (default: 100)
     -b, --bitmap               render text as bitmaps
     -d, --debug                enable debug logs
+        --vim                  enable vimium-style keyboard navigation
+                               (h/j/k/l scroll, f link hints, / find)
     -h, --help                 display this help message
     -v, --version              output the version number

@@ -344,6 +344,7 @@ pub extern "C" fn carbonyl_renderer_listen(bridge: RendererPtr, delegate: *mut B
         }
 
         listen(|mut events| {
+            let browser_height = bridge.lock().unwrap().window.browser.height as i32;
             bridge.lock().unwrap().renderer.render(move |renderer| {
                 let get_scale = || bridge.lock().unwrap().window.scale;
                 let scale = |col, row| {
@@ -359,6 +360,26 @@ pub extern "C" fn carbonyl_renderer_listen(bridge: RendererPtr, delegate: *mut B
                     match action {
                         NavigationAction::Ignore => (),
                         NavigationAction::Forward => return true,
+                        NavigationAction::KeyPress(char) => emit!(key_press(char as c_char)),
+                        NavigationAction::Scroll(delta) => emit!(scroll(delta as c_int)),
+                        NavigationAction::Click(col, row) => {
+                            let (px, py): (c_uint, c_uint) =
+                                scale(col as usize, row as usize);
+                            let md = delegate.mouse_down;
+                            let mu = delegate.mouse_up;
+                            let post_task_fn = delegate.post_task;
+                            // Two separate posts (mouse_down now, mouse_up after a short
+                            // delay on a side thread) so blink registers down/up as a
+                            // proper click without the browser main thread blocking on
+                            // sleep.
+                            let run_down = move || md(px, py);
+                            unsafe { post_task(post_task_fn, run_down) }
+                            std::thread::spawn(move || {
+                                std::thread::sleep(std::time::Duration::from_millis(80));
+                                let run_up = move || mu(px, py);
+                                unsafe { post_task(post_task_fn, run_up) }
+                            });
+                        }
                         NavigationAction::GoBack() => emit!(go_back()),
                         NavigationAction::GoForward() => emit!(go_forward()),
                         NavigationAction::Refresh() => emit!(refresh()),
@@ -383,7 +404,7 @@ pub extern "C" fn carbonyl_renderer_listen(bridge: RendererPtr, delegate: *mut B
                             emit!(scroll((delta as f32 * scale.height) as c_int))
                         }
                         KeyPress { key } => {
-                            if dispatch(renderer.keypress(&key).unwrap()) {
+                            if dispatch(renderer.keypress(&key, browser_height).unwrap()) {
                                 emit!(key_press(key.char as c_char))
                             }
                         }

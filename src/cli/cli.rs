@@ -9,6 +9,7 @@ pub struct CommandLine {
     pub zoom: f32,
     pub debug: bool,
     pub bitmap: bool,
+    pub vim: bool,
     pub program: CommandLineProgram,
     pub shell_mode: bool,
 }
@@ -17,6 +18,7 @@ pub enum EnvVar {
     Debug,
     Bitmap,
     ShellMode,
+    Vim,
 }
 
 impl EnvVar {
@@ -25,6 +27,7 @@ impl EnvVar {
             EnvVar::Debug => "CARBONYL_ENV_DEBUG",
             EnvVar::Bitmap => "CARBONYL_ENV_BITMAP",
             EnvVar::ShellMode => "CARBONYL_ENV_SHELL_MODE",
+            EnvVar::Vim => "CARBONYL_ENV_VIM",
         }
     }
 }
@@ -41,6 +44,7 @@ impl CommandLine {
         let mut zoom = 1.0;
         let mut debug = false;
         let mut bitmap = false;
+        let mut vim = false;
         let mut shell_mode = false;
         let mut program = CommandLineProgram::Main;
         let args = env::args().skip(1).collect::<Vec<String>>();
@@ -77,6 +81,7 @@ impl CommandLine {
                 "-z" | "--zoom" => set_f32!(zoom = zoom / 100.0),
                 "-d" | "--debug" => set!(debug, Debug),
                 "-b" | "--bitmap" => set!(bitmap, Bitmap),
+                "--vim" => set!(vim, Vim),
 
                 "-h" | "--help" => program = CommandLineProgram::Help,
                 "-v" | "--version" => program = CommandLineProgram::Version,
@@ -96,12 +101,17 @@ impl CommandLine {
             shell_mode = true;
         }
 
+        if env::var(EnvVar::Vim).is_ok() {
+            vim = true;
+        }
+
         CommandLine {
             args,
             fps,
             zoom,
             debug,
             bitmap,
+            vim,
             program,
             shell_mode,
         }
