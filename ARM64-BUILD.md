@@ -9,6 +9,37 @@ All paths are relative to the Carbonyl source root (`~/carbonyl/carbonyl-src/`) 
 
 ---
 
+## Corrections from the verified 2026-07 rebuild
+
+> This document was written against an earlier depot_tools/toolchain state. A full clean
+> rebuild on 2026-07-18/19 (Ubuntu 24.04 arm64 Multipass VM, 8 CPU / 12 GB RAM) surfaced
+> several deviations. With the fixes below the build completes with **zero errors** and is
+> verified end-to-end: `headless_shell --version` prints `Carbonyl 0.0.3`, it renders live
+> pages to the terminal, and file downloads save to `~/Downloads/`. The critical fixes,
+> each detailed inline in the section noted:
+>
+> 1. **Pin depot_tools to a Chromium-111-era commit** — latest depot_tools requires
+>    Python 3.11+ (`StrEnum`), which conflicts with the Python 3.10 that Chromium 111
+>    needs. (§1)
+> 2. **Use a Python 3.10 PATH shim, not `update-alternatives`** — repointing the system
+>    `python3` breaks `apt`/`add-apt-repository` on Ubuntu 24.04. (Environment)
+> 3. **Sync before applying patches** — `patches.sh apply` needs `chromium/src` to exist,
+>    so the old "apply patches before syncing" order fails. (§1)
+> 4. **Neutralize reclient in `chromium/src/DEPS`** — the `.gclient` `custom_deps: None`
+>    does *not* suppress the arm64 cipd fetch of `infra/rbe/client/linux-arm64`. (§1)
+> 5. **`gn` and `esbuild` arrive automatically** as arm64 cipd binaries from the sync — the
+>    manual build/copy steps in §2f/§2h are normally unnecessary. (§2f/§2h)
+> 6. **`LASTCHANGE.committime` must be a bare integer** — the `lastchange.py` fallback
+>    writes a `key=value` blob that breaks `compute_build_timestamp.py`. (§2g)
+> 7. **Apply `third_party/node/typescript.patch` after `npm install`** — without it the
+>    WebUI `tsc` step fails with `TrustedHTML not assignable to string`. (§2i)
+> 8. **`DAWN_VERSION` must have no trailing newline** — a newline becomes an unterminated
+>    C++ string literal that cascades into bogus Dawn compile errors. (§2k)
+> 9. **Running the binary** needs `libcarbonyl.so` beside it, extra runtime apt packages,
+>    and `--no-sandbox` inside a VM. (§6)
+
+---
+
 ## Environment
 
 - Ubuntu 24.04 arm64 (Multipass VM on Apple M4, 16 GB RAM allocated)
@@ -31,41 +62,100 @@ sudo apt-get install -y \
 
 Ubuntu 24.04 ships Python 3.12, which breaks Chromium 111's build scripts (the `imp`
 module was removed in 3.12 and bundled `six` 1.14 is broken). Install Python 3.10
-from the deadsnakes PPA and make it the default:
+from the deadsnakes PPA:
 
 ```bash
 sudo add-apt-repository ppa:deadsnakes/ppa -y
 sudo apt-get install -y python3.10 python3.10-distutils python3.10-dev
-
-# Make python3.10 the default python3
-sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 5
-sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 10
-
-python3 --version  # should show 3.10.x
 ```
+
+> **Use a PATH shim, not `update-alternatives` (corrected 2026-07).** Repointing the
+> system `/usr/bin/python3` to 3.10 breaks Ubuntu 24.04's `apt`, `add-apt-repository`,
+> and other system tools that require 3.12. Instead, put a 3.10 `python3` earlier on
+> `PATH` only for the build. This keeps the system default at 3.12 while the build sees
+> 3.10:
+>
+> ```bash
+> mkdir -p ~/py310
+> ln -sf /usr/bin/python3.10 ~/py310/python3
+> ln -sf /usr/bin/python3.10 ~/py310/python
+> ```
+>
+> Then source a small build-env file in every build shell (also used by later steps):
+>
+> ```bash
+> cat > ~/buildenv.sh << 'EOF'
+> export PATH="$HOME/py310:$HOME/carbonyl/carbonyl-src/chromium/depot_tools:$HOME/.cargo/bin:$PATH"
+> export DEPOT_TOOLS_UPDATE=0
+> export VPYTHON_BYPASS="manually managed python not supported by chrome operations"
+> EOF
+> source ~/buildenv.sh
+> python3 --version   # should show 3.10.x here, still 3.12 in a normal shell
+> ```
 
 ---
 
 ## 1. Checkout
 
 ```bash
-git clone https://github.com/fathyb/carbonyl ~/carbonyl/carbonyl-src
+# Use this fork (carylewis/carbonyl) — it already contains the file-download support
+# committed under src/browser/ and chromium/patches/chromium/0015-*, so §5 is baked in.
+git clone https://github.com/carylewis/carbonyl ~/carbonyl/carbonyl-src
 cd ~/carbonyl/carbonyl-src
 
 # Fetch depot_tools
 git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git chromium/depot_tools
-export PATH="$PWD/chromium/depot_tools:$PATH"
-
-# Apply Carbonyl's Chromium patches before syncing
-./scripts/patches.sh apply
-
-cd chromium
-gclient sync   # pulls Chromium 111 + all sub-repos (~65 GB, takes 1-2 hours)
 ```
 
-> **DEPS note:** The `.gclient` config already includes `"src/buildtools/reclient": None`
-> which skips the reclient fetch (reclient CIPD packages are x86_64-only). No manual
-> DEPS edit is required.
+> **Pin depot_tools to the Chromium-111 era (corrected 2026-07).** The latest depot_tools
+> requires Python 3.11+ (`from enum import StrEnum`), which is incompatible with the
+> Python 3.10 that Chromium 111 needs — `gclient` crashes on import. Pin it to a
+> contemporaneous commit and disable auto-update (`DEPOT_TOOLS_UPDATE=0`, already set in
+> `~/buildenv.sh`):
+>
+> ```bash
+> ( cd chromium/depot_tools && \
+>   git checkout -q "$(git rev-list -1 --before=2023-03-15 origin/main)" )
+> ```
+
+```bash
+source ~/buildenv.sh   # puts py310 shim + depot_tools on PATH, DEPOT_TOOLS_UPDATE=0
+
+cd chromium
+gclient sync --no-history --shallow --nohooks   # Chromium 111 + sub-repos, ~14 GB, ~5 min
+```
+
+> **Sync *before* applying patches (corrected 2026-07).** `scripts/patches.sh apply`
+> `cd`s into `chromium/src` and `git checkout`s the upstream base commits, so `chromium/src`
+> must already exist. The old "apply patches before syncing" order fails with
+> `cd: chromium/src: No such file or directory`. With `--shallow` the patch-base commits
+> (`92da8189…`, Skia `486deb23…`, WebRTC `727080cb…`) are exactly the synced HEADs, so the
+> checkouts in `patches.sh` are no-ops and succeed.
+
+> **Neutralize reclient in `chromium/src/DEPS` (corrected 2026-07).** `reclient`
+> (`infra/rbe/client/${platform}`) has no `linux-arm64` cipd package, and the `.gclient`
+> `custom_deps: {"src/buildtools/reclient": None}` does **not** suppress the fetch — the
+> sync dies with `no such package: infra/rbe/client/linux-arm64`. Give the reclient block
+> in `chromium/src/DEPS` an impossible condition, then re-run the sync:
+>
+> ```bash
+> # In chromium/src/DEPS, inside the 'src/buildtools/reclient': { ... } block, add:
+> #   'condition': 'host_os == "win" and host_os == "linux"',   # always false → skipped
+> cd ~/carbonyl/carbonyl-src/chromium && gclient sync --no-history --shallow --nohooks
+> ```
+>
+> Set a git identity first (`git config --global user.email/user.name`) so `patches.sh`'s
+> `git am` can commit. Then apply patches:
+>
+> ```bash
+> cd ~/carbonyl/carbonyl-src && ./scripts/patches.sh apply
+> ```
+
+> **Note on hooks:** we sync with `--nohooks` on purpose. The arm64-incompatible hooks are
+> exactly the ones replaced by the manual steps in §2 (sysroot, gn, LASTCHANGE, esbuild,
+> node_modules, generated headers). `gn` and `esbuild` still arrive as arm64 cipd binaries
+> during the dep sync, so §2f/§2h are usually already satisfied — check before doing them
+> manually.
 
 ---
 
@@ -212,6 +302,7 @@ are not committed to the repository; generate them or copy from an existing buil
 cd chromium/src
 python3 build/util/lastchange.py -o build/util/LASTCHANGE
 python3 build/util/lastchange.py --revision-id-only -o build/util/LASTCHANGE.committime
+: > build/util/LASTCHANGE.dummy
 
 # Or copy from an existing build:
 cp /path/to/existing/build/util/LASTCHANGE     chromium/src/build/util/
@@ -219,12 +310,30 @@ cp /path/to/existing/build/util/LASTCHANGE.committime chromium/src/build/util/
 cp /path/to/existing/build/util/LASTCHANGE.dummy      chromium/src/build/util/
 ```
 
+> **`LASTCHANGE.committime` must be a bare unix integer (corrected 2026-07).** After
+> `patches.sh`, the patched HEAD has no Gerrit `Change-Id`, so `lastchange.py` falls back
+> and writes `LASTCHANGE=0\nLASTCHANGE_YEAR=1970` into *both* files. `gn gen` then dies in
+> `compute_build_timestamp.py` with `ValueError: invalid literal for int()`. Overwrite the
+> committime file with the actual HEAD commit time (a single integer, no newline):
+>
+> ```bash
+> printf '%s' "$(git -C chromium/src log -1 --format=%ct HEAD)" \
+>   > chromium/src/build/util/LASTCHANGE.committime
+> ```
+
 ---
 
 ### 2h. `esbuild` binary
 
 The DevTools frontend build requires an `esbuild` binary that is not checked in.
-Copy from an existing build or download it:
+
+> **Usually already present (2026-07).** The dep sync fetches an arm64 `esbuild` cipd
+> binary automatically. Check first — `file third_party/devtools-frontend/src/third_party/esbuild/esbuild`
+> should report `ELF ... ARM aarch64`. Same for `gn` in §2f
+> (`buildtools/linux64/gn` arrives as an arm64 ELF). Only do the manual steps if they're
+> actually missing.
+
+If it is missing, copy from an existing build or download it:
 
 ```bash
 mkdir -p chromium/src/third_party/devtools-frontend/src/third_party/esbuild
@@ -250,8 +359,23 @@ Alternatively, install them with npm (requires the versions matching Chromium 11
 
 ```bash
 cd chromium/src/third_party/node
-npm install  # uses the package.json already present
+npm install  # uses the package.json + package-lock.json already present
 ```
+
+> **After `npm install`, apply `typescript.patch` (corrected 2026-07).** Chromium ships
+> `third_party/node/typescript.patch`, which rewrites TypeScript's `lib.dom.d.ts`
+> `innerHTML: string` into a `set innerHTML(html: string|TrustedHTML)` setter. A fresh
+> `npm install` gives the *unpatched* TypeScript, so the WebUI `tsc` step
+> (`//ui/webui/resources:library`) fails ~40 % into the build with
+> `TS2322: Type 'TrustedHTML' is not assignable to type 'string'`. This is why copying
+> `node_modules` from an existing build (above) is preferred — that copy already has the
+> patch applied. If you used `npm install`, apply it manually:
+>
+> ```bash
+> cd chromium/src/third_party/node
+> patch -p1 --forward < typescript.patch
+> grep -n 'set innerHTML' node_modules/typescript/lib/lib.dom.d.ts   # verify
+> ```
 
 ---
 
@@ -306,8 +430,25 @@ Or create it manually with the Dawn commit hash from `chromium/src/DEPS`:
 ```bash
 grep -A2 '"dawn_revision"' chromium/src/DEPS
 # e.g.: "cb8ce4332c5d6102b8b489186f342ae01d5054be"
-echo "cb8ce4332c5d6102b8b489186f342ae01d5054be" > chromium/src/gpu/webgpu/DAWN_VERSION
+# NOTE: printf, not echo — the file must have NO trailing newline (see below).
+printf '%s' "cb8ce4332c5d6102b8b489186f342ae01d5054be" > chromium/src/gpu/webgpu/DAWN_VERSION
 ```
+
+> **`DAWN_VERSION` must have no trailing newline (corrected 2026-07).** Dawn's
+> `dawn_version_gen` action embeds the file's bytes *verbatim* into a C++ string literal
+> (`static constexpr std::string_view kDawnVersion("…")`). `echo` appends `\n`, which
+> lands *inside* the literal and makes it unterminated — the tokenizer then desyncs and
+> emits misleading cascade errors in unrelated Dawn headers (`no template named 'RefBase'`,
+> `unknown type name 'FeatureInfo'`), failing the build at ~target 14,700/37,107. Write it
+> with `printf` (the file should be exactly 40 bytes), and if you already built, remove the
+> stale generated header so it regenerates:
+>
+> ```bash
+> printf '%s' "$(grep -oE 'cb8ce[0-9a-f]{35}' chromium/src/DEPS | head -1)" \
+>   > chromium/src/gpu/webgpu/DAWN_VERSION
+> wc -c chromium/src/gpu/webgpu/DAWN_VERSION   # -> 40
+> rm -f chromium/src/gen/third_party/dawn/src/dawn/common/Version_autogen.h
+> ```
 
 ---
 
@@ -739,9 +880,51 @@ friend class carbonyl::DownloadManagerDelegate;
 
 ## 6. Running
 
+Two runtime prerequisites (added 2026-07), both one-time:
+
+**a. Put `libcarbonyl.so` next to the binary.** `headless_shell` has `RPATH=$ORIGIN/.` and
+`NEEDED libcarbonyl.so`, so the `.so` (built by `cargo build --release` into
+`carbonyl-src/build/release/`) must sit in the same dir, or you get
+`error while loading shared libraries: libcarbonyl.so: cannot open shared object file`:
+
+```bash
+cp ~/carbonyl/carbonyl-src/build/release/libcarbonyl.so \
+   ~/carbonyl/carbonyl-src/chromium/src/out/Default/
+```
+
+**b. Install runtime shared libraries.** The binary is built against the Bullseye sysroot
+but runs on the host, which lacks several libs (first missing one is usually
+`libasound.so.2`):
+
+```bash
+sudo apt-get install -y \
+  libasound2t64 libnss3 libnspr4 libatk1.0-0t64 libatk-bridge2.0-0t64 \
+  libcups2t64 libdrm2 libgbm1 libxkbcommon0 libxcomposite1 libxdamage1 \
+  libxrandr2 libxfixes3 libxext6 libx11-6 libpangocairo-1.0-0 libcairo2 \
+  libatspi2.0-0t64 libxcb1 libxrender1
+```
+
+Then run:
+
 ```bash
 cd ~/carbonyl/carbonyl-src/chromium/src/out/Default
+./headless_shell --version                                    # -> Carbonyl 0.0.3
 ./headless_shell --no-sandbox [--ignore-certificate-errors] <url>
+```
+
+`--no-sandbox` is required inside a container/VM without a usable sandbox (otherwise
+`FATAL:zygote_host_impl_linux.cc … No usable sandbox!`). A convenience launcher on `PATH`
+keeps this hands-off:
+
+```bash
+sudo tee /usr/local/bin/carbonyl > /dev/null << 'EOF'
+#!/usr/bin/env bash
+BIN="$HOME/carbonyl/carbonyl-src/chromium/src/out/Default"
+[ -e "$BIN/libcarbonyl.so" ] || cp "$HOME/carbonyl/carbonyl-src/build/release/libcarbonyl.so" "$BIN/"
+exec "$BIN/headless_shell" --no-sandbox "$@"
+EOF
+sudo chmod +x /usr/local/bin/carbonyl
+# now just: carbonyl https://example.com
 ```
 
 Downloaded files appear in `~/Downloads/`. During download the terminal title bar
@@ -808,3 +991,44 @@ write it manually (see section 2k).
 
 `libcarbonyl.so` references glibc symbols newer than the Bullseye sysroot. Add
 `"-Wl,--allow-shlib-undefined"` to the headless_shell ldflags (see section 2d).
+
+### `ImportError: cannot import name 'StrEnum' from 'enum'` (gclient)
+
+depot_tools is too new for Python 3.10. Pin it to a Chromium-111-era commit and set
+`DEPOT_TOOLS_UPDATE=0` (see section 1).
+
+### `no such package: infra/rbe/client/linux-arm64` (gclient sync)
+
+reclient has no arm64 cipd package and `custom_deps: None` doesn't suppress it. Give the
+`src/buildtools/reclient` block in `chromium/src/DEPS` an always-false `condition` and
+re-sync with `--nohooks` (see section 1).
+
+### `cd: chromium/src: No such file or directory` (patches.sh)
+
+You ran `patches.sh apply` before `gclient sync`. Sync first (the source tree must exist),
+then apply patches (see section 1).
+
+### `ValueError: invalid literal for int()` in `compute_build_timestamp.py` (gn gen)
+
+`build/util/LASTCHANGE.committime` holds the `LASTCHANGE=0…` fallback blob instead of a
+bare integer. Overwrite it with `git log -1 --format=%ct HEAD` (see section 2g).
+
+### `TS2322: Type 'TrustedHTML' is not assignable to type 'string'` (tsc / ui:library)
+
+You used `npm install` and didn't apply `third_party/node/typescript.patch`. Apply it, then
+resume the build (see section 2i).
+
+### Dawn: `no template named 'RefBase'` / `unknown type name 'FeatureInfo'`
+
+Misleading cascade from a malformed `gpu/webgpu/DAWN_VERSION` — it has a trailing newline
+that breaks the generated `kDawnVersion` string literal. Rewrite it with `printf` (no
+newline), delete the stale `Version_autogen.h`, and resume (see section 2k).
+
+### `error while loading shared libraries: libcarbonyl.so` (at runtime)
+
+Copy `build/release/libcarbonyl.so` next to `headless_shell` — its RPATH is `$ORIGIN/.`
+(see section 6a).
+
+### `error while loading shared libraries: libasound.so.2` (or other lib) at runtime
+
+Install the runtime shared libraries the host is missing (see section 6b).
