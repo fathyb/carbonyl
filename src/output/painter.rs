@@ -2,13 +2,16 @@ use std::io::{self, Stdout, Write};
 
 use crate::gfx::{Color, Point};
 
-use super::{binarize_quandrant, Cell};
+use crate::cli::CommandLine;
+
+use super::{binarize_octant, binarize_quandrant, binarize_sextant, BlockMode, Cell};
 
 pub struct Painter {
     output: Stdout,
     buffer: Vec<u8>,
     cursor: Option<Point<u32>>,
     true_color: bool,
+    blocks: BlockMode,
     background: Option<Color>,
     foreground: Option<Color>,
     background_code: Option<u8>,
@@ -21,6 +24,7 @@ impl Painter {
             buffer: Vec::new(),
             cursor: None,
             output: io::stdout(),
+            blocks: CommandLine::parse().blocks,
             background: None,
             foreground: None,
             background_code: None,
@@ -66,6 +70,7 @@ impl Painter {
         let &Cell {
             cursor,
             quadrant,
+            ref pixels,
             ref grapheme,
         } = cell;
 
@@ -85,7 +90,11 @@ impl Painter {
                 grapheme.width as u32,
             )
         } else {
-            let (char, background, foreground) = binarize_quandrant(quadrant);
+            let (char, background, foreground) = match self.blocks {
+                BlockMode::Quadrant => binarize_quandrant(quadrant),
+                BlockMode::Sextant => binarize_sextant(pixels),
+                BlockMode::Octant => binarize_octant(pixels),
+            };
 
             (char, background, foreground, 1)
         };

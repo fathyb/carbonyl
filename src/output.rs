@@ -1,5 +1,7 @@
 // mod kd_tree;
 // mod quantizer;
+mod block_tables;
+mod blocks;
 mod cell;
 mod frame_sync;
 mod painter;
@@ -9,6 +11,7 @@ mod renderer;
 mod window;
 mod xterm;
 
+pub use blocks::*;
 pub use cell::*;
 pub use frame_sync::*;
 pub use painter::*;
