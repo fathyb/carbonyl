@@ -2,6 +2,8 @@ use std::rc::Rc;
 
 use crate::gfx::{Color, Point};
 
+use super::CellPixels;
+
 #[derive(Clone, PartialEq)]
 pub struct Grapheme {
     /// Unicode character in UTF-8, might contain multiple code points (Emoji, CJK).
@@ -18,6 +20,8 @@ pub struct Cell {
     /// Text grapheme if any
     pub grapheme: Option<Rc<Grapheme>>,
     pub quadrant: (Color, Color, Color, Color),
+    /// Pixels before they get averaged into a quadrant, in row order
+    pub pixels: CellPixels,
 }
 
 impl Cell {
@@ -31,6 +35,7 @@ impl Cell {
                 Color::black(),
                 Color::black(),
             ),
+            pixels: [Color::black(); 8],
         }
     }
 }

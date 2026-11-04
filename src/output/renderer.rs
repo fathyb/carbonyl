@@ -113,6 +113,7 @@ impl Renderer {
             }
 
             previous.quadrant = current.quadrant;
+            previous.pixels = current.pixels;
             previous.grapheme = current.grapheme.clone();
 
             self.painter.paint(current)?;
@@ -169,6 +170,16 @@ impl Renderer {
                     pair(x + 1, y + 2),
                     pair(x + 0, y + 2),
                 );
+                cell.pixels = [
+                    pixel(x + 0, y + 0),
+                    pixel(x + 1, y + 0),
+                    pixel(x + 0, y + 1),
+                    pixel(x + 1, y + 1),
+                    pixel(x + 0, y + 2),
+                    pixel(x + 1, y + 2),
+                    pixel(x + 0, y + 3),
+                    pixel(x + 1, y + 3),
+                ];
 
                 x += 2;
             }
@@ -195,6 +206,7 @@ impl Renderer {
         self.draw(rect, |cell| {
             cell.grapheme = None;
             cell.quadrant = (color, color, color, color);
+            cell.pixels = [color; 8];
         })
     }
 

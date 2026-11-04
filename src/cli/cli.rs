@@ -1,5 +1,7 @@
 use std::{env, ffi::OsStr};
 
+use crate::output::BlockMode;
+
 use super::CommandLineProgram;
 
 #[derive(Clone, Debug)]
@@ -9,6 +11,7 @@ pub struct CommandLine {
     pub zoom: f32,
     pub debug: bool,
     pub bitmap: bool,
+    pub blocks: BlockMode,
     pub program: CommandLineProgram,
     pub shell_mode: bool,
 }
@@ -41,6 +44,7 @@ impl CommandLine {
         let mut zoom = 1.0;
         let mut debug = false;
         let mut bitmap = false;
+        let mut blocks = BlockMode::default();
         let mut shell_mode = false;
         let mut program = CommandLineProgram::Main;
         let args = env::args().skip(1).collect::<Vec<String>>();
@@ -77,6 +81,11 @@ impl CommandLine {
                 "-z" | "--zoom" => set_f32!(zoom = zoom / 100.0),
                 "-d" | "--debug" => set!(debug, Debug),
                 "-b" | "--bitmap" => set!(bitmap, Bitmap),
+                "--blocks" => {
+                    if let Some(mode) = value.and_then(|value| BlockMode::parse(value)) {
+                        blocks = mode;
+                    }
+                }
 
                 "-h" | "--help" => program = CommandLineProgram::Help,
                 "-v" | "--version" => program = CommandLineProgram::Version,
@@ -102,6 +111,7 @@ impl CommandLine {
             zoom,
             debug,
             bitmap,
+            blocks,
             program,
             shell_mode,
         }
